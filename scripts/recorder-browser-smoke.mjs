@@ -151,7 +151,7 @@ try{
     return {workers:window.__gifWorkersCreated,header,frames:count,size:bytes.length,exportStatus,frameDetail};
   });
   assert(!result.error,result.error||'');
-  assert.equal(result.workers,1,'Browser export should create a real Web Worker');
+  assert(result.workers>=2,'Cancelled long export and finished short export must each create a real Web Worker');
   assert.equal(result.header,'GIF89a','Should produce GIF content');
   assert.equal(result.frames,5,'Should encode all five frames (1 sec at 5 FPS)');
   assert(result.frameDetail.includes('changing steps'),'UI should explain whether cells changed');
