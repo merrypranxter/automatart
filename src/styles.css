@@ -58,3 +58,10 @@ input[type=range]{width:100%;margin:4px 0 7px;accent-color:#f62eb8;cursor:pointe
 .stage-capture-buttons button{flex:1;min-height:37px;border-radius:7px;border:1px solid #35e6d0;background:#15bfa7;color:#0b1420;font:700 11px 'Chakra Petch',monospace}
 .stage-capture-buttons button+button{background:#204b55;color:#c0fff5}
 @media(max-width:450px){.stage-capture-state,.stage-capture-error,.stage-capture-success{padding:7px;margin-top:6px}.stage-capture-foot span{font-size:9px}.stage-capture-state progress{height:11px;margin:6px 0}}
+
+/* Export dismissal: closing the banner also releases the preview Blob URL. */
+.stage-success-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.stage-success-top span{flex:1}
+.dismiss-export{margin-left:auto!important;flex:0 0 auto!important;min-width:34px;min-height:34px;border-radius:8px;background:#1e1528!important;color:#fff!important;border:1px solid #ffffff75!important;font:700 24px/1 system-ui,sans-serif!important;cursor:pointer}
+.dismiss-export:hover{background:#623251!important}
+.finished-export-top{display:flex!important;flex-direction:row!important;justify-content:space-between;align-items:center;gap:8px}

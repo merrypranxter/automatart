@@ -185,6 +185,10 @@ export default function App(){
       setMessage('Could not load recipe: '+(err instanceof Error?err.message:'Unknown error'));
     }
   }
+  function dismissExport(){
+    setLastExport(null);
+    setCaptureError(null);
+  }
   async function saveLastExport(){
     if(!lastExport)return;
     const file=new File([lastExport.blob],lastExport.name,{type:lastExport.blob.type});
@@ -295,7 +299,9 @@ export default function App(){
             <button onClick={jumpToRecorder}>BACK TO RECORDER ↓</button>
           </div>}
           {!capturing&&lastExport&&<div className="stage-capture-success" role="status">
-            <div><b>✓ ANIMATION READY</b><span>{lastExport.frames} frames · {lastExport.elapsed.toFixed(1)} sec</span></div>
+            <div className="stage-success-top"><b>✓ ANIMATION READY</b><span>{lastExport.frames} frames · {lastExport.elapsed.toFixed(1)} sec</span>
+              <button type="button" className="dismiss-export" aria-label="Dismiss animation ready banner" title="Close this notification" onClick={dismissExport}>×</button>
+            </div>
             <div className="stage-capture-buttons">
               <button onClick={saveLastExport}>SAVE / SHARE</button>
               <button onClick={jumpToRecorder}>PLAY PREVIEW ↓</button>
@@ -485,7 +491,10 @@ export default function App(){
                 {capturing&&<button className="cancel-button" onClick={()=>controllerRef.current?.abort()}>✕ CANCEL</button>}
               </div>
               {lastExport&&!capturing&&<div className="finished-export" role="status">
-                <div><b>✓ EXPORT READY · {lastExport.frames} FRAMES</b>
+                <div className="finished-export-top"><b>✓ EXPORT READY · {lastExport.frames} FRAMES</b>
+                  <button type="button" className="dismiss-export" aria-label="Close finished export panel" onClick={dismissExport}>×</button>
+                </div>
+                <div>
                   <span>{lastExport.name} · {lastExport.elapsed.toFixed(1)} sec · {lastExport.distinctFrames} changing steps</span>
                 </div>
                 <div className="export-preview">
