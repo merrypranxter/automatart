@@ -61,7 +61,7 @@ export default function App(){
   const [customSeconds,setCustomSeconds]=useState(45);
   const [resolution,setResolution]=useState<ExportResolution>(480);
   const [exportFps,setExportFps]=useState(10);
-  const [restartCapture,setRestartCapture]=useState(false);
+  const [restartCapture,setRestartCapture]=useState(true);
   const [capturing,setCapturing]=useState(false);
   const [lastExport,setLastExport]=useState<{name:string;blob:Blob;url:string;frames:number;distinctFrames:number;elapsed:number;extension:string}|null>(null);
   const [captureProgress,setCaptureProgress]=useState<CaptureProgress|null>(null);

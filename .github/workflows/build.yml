@@ -1,4 +1,4 @@
-name: Build Automatart
+name: Build and smoke-test Automatart
 on:
   push:
     branches: [main]
@@ -13,4 +13,9 @@ jobs:
         with:
           node-version: '22'
       - run: npm install --no-audit --no-fund
-      - run: npm run build
+      - name: Type-check and production build
+        run: npm run build
+      - name: Install headless canvas and GIF decoder for export smoke test
+        run: npm install --no-save --no-audit --no-fund @napi-rs/canvas gifuct-js
+      - name: Encode and decode a truly animated GIF
+        run: node scripts/recording-smoke.mjs
