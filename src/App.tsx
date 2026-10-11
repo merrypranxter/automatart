@@ -3,6 +3,12 @@ import type { ChangeEvent, PointerEvent } from 'react';
 import { createWorld, paintWorld, stepWorld } from './engine/sim';
 import { renderWorld } from './engine/render';
 import {
+  captureAnimation, chooseVideoMime, recommendedDimensions, CaptureCancelled
+} from './engine/capture';
+import type {
+  CaptureFormat, CaptureProgress, DurationMode, ExportResolution
+} from './engine/capture';
+import {
   INITIAL_APPEARANCE, INITIAL_SETTINGS, LIFE_RULES, PALETTES
 } from './engine/types';
 import type {
@@ -49,6 +55,17 @@ export default function App(){
   const [population,setPopulation]=useState(0);
   const [resetNumber,setResetNumber]=useState(0);
   const [message,setMessage]=useState('Paint the canvas, scramble the rules, and watch the mathematics get weird.');
+  const [captureFormat,setCaptureFormat]=useState<CaptureFormat>('gif');
+  const [durationMode,setDurationMode]=useState<DurationMode>('fixed');
+  const [durationPreset,setDurationPreset]=useState('30');
+  const [customSeconds,setCustomSeconds]=useState(45);
+  const [resolution,setResolution]=useState<ExportResolution>(480);
+  const [exportFps,setExportFps]=useState(10);
+  const [restartCapture,setRestartCapture]=useState(false);
+  const [capturing,setCapturing]=useState(false);
+  const [captureProgress,setCaptureProgress]=useState<CaptureProgress|null>(null);
+  const controllerRef=useRef<AbortController|null>(null);
+  const recordingRef=useRef(false);
   const worldRef=useRef<World>(createWorld(INITIAL_SETTINGS));
   const canvasRef=useRef<HTMLCanvasElement>(null);
   const loadRef=useRef<HTMLInputElement>(null);
@@ -163,7 +180,43 @@ export default function App(){
       setMessage('Could not load recipe: '+(err instanceof Error?err.message:'Unknown error'));
     }
   }
+  async function startCapture(){
+    if(recordingRef.current)return;
+    recordingRef.current=true;
+    const controller=new AbortController();
+    controllerRef.current=controller;
+    setPlaying(false);
+    setCapturing(true);
+    setCaptureProgress({phase:'Preparing recorder',frames:0,seconds:0,fraction:0});
+    const seconds=durationMode==='settled'?600:durationPreset==='custom'?customSeconds:Number(durationPreset);
+    const safeSeconds=Math.min(600,Math.max(1,Math.floor(seconds)||30));
+    const startedAt=worldRef.current;
+    try{
+      const result=await captureAnimation(startedAt,settings,appearance,{
+        format:captureFormat,mode:durationMode,seconds:safeSeconds,
+        fps:exportFps,resolution,restart:restartCapture,stepsPerSecond:speed
+      },setCaptureProgress,controller.signal);
+      const label=result.ended==='settled'?'settled naturally':
+        result.ended==='limit'?'reached the 10-minute safety limit':'complete';
+      download('automatart-'+settings.engine+'-'+(restartCapture?'seed'+settings.seed:'gen'+generation)+'-'+Math.round(result.elapsed)+'s.'+result.extension,result.blob);
+      setMessage('Export '+label+': '+result.extension.toUpperCase()+' · '+result.frames+' frames. File download started.');
+    }catch(error){
+      if(error instanceof CaptureCancelled||controller.signal.aborted){
+        setMessage('Recording cancelled. Your live universe is unharmed.');
+      }else{
+        setMessage('Export failed: '+(error instanceof Error?error.message:'Unknown recording error'));
+      }
+    }finally{
+      controllerRef.current=null;
+      recordingRef.current=false;
+      setCapturing(false);
+      setCaptureProgress(null);
+    }
+  }
   const activeEngine=ENGINES.find(e=>e.id===settings.engine);
+  const outputSize=recommendedDimensions(settings,resolution);
+  const videoSupported=typeof window!=='undefined'&&chooseVideoMime()!==null;
+  const predictedFrames=(durationMode==='settled'?600:durationPreset==='custom'?customSeconds:Number(durationPreset))*exportFps;
   const densityLabel=Math.round(settings.density*100)+'%';
   return (
     <div className="app-shell">
@@ -293,14 +346,102 @@ export default function App(){
               <button onClick={()=>loadRef.current?.click()} className="export">⇧ LOAD RECIPE</button>
               <input className="sr-only" ref={loadRef} type="file" accept=".json,application/json" onChange={loadRecipe}/>
             </div>
-            <p className="module-note">GIF • APNG • WEBM • MP4 are scheduled for Phase 4, alongside a proper recording timeline and loop detection.</p>
+            <div className="recorder-panel">
+              <div className="recorder-heading"><span>✹ ANIMATION RECORDER</span><span className="recorder-ready">EXPORT LAB / EARLY PHASE 4</span></div>
+              <label className="input-label" htmlFor="export-format">Animation format</label>
+              <select id="export-format" value={captureFormat} disabled={capturing}
+                onChange={e=>{
+                  const format=e.target.value as CaptureFormat;
+                  setCaptureFormat(format);
+                  setExportFps(format==='gif'?10:30);
+                  setResolution(format==='gif'?480:720);
+                }}>
+                <option value="gif">GIF · LOOPING ANIMATION</option>
+                <option value="video">VIDEO · MP4 / WEBM (BROWSER-DEPENDENT)</option>
+              </select>
+              <label className="input-label" htmlFor="duration-mode">When should recording end?</label>
+              <select id="duration-mode" value={durationMode} disabled={capturing}
+                onChange={e=>setDurationMode(e.target.value as DurationMode)}>
+                <option value="fixed">After a chosen duration</option>
+                <option value="settled">When the cells stop changing</option>
+              </select>
+              {durationMode==='fixed' ? <>
+                <label className="input-label" htmlFor="duration-preset">Duration</label>
+                <select id="duration-preset" value={durationPreset} disabled={capturing}
+                  onChange={e=>setDurationPreset(e.target.value)}>
+                  <option value="10">10 seconds</option>
+                  <option value="30">30 seconds</option>
+                  <option value="60">1 minute</option>
+                  <option value="120">2 minutes</option>
+                  <option value="300">5 minutes</option>
+                  <option value="custom">Custom duration</option>
+                </select>
+                {durationPreset==='custom'&&<>
+                  <label className="input-label" htmlFor="custom-seconds">Custom length <em>1–600 seconds</em></label>
+                  <input id="custom-seconds" type="number" min="1" max="600" step="1" value={customSeconds}
+                    disabled={capturing}
+                    onChange={e=>setCustomSeconds(Math.max(1,Math.min(600,Number(e.target.value)||1)))}/>
+                </>}
+              </>:<p className="module-note">
+                The recorder checks for 3 unchanged generations in a row and stops automatically.
+                Oscillators, moving patterns, and cyclic universes may never settle, so recordings are capped at 10 minutes.
+                Videos finish on the last frame; GIFs play once and stay on the final frame where supported.
+              </p>}
+              <div className="record-settings-grid">
+                <div>
+                  <label className="input-label" htmlFor="export-resolution">Export quality</label>
+                  <select id="export-resolution" value={resolution} disabled={capturing}
+                    onChange={e=>setResolution(Number(e.target.value) as ExportResolution)}>
+                    <option value={360}>360 · SMALL</option>
+                    <option value={480}>480 · LIGHT</option>
+                    <option value={720}>720 · HD</option>
+                    <option value={1080}>1080 · FULL HD</option>
+                    <option value={2160}>2160 · ULTRA HD</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="input-label" htmlFor="export-fps">Frames / second</label>
+                  <select id="export-fps" value={exportFps} disabled={capturing}
+                    onChange={e=>setExportFps(Number(e.target.value))}>
+                    {[5,10,15,24,30].map(n=><option value={n} key={n}>{n} FPS</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="capture-specs">
+                <b>{outputSize[0]} × {outputSize[1]}</b>
+                <span>{captureFormat==='gif'?'GIF / 256 COLORS PER FRAME':'VIDEO / MP4 OR WEBM'} · {exportFps} FPS</span>
+              </div>
+              <label className="toggle"><input type="checkbox" checked={restartCapture} disabled={capturing}
+                onChange={e=>setRestartCapture(e.target.checked)}/>
+                <span>Restart from original seed before recording</span>
+              </label>
+              {captureFormat==='gif'&&predictedFrames>250&&
+                <p className="capture-warning">⚠ {Math.ceil(predictedFrames)} frames at this resolution can make a very large GIF. Start with 480p / 10 FPS; especially on iPhone.</p>}
+              {captureFormat==='video'&&!videoSupported&&
+                <p className="capture-warning">This browser has not reported a supported video encoder. GIF recording should still work.</p>}
+              {capturing&&captureProgress&&<div className="capture-progress" role="status">
+                <div><b>{captureProgress.phase}</b><span>{Math.floor(captureProgress.seconds)}s · {captureProgress.frames} frames</span></div>
+                <progress max="1" value={captureProgress.fraction}/>
+                <p>Keep this tab open while recording. Video exports run in real time.</p>
+              </div>}
+              <div className="capture-buttons">
+                <button className="record-button" disabled={capturing||(captureFormat==='video'&&!videoSupported)}
+                  onClick={startCapture}>{capturing?'● RECORDING':'● RECORD '+captureFormat.toUpperCase()}</button>
+                {capturing&&<button className="cancel-button" onClick={()=>controllerRef.current?.abort()}>✕ CANCEL</button>}
+              </div>
+              <p className="module-note">
+                Video is recorded in real time and may save as MP4 or WebM depending on your browser.
+                GIF is rendered frame by frame. Recording copies your current universe without changing the live one.
+                Larger/longer recordings need more memory. Video contains no audio.
+              </p>
+            </div>
           </section>
           <section className="future">
             <div className="future-header">COMING OUT OF THE INCUBATOR</div>
             <div className="future-list">
               <div><b>02 / CHROMA</b><span>More rule-to-art patch cables + animated palettes</span></div>
               <div><b>03 / SKIN</b><span>Particles, contours, glitter, geometry & organic morphs</span></div>
-              <div><b>04 / RECORD</b><span>GIF, APNG, video, full-res frames & loop hunting</span></div>
+              <div><b>04 / RECORD</b><span>GIF + MP4/WebM recording is here! APNG & loop hunting to come.</span></div>
               <div><b>05 / MUTATION</b><span>Breed rules, batch experiments & a local weirdness generator</span></div>
               <div><b>06–07 / BIOLOGY</b><span>Rule parasites, territory fights, Lenia & strange topology</span></div>
             </div>
