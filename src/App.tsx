@@ -490,7 +490,7 @@ export default function App(){
               <label className="input-label" htmlFor="trail-persistence">Cell afterimage persistence <em>{Math.round(settings.trailDecay*100)}%</em></label>
               <input id="trail-persistence" type="range" min=".65" max=".99" step=".01" value={settings.trailDecay}
                 onChange={e=>updateSetting('trailDecay',Number(e.target.value))}/>
-            </>
+            </>}
             <label className="toggle"><input type="checkbox" checked={appearance.showGrid} onChange={e=>updateAppearance('showGrid',e.target.checked)}/><span>Show mathematical grid</span></label>
             <label className="toggle"><input type="checkbox" checked={appearance.trails} onChange={e=>updateAppearance('trails',e.target.checked)}/><span>Show cell afterimages</span></label>
             <div className="export-grid">
