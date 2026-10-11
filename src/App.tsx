@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { paletteFromColors, automatartColorsFromPortable } from './palettes/portable';
 import type { ChangeEvent, PointerEvent } from 'react';
 import { createWorld, paintWorld, stepWorld, rewindWorld } from './engine/sim';
 import { lookupCell } from './engine/topology';
@@ -13,7 +14,7 @@ import type {
   CaptureFormat, CaptureProgress, DurationMode, ExportResolution
 } from './engine/capture';
 import {
-  INITIAL_APPEARANCE, INITIAL_SETTINGS, LIFE_RULES, PALETTES, MOIRE_PALETTE_NAMES, AUTOMATART_PALETTE_NAMES
+  INITIAL_APPEARANCE, INITIAL_SETTINGS, LIFE_RULES, PALETTES, PALETTE_LIBRARY, MOIRE_PALETTE_NAMES, AUTOMATART_PALETTE_NAMES
 } from './engine/types';
 import type {
   Appearance, AspectId, ColorBy, EngineId, LifeRule, NeighborShape, PatternId, SimSettings, SkinId, World
@@ -86,6 +87,7 @@ export default function App(){
   const worldRef=useRef<World>(createWorld(INITIAL_SETTINGS));
   const canvasRef=useRef<HTMLCanvasElement>(null);
   const loadRef=useRef<HTMLInputElement>(null);
+  const paletteImportRef=useRef<HTMLInputElement>(null);
   const recorderRef=useRef<HTMLDivElement>(null);
   const jumpToRecorder=()=>recorderRef.current?.scrollIntoView({behavior:'smooth',block:'center'});
   const updateSetting=<K extends keyof SimSettings>(key:K,value:SimSettings[K])=>
@@ -190,6 +192,32 @@ export default function App(){
     renderWorld(c,worldRef.current,appearance,1400);
     download('automatart-'+settings.engine+'-gen'+generation+'.png',c.toDataURL('image/png'));
     setMessage('Still frame saved as PNG. GIF/video animation recording is in the Animation Recorder below.');
+  }
+  function savePortablePalette(){
+    try{
+      const colors=appearance.palette;
+      const known=PALETTE_LIBRARY.find(p=>p.colors.length===colors.length&&p.colors.every((c,i)=>c.toLowerCase()===colors[i]?.toLowerCase()));
+      const document=paletteFromColors(colors,known?.id??'automatart/custom',known?.name??'Custom Automatart palette',known?.source??'automatart');
+      const blob=new Blob([JSON.stringify(document,null,2)],{type:'application/json'});
+      download('automatart-palette-'+(known?.id.replace('/','-')??'custom')+'.json',blob);
+      setMessage('Portable palette JSON saved. Import into It\'s a Moiré or Math Art Suite.');
+    }catch(error){
+      setMessage('Palette export failed: '+(error instanceof Error?error.message:'Unknown error'));
+    }
+  }
+  async function loadPortablePalette(event:ChangeEvent<HTMLInputElement>){
+    const file=event.target.files?.[0];
+    event.target.value='';
+    if(!file)return;
+    try{
+      if(file.size>65536)throw new Error('Palette file too large (64 KB max)');
+      const document:unknown=JSON.parse(await file.text());
+      const colors=automatartColorsFromPortable(document);
+      setAppearance(a=>({...a,palette:colors}));
+      setMessage('Imported '+colors.length+' exact colors from a portable palette. Automaton rules and world state are unchanged.');
+    }catch(error){
+      setMessage('Palette import rejected: '+(error instanceof Error?error.message:'Invalid file'));
+    }
   }
   function saveRecipe(){
     const recipe={kind:'automatart-recipe-v1',settings,appearance};
@@ -513,6 +541,11 @@ export default function App(){
             <div className="palette-summary">
               <span>{MOIRE_PALETTE_NAMES.length+AUTOMATART_PALETTE_NAMES.length} PALETTES · {appearance.palette.length} COLOR STOPS</span>
               <button type="button" onClick={mutateColors}>✳ RANDOM PALETTE</button>
+            </div>
+            <div className="export-grid">
+              <button type="button" onClick={savePortablePalette} className="export">↓ EXPORT PALETTE JSON</button>
+              <button type="button" onClick={()=>paletteImportRef.current?.click()} className="export">↑ IMPORT PALETTE JSON</button>
+              <input ref={paletteImportRef} className="sr-only" aria-label="Import portable palette JSON" type="file" accept=".json,application/json" onChange={loadPortablePalette}/>
             </div>
             <div className="color-wells">
               {appearance.palette.map((c,i)=><label key={i} title={'Edit color '+(i+1)}>
