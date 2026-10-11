@@ -14,9 +14,9 @@ function getBuffer(canvas: HTMLCanvasElement, w:number,h:number):HTMLCanvasEleme
   if(b.height!==h)b.height=h;
   return b;
 }
-export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,outputWidth=900):void{
+export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,outputWidth=900,outputHeight?:number):void{
   const w=world.width,h=world.height;
-  const outW=outputWidth, outH=Math.round(outputWidth*h/w);
+  const outW=outputWidth, outH=outputHeight??Math.round(outputWidth*h/w);
   if(canvas.width!==outW)canvas.width=outW;
   if(canvas.height!==outH)canvas.height=outH;
   const ctx=canvas.getContext('2d',{alpha:false});

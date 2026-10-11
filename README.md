@@ -43,3 +43,9 @@ The model uses typed arrays, seeded generation, wrap/no-wrap boundaries and sepa
 - Avoid premultiplied-alpha dirty mattes for future transparent exports.
 
 Original art/code project by merrypranxter.
+
+## Recorder diagnostics / mobile notes
+- Exports display an inline playable GIF/video preview and report frames + changing simulation steps. A static result can be differentiated from a paused/dead automaton.
+- Video capture uses an attached, visible recording canvas and does not resize the captureStream surface. It yields to requestAnimationFrame to publish pixels; MediaRecorder support remains browser-dependent.
+- GIF uses one coherent palette and maps subsequent frames to it, greatly reducing per-frame quantization work; the completed GIF is structurally scanned to confirm its frame count.
+- High-resolution/long GIFs can overwhelm mobile Safari, so fixed-duration oversize runs are rejected with advice to use video. Until-settled GIFs apply a frame-budget safety cap.

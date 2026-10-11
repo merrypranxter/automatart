@@ -163,9 +163,9 @@ export async function captureAnimation(
   const [width,height]=recommendedDimensions(s,opt.resolution);
   const totalFrames=Math.ceil(opt.seconds*opt.fps);
   // Prevent mobile browser tab eviction on combinations likely to exhaust RAM.
+  const budget=/iPhone|iPad|Android/i.test(navigator.userAgent)?110_000_000:350_000_000;
   if(opt.format==='gif'){
-    const budget=/iPhone|iPad|Android/i.test(navigator.userAgent)?110_000_000:350_000_000;
-    if(width*height*totalFrames>budget){
+    if(opt.mode==='fixed'&&width*height*totalFrames>budget){
       throw new Error('GIF is too big for reliable encoding on this device. Try 360/480p, fewer seconds or lower FPS; use video for long HD clips.');
     }
   }
@@ -184,8 +184,9 @@ export async function captureAnimation(
   try{
     if(opt.format==='gif'){
       const gif=GIFEncoder();
+      const frameLimit=Math.min(totalFrames,Math.max(1,Math.floor(budget/(width*height))));
       let map:(pixels:Uint8ClampedArray)=>Uint8Array=()=>new Uint8Array();
-      for(let i=0;i<totalFrames;i++){
+      for(let i=0;i<frameLimit;i++){
         notCancelled(signal);
         renderWorld(canvas,cursor.current,a,width,height);
         const pixels=ctx.getImageData(0,0,width,height).data;
@@ -202,7 +203,7 @@ export async function captureAnimation(
         const transition=cursor.advance();
         if(transition.changed)distinctFrames++;
         if(opt.mode==='settled'&&transition.settled){ended='settled';break;}
-        if(i===totalFrames-1&&opt.mode==='settled')ended='limit';
+        if(i===frameLimit-1&&opt.mode==='settled')ended='limit';
         // Yield to the browser on every frame so controls and progress remain responsive.
         if(i%2===0)update('Encoding animated GIF',frames);
         await delay(0);
@@ -213,7 +214,9 @@ export async function captureAnimation(
       const bytes=gif.bytes();
       const actual=countGifFrames(bytes);
       if(actual!==frames)throw new Error('GIF contained '+actual+' frames, expected '+frames+'. Export was not saved.');
-      return {blob:new Blob([bytes.slice().buffer],{type:'image/gif'}),
+      const copy=new Uint8Array(bytes.length);
+      copy.set(bytes);
+      return {blob:new Blob([copy.buffer],{type:'image/gif'}),
         extension:'gif',frames,distinctFrames,elapsed:frames/opt.fps,ended};
     }
 

@@ -63,10 +63,11 @@ export default function App(){
   const [exportFps,setExportFps]=useState(10);
   const [restartCapture,setRestartCapture]=useState(false);
   const [capturing,setCapturing]=useState(false);
-  const [lastExport,setLastExport]=useState<{name:string;blob:Blob}|null>(null);
+  const [lastExport,setLastExport]=useState<{name:string;blob:Blob;url:string;frames:number;distinctFrames:number;elapsed:number;extension:string}|null>(null);
   const [captureProgress,setCaptureProgress]=useState<CaptureProgress|null>(null);
   const controllerRef=useRef<AbortController|null>(null);
   const recordingRef=useRef(false);
+  useEffect(()=>()=>{if(lastExport)URL.revokeObjectURL(lastExport.url);},[lastExport]);
   const worldRef=useRef<World>(createWorld(INITIAL_SETTINGS));
   const canvasRef=useRef<HTMLCanvasElement>(null);
   const loadRef=useRef<HTMLInputElement>(null);
@@ -146,7 +147,7 @@ export default function App(){
     const c=document.createElement('canvas');
     renderWorld(c,worldRef.current,appearance,1400);
     download('automatart-'+settings.engine+'-gen'+generation+'.png',c.toDataURL('image/png'));
-    setMessage('Still frame saved as PNG. GIF/video recording arrives in Phase 4.');
+    setMessage('Still frame saved as PNG. GIF/video animation recording is in the Animation Recorder below.');
   }
   function saveRecipe(){
     const recipe={kind:'automatart-recipe-v1',settings,appearance};
@@ -215,9 +216,9 @@ export default function App(){
       const label=result.ended==='settled'?'settled naturally':
         result.ended==='limit'?'reached the 10-minute safety limit':'complete';
       const name='automatart-'+settings.engine+'-'+(restartCapture?'seed'+settings.seed:'gen'+generation)+'-'+Math.round(result.elapsed)+'s.'+result.extension;
-      setLastExport({name,blob:result.blob});
+      setLastExport({name,blob:result.blob,url:URL.createObjectURL(result.blob),frames:result.frames,distinctFrames:result.distinctFrames,elapsed:result.elapsed,extension:result.extension});
       download(name,result.blob);
-      setMessage('Export '+label+': '+result.extension.toUpperCase()+' · '+result.frames+' frames. Use SAVE / SHARE below if the automatic download was blocked.');
+      setMessage('Export '+label+': '+result.frames+' recorded frames / '+result.distinctFrames+' changing steps. Play the preview below to verify motion before saving.');
     }catch(error){
       if(error instanceof CaptureCancelled||controller.signal.aborted){
         setMessage('Recording cancelled. Your live universe is unharmed.');
@@ -437,6 +438,7 @@ export default function App(){
                 <p className="capture-warning">⚠ {Math.ceil(predictedFrames)} frames at this resolution can make a very large GIF. Start with 480p / 10 FPS; especially on iPhone.</p>}
               {captureFormat==='video'&&!videoSupported&&
                 <p className="capture-warning">This browser has not reported a supported video encoder. GIF recording should still work.</p>}
+              <div id="capture-canvas-mount" className={capturing?'capture-live':'capture-live capture-hidden'} aria-label="Live export preview" />
               {capturing&&captureProgress&&<div className="capture-progress" role="status">
                 <div><b>{captureProgress.phase}</b><span>{Math.floor(captureProgress.seconds)}s · {captureProgress.frames} frames</span></div>
                 <progress max="1" value={captureProgress.fraction}/>
@@ -448,7 +450,18 @@ export default function App(){
                 {capturing&&<button className="cancel-button" onClick={()=>controllerRef.current?.abort()}>✕ CANCEL</button>}
               </div>
               {lastExport&&!capturing&&<div className="finished-export" role="status">
-                <div><b>✓ EXPORT READY</b><span>{lastExport.name}</span></div>
+                <div><b>✓ EXPORT READY · {lastExport.frames} FRAMES</b>
+                  <span>{lastExport.name} · {lastExport.elapsed.toFixed(1)} sec · {lastExport.distinctFrames} changing steps</span>
+                </div>
+                <div className="export-preview">
+                  {lastExport.extension==='gif'?
+                    <img src={lastExport.url} alt="Preview of exported animated GIF" />:
+                    <video src={lastExport.url} controls autoPlay muted loop playsInline preload="metadata" />}
+                </div>
+                {lastExport.distinctFrames===0&&<p className="capture-warning">
+                  The mathematical state didn't change during recording, so every frame shows the same picture.
+                  Try NEW SEED, a different automaton, or restart from the original seed.
+                </p>}
                 <button onClick={saveLastExport}>⇩ SAVE / SHARE TO FILES</button>
               </div>}
               <p className="module-note">
