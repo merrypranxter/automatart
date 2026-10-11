@@ -1,6 +1,7 @@
-import { GIFEncoder, quantize, applyPalette } from 'gifenc';
+import { GIFEncoder, quantize } from 'gifenc';
 import { createWorld, stepWorld } from './sim';
 import { renderWorld } from './render';
+import { worldDimensions } from './types';
 import type { Appearance, SimSettings, World } from './types';
 
 export type CaptureFormat = 'gif' | 'video';
@@ -27,179 +28,255 @@ export interface CaptureResult {
   frames: number;
   elapsed: number;
   ended: 'duration' | 'settled' | 'limit';
+  distinctFrames: number;
 }
 
 export class CaptureCancelled extends Error {
-  constructor() { super('Recording cancelled'); this.name = 'CaptureCancelled'; }
+  constructor(){super('Recording cancelled');this.name='CaptureCancelled';}
 }
-
-export function recommendedDimensions(settings:SimSettings, size:ExportResolution):[number,number]{
-  const [w,h] = settings.aspect==='square'?[1,1]:settings.aspect==='landscape'?[16,9]:[9,16];
-  const width = settings.aspect==='landscape' ? Math.round(size*w/h) : size;
-  const height = Math.round(width*h/w);
-  // Video encoders prefer even dimensions, especially H.264.
-  return [Math.max(2, width+width%2),Math.max(2,height+height%2)];
+export function recommendedDimensions(s:SimSettings,size:ExportResolution):[number,number]{
+  const [w,h]=worldDimensions(s);
+  // Preserve the ACTUAL cell grid ratio. The rendering canvas must never resize
+  // after captureStream() has been called or some browsers lose the video track.
+  let width=s.aspect==='landscape' ? Math.round(size*16/9) : size;
+  if(width%2)width++;
+  let height=Math.round(width*h/w);
+  if(height%2)height++;
+  return [width,height];
 }
-
-function cloneWorld(w:World):World{
-  return {
-    engine:w.engine,width:w.width,height:w.height,generation:w.generation,
+export function cloneWorld(w:World):World{
+  return {engine:w.engine,width:w.width,height:w.height,generation:w.generation,
     cells:w.cells.slice(),ages:w.ages.slice(),neighbors:w.neighbors.slice(),
-    events:w.events.slice(),traces:w.traces.slice()
-  };
+    events:w.events.slice(),traces:w.traces.slice()};
 }
-function equalCells(a:Uint8Array,b:Uint8Array):boolean{
+export function equalCells(a:Uint8Array,b:Uint8Array):boolean{
   if(a.length!==b.length)return false;
   for(let i=0;i<a.length;i++)if(a[i]!==b[i])return false;
   return true;
 }
-const wait = (ms:number) => new Promise<void>(resolve=>setTimeout(resolve,ms));
-function assertNotCancelled(signal:AbortSignal){
-  if(signal.aborted)throw new CaptureCancelled();
-}
+const delay=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
+const nextPaint=()=>new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
+const notCancelled=(signal:AbortSignal)=>{if(signal.aborted)throw new CaptureCancelled();};
 
 export function chooseVideoMime():string|null{
   if(typeof window==='undefined'||typeof MediaRecorder==='undefined'
     ||!('captureStream' in HTMLCanvasElement.prototype))return null;
-  // Safari commonly offers MP4; Chromium/Firefox may offer WebM instead.
-  const types=['video/mp4;codecs=avc1.42E01E','video/mp4',
-    'video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
-  return types.find(type=>MediaRecorder.isTypeSupported(type))??null;
+  return ['video/mp4;codecs=avc1.42E01E','video/mp4',
+    'video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']
+    .find(t=>MediaRecorder.isTypeSupported(t))??null;
 }
 
-interface SimulationCursor {
+interface Cursor {
   current:World;
-  advance:()=>boolean;
+  advance:()=>{settled:boolean;changed:boolean};
 }
-function makeCursor(source:World, s:SimSettings, fps:number, stepsPerSecond:number):SimulationCursor{
+export function createCaptureCursor(source:World,s:SimSettings,fps:number,stepsPerSecond:number):Cursor{
   let current=cloneWorld(source);
-  let fraction=0;
-  let unchanged=0;
-  const cursor:SimulationCursor={
+  let carry=0,unchanged=0;
+  const cursor:Cursor={
     current,
     advance(){
-      fraction+=stepsPerSecond/fps;
-      const steps=Math.floor(fraction);
-      fraction-=steps;
-      for(let i=0;i<steps;i++){
+      carry+=stepsPerSecond/fps;
+      const count=Math.floor(carry);
+      carry-=count;
+      let changed=false;
+      for(let i=0;i<count;i++){
         const next=stepWorld(current,s);
-        unchanged=equalCells(current.cells,next.cells)?unchanged+1:0;
+        const same=equalCells(current.cells,next.cells);
+        unchanged=same?unchanged+1:0;
+        if(!same)changed=true;
         current=next;
       }
       cursor.current=current;
-      // 3 consecutive generation checks avoids a false still frame at low speed.
-      return unchanged>=3;
+      return {settled:unchanged>=3,changed};
     }
   };
   return cursor;
 }
 
+// A steady GIF palette keeps colors coherent across frames and avoids doing
+// an expensive 256-color quantization for *every* animation frame on mobile.
+function makePaletteIndex(palette:number[][]){
+  const lut=new Uint16Array(65536);
+  lut.fill(0xffff);
+  const colors=palette.map(p=>[p[0],p[1],p[2]]);
+  return (rgba:Uint8ClampedArray):Uint8Array=>{
+    const out=new Uint8Array(rgba.length/4);
+    for(let p=0,j=0;p<rgba.length;p+=4,j++){
+      const r=rgba[p],g=rgba[p+1],b=rgba[p+2];
+      const key=((r>>3)<<11)|((g>>2)<<5)|(b>>3);
+      let best=lut[key];
+      if(best===0xffff){
+        let dist=Infinity,bestIndex=0;
+        for(let k=0;k<colors.length;k++){
+          const c=colors[k],dr=r-c[0],dg=g-c[1],db=b-c[2];
+          const d=dr*dr*0.9+dg*dg*1.4+db*db*0.9;
+          if(d<dist){dist=d;bestIndex=k;}
+        }
+        best=bestIndex;lut[key]=best;
+      }
+      out[j]=best;
+    }
+    return out;
+  };
+}
+
+// Parse GIF records, not arbitrary 0x2C compressed-data bytes, to verify
+// the exported file REALLY has the number of frames the UI promises.
+export function countGifFrames(data:Uint8Array):number{
+  if(data.length<14||String.fromCharCode(...data.subarray(0,6))!=='GIF89a')return 0;
+  let p=13,n=0;
+  const packed=data[10];
+  if(packed&0x80)p+=3*(1<<((packed&7)+1));
+  const skipSubBlocks=()=>{
+    while(p<data.length){
+      const size=data[p++];
+      if(!size)return;
+      p+=size;
+    }
+  };
+  while(p<data.length){
+    const id=data[p++];
+    if(id===0x3b)break;
+    if(id===0x21){p++;skipSubBlocks();continue;}
+    if(id===0x2c){
+      if(p+9>data.length)return 0;
+      const flags=data[p+8];p+=9;
+      if(flags&0x80)p+=3*(1<<((flags&7)+1));
+      p++;skipSubBlocks();n++;continue;
+    }
+    return 0;
+  }
+  return n;
+}
+
 export async function captureAnimation(
-  startingWorld:World,
-  s:SimSettings,
-  a:Appearance,
-  options:CaptureOptions,
-  onProgress:(progress:CaptureProgress)=>void,
-  signal:AbortSignal
+  startingWorld:World,s:SimSettings,a:Appearance,options:CaptureOptions,
+  onProgress:(progress:CaptureProgress)=>void,signal:AbortSignal
 ):Promise<CaptureResult>{
   const opt={...options,
     seconds:Math.min(600,Math.max(1,Number(options.seconds)||30)),
     fps:Math.min(30,Math.max(5,Number(options.fps)||10)),
     stepsPerSecond:Math.max(1,Math.min(120,Number(options.stepsPerSecond)||18))
   };
-  const source=opt.restart?createWorld(s):startingWorld;
-  const cursor=makeCursor(source,s,opt.fps,opt.stepsPerSecond);
+  const cursor=createCaptureCursor(opt.restart?createWorld(s):startingWorld,s,opt.fps,opt.stepsPerSecond);
   const [width,height]=recommendedDimensions(s,opt.resolution);
+  const totalFrames=Math.ceil(opt.seconds*opt.fps);
+  // Prevent mobile browser tab eviction on combinations likely to exhaust RAM.
+  if(opt.format==='gif'){
+    const budget=/iPhone|iPad|Android/i.test(navigator.userAgent)?110_000_000:350_000_000;
+    if(width*height*totalFrames>budget){
+      throw new Error('GIF is too big for reliable encoding on this device. Try 360/480p, fewer seconds or lower FPS; use video for long HD clips.');
+    }
+  }
   const canvas=document.createElement('canvas');
   canvas.width=width;canvas.height=height;
+  canvas.className='capture-preview-canvas';
+  const host=document.getElementById('capture-canvas-mount');
+  // Some WebKit capture implementations freeze detached/invisible canvases.
+  // Keep the recording surface attached and actually painted during capture.
+  if(host)host.appendChild(canvas);
   const ctx=canvas.getContext('2d',{willReadFrequently:opt.format==='gif'});
-  if(!ctx)throw new Error('Canvas drawing is not supported in this browser.');
-  const totalFrames=Math.ceil(opt.seconds*opt.fps);
-  const update=(phase:string,frame:number)=>{
-    onProgress({phase,frames:frame,seconds:frame/opt.fps,fraction:Math.min(1,frame/totalFrames)});
-  };
-
-  if(opt.format==='gif'){
-    // GIF's centisecond timing and 256-color limit make 10 fps / 480p
-    // a more reliable mobile default than enormous 4K/high-fps exports.
-    const encoder=GIFEncoder();
-    let frames=0,ended:CaptureResult['ended']='duration';
-    for(let i=0;i<totalFrames;i++){
-      assertNotCancelled(signal);
-      renderWorld(canvas,cursor.current,a,width);
-      const pixels=ctx.getImageData(0,0,width,height).data;
-      const palette=quantize(pixels,256,{format:'rgb565'});
-      const index=applyPalette(pixels,palette,'rgb565');
-      encoder.writeFrame(index,width,height,{
-        palette,delay:Math.round(1000/opt.fps),repeat:opt.mode==='settled'?-1:0
-      });
-      frames++;
-      const stable=cursor.advance();
-      if(opt.mode==='settled'&&stable){ended='settled';break;}
-      if(i===totalFrames-1&&opt.mode==='settled')ended='limit';
-      if(i%2===0){update('Encoding GIF',frames);await wait(0);}
-    }
-    assertNotCancelled(signal);
-    update('Finalizing GIF',frames);
-    encoder.finish();
-    const bytes=encoder.bytes();
-    const out=new Uint8Array(bytes.length);
-    out.set(bytes);
-    return {blob:new Blob([out.buffer],{type:'image/gif'}),extension:'gif',
-      frames,elapsed:frames/opt.fps,ended};
-  }
-
-  const mime=chooseVideoMime();
-  if(!mime)throw new Error('This browser does not support video capture. Try Chrome, Edge, or Safari on a newer device.');
-  if(typeof canvas.captureStream!=='function')throw new Error('Canvas video recording is unavailable here.');
-  renderWorld(canvas,cursor.current,a,width);
-  const stream=canvas.captureStream(opt.fps);
-  const chunks:Blob[]=[];
-  let recorder:MediaRecorder;
+  if(!ctx){canvas.remove();throw new Error('Canvas drawing unavailable.');}
+  const update=(phase:string,count:number)=>
+    onProgress({phase,frames:count,seconds:count/opt.fps,fraction:Math.min(1,count/totalFrames)});
+  let frames=0,distinctFrames=0,ended:CaptureResult['ended']='duration';
   try{
-    recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:
-      opt.resolution>=2160?16_000_000:opt.resolution>=1080?8_000_000:opt.resolution>=720?4_000_000:2_000_000});
-  }catch(e){
-    stream.getTracks().forEach(track=>track.stop());
-    throw new Error('Cannot start this video format or resolution on this device.');
-  }
-  let mediaError:Error|null=null;
-  const finished=new Promise<void>(resolve=>{
-    recorder.ondataavailable=event=>{if(event.data.size>0)chunks.push(event.data);};
-    recorder.onerror=()=>{mediaError=new Error('The browser video recorder reported an error.');};
-    recorder.onstop=()=>resolve();
-  });
-  let frames=0,ended:CaptureResult['ended']='duration';
-  try{
-    assertNotCancelled(signal);
-    recorder.start(2000);
-    const start=performance.now();
-    const frameLength=1000/opt.fps;
-    for(let i=0;i<totalFrames;i++){
-      assertNotCancelled(signal);
-      // Real-time canvas capture: MediaRecorder timestamps physical time.
-      // Don't freeze the UI by simulating a minute of video synchronously.
-      renderWorld(canvas,cursor.current,a,width);
-      frames++;
-      const stable=cursor.advance();
-      if(i%Math.max(1,Math.floor(opt.fps/3))===0)update('Recording video',frames);
-      if(opt.mode==='settled'&&stable){ended='settled';break;}
-      if(i===totalFrames-1&&opt.mode==='settled')ended='limit';
-      const nextTime=start+(i+1)*frameLength;
-      await wait(Math.max(0,nextTime-performance.now()));
+    if(opt.format==='gif'){
+      const gif=GIFEncoder();
+      let map:(pixels:Uint8ClampedArray)=>Uint8Array=()=>new Uint8Array();
+      for(let i=0;i<totalFrames;i++){
+        notCancelled(signal);
+        renderWorld(canvas,cursor.current,a,width,height);
+        const pixels=ctx.getImageData(0,0,width,height).data;
+        if(i===0){
+          const palette=quantize(pixels,256,{format:'rgb565'});
+          map=makePaletteIndex(palette);
+          gif.writeFrame(map(pixels),width,height,{
+            palette,delay:Math.round(1000/opt.fps),repeat:opt.mode==='settled'?-1:0
+          });
+        }else{
+          gif.writeFrame(map(pixels),width,height,{delay:Math.round(1000/opt.fps)});
+        }
+        frames++;
+        const transition=cursor.advance();
+        if(transition.changed)distinctFrames++;
+        if(opt.mode==='settled'&&transition.settled){ended='settled';break;}
+        if(i===totalFrames-1&&opt.mode==='settled')ended='limit';
+        // Yield to the browser on every frame so controls and progress remain responsive.
+        if(i%2===0)update('Encoding animated GIF',frames);
+        await delay(0);
+      }
+      notCancelled(signal);
+      update('Verifying GIF frames',frames);
+      gif.finish();
+      const bytes=gif.bytes();
+      const actual=countGifFrames(bytes);
+      if(actual!==frames)throw new Error('GIF contained '+actual+' frames, expected '+frames+'. Export was not saved.');
+      return {blob:new Blob([bytes.slice().buffer],{type:'image/gif'}),
+        extension:'gif',frames,distinctFrames,elapsed:frames/opt.fps,ended};
     }
-    // Let the MediaRecorder capture the final painted frame before stopping.
-    if(!signal.aborted)await wait(Math.ceil(1000/opt.fps));
+
+    const mime=chooseVideoMime();
+    if(!mime||typeof canvas.captureStream!=='function')
+      throw new Error('This browser cannot record canvas video. GIF export is available instead.');
+    // Let WebKit/Chromium see the canvas before capturing; do NOT resize it later.
+    renderWorld(canvas,cursor.current,a,width,height);
+    await nextPaint();
+    notCancelled(signal);
+    const stream=canvas.captureStream(opt.fps);
+    const track=stream.getVideoTracks()[0] as (MediaStreamTrack & {requestFrame?:()=>void})|undefined;
+    if(!track){stream.getTracks().forEach(t=>t.stop());throw new Error('No video track could be captured.');}
+    const chunks:Blob[]=[];
+    let recorder:MediaRecorder;
+    try{
+      recorder=new MediaRecorder(stream,{mimeType:mime,
+        videoBitsPerSecond:opt.resolution>=2160?16_000_000:
+          opt.resolution>=1080?8_000_000:opt.resolution>=720?4_000_000:2_000_000});
+    }catch{
+      stream.getTracks().forEach(t=>t.stop());
+      throw new Error('Video encoder could not start at this resolution. Try 480p or 720p.');
+    }
+    let recordingError:Error|null=null;
+    const finished=new Promise<void>(resolve=>{
+      recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+      recorder.onerror=()=>{recordingError=new Error('Video encoder reported an error.');};
+      recorder.onstop=()=>resolve();
+    });
+    try{
+      recorder.start(1000);
+      const begin=performance.now(),stepMillis=1000/opt.fps;
+      for(let i=0;i<totalFrames;i++){
+        notCancelled(signal);
+        renderWorld(canvas,cursor.current,a,width,height);
+        // An animation frame lets the compositor publish the new canvas pixels;
+        // optional requestFrame additionally nudges CanvasCaptureMediaStreamTrack.
+        await nextPaint();
+        if(track.requestFrame){
+          try{track.requestFrame();}catch{ /* Automatic stream capture still runs */ }
+        }
+        frames++;
+        const transition=cursor.advance();
+        if(transition.changed)distinctFrames++;
+        if(i%Math.max(1,Math.floor(opt.fps/3))===0)update('Recording video frames',frames);
+        if(opt.mode==='settled'&&transition.settled){ended='settled';break;}
+        if(i===totalFrames-1&&opt.mode==='settled')ended='limit';
+        await delay(Math.max(0,begin+(i+1)*stepMillis-performance.now()));
+      }
+      if(!signal.aborted)await delay(Math.ceil(1000/opt.fps));
+    }finally{
+      if(recorder.state!=='inactive')recorder.stop();
+      await finished;
+      stream.getTracks().forEach(t=>t.stop());
+    }
+    notCancelled(signal);
+    if(recordingError)throw recordingError;
+    const blob=new Blob(chunks,{type:mime.split(';')[0]});
+    if(blob.size<1000)throw new Error('Recorder produced an empty or nearly empty video. Try a smaller resolution.');
+    update('Video ready for preview',frames);
+    return {blob,extension:mime.includes('mp4')?'mp4':'webm',frames,
+      distinctFrames,elapsed:frames/opt.fps,ended};
   }finally{
-    if(recorder.state!=='inactive')recorder.stop();
-    await finished;
-    stream.getTracks().forEach(track=>track.stop());
+    canvas.remove();
   }
-  assertNotCancelled(signal);
-  if(mediaError)throw mediaError;
-  const blob=new Blob(chunks,{type:mime.split(';')[0]});
-  if(blob.size<100)throw new Error('The browser did not produce a playable video. Try a lower resolution.');
-  const extension=mime.includes('mp4')?'mp4':'webm';
-  update('Finalizing video',frames);
-  return {blob,extension,frames,elapsed:frames/opt.fps,ended};
 }
