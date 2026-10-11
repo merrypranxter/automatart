@@ -98,7 +98,7 @@ export const INITIAL_SETTINGS: SimSettings = {
   engine: 'cyclic', lifeRule:'conway', cellCount:96, aspect:'square',
   seed:82641, density:0.36, wrap:true, pattern:'noise',
   neighborShape:'moore',lattice:'square',
-  orientedMask:17,orientedSymmetry:'rotations',orientedMatch:'exact',
+  orientedMask:34,orientedSymmetry:'rotations',orientedMatch:'exact',
   orientedSurviveMin:2,orientedSurviveMax:3,
   customBirth:[3],customSurvive:[2,3],trailDecay:0.89,
   cyclicStates:12,cyclicThreshold:2,wolframRule:30,

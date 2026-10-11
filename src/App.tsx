@@ -217,8 +217,9 @@ export default function App(){
       s.orientedMask=Math.max(1,Math.min(255,Math.floor(Number(s.orientedMask)||34)));
       if(!['fixed','rotations','dihedral'].includes(s.orientedSymmetry))s.orientedSymmetry='rotations';
       if(!['exact','contains'].includes(s.orientedMatch))s.orientedMatch='exact';
-      s.orientedSurviveMin=Math.max(0,Math.min(8,Math.floor(Number(s.orientedSurviveMin)??2)));
-      s.orientedSurviveMax=Math.max(s.orientedSurviveMin,Math.min(8,Math.floor(Number(s.orientedSurviveMax)??3)));
+      const survMin=Number(s.orientedSurviveMin),survMax=Number(s.orientedSurviveMax);
+      s.orientedSurviveMin=Number.isFinite(survMin)?Math.max(0,Math.min(8,Math.floor(survMin))):2;
+      s.orientedSurviveMax=Number.isFinite(survMax)?Math.max(s.orientedSurviveMin,Math.min(8,Math.floor(survMax))):3;
       if(!Number.isFinite(s.density)||s.density<0||s.density>1)throw new Error('Invalid density');
       if(!Number.isFinite(s.seed))throw new Error('Invalid seed');
       s.seed=s.seed>>>0;s.cyclicStates=Math.max(3,Math.min(24,Math.floor(s.cyclicStates)||12));
