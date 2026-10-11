@@ -21,6 +21,8 @@ jobs:
         run: node scripts/z3-topology-smoke.mjs
       - name: Verify shared palette library
         run: node scripts/palette-smoke.mjs
+      - name: Verify portable palette JSON exchange
+        run: node --experimental-strip-types scripts/palette-exchange-smoke.mjs
       - name: Install headless canvas and GIF decoder for export smoke test
         run: npm install --no-save --no-audit --no-fund @napi-rs/canvas gifuct-js
       - name: Encode and decode a truly animated GIF
