@@ -63,14 +63,14 @@ function drawFieldSkin(
   }
   lctx.putImageData(img,0,0);
   const strength=clamp(a.glowStrength??0.8);
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(low,0,0,outW,outH);
   if(strength>0){
     ctx.save();
-    ctx.globalCompositeOperation='screen';ctx.globalAlpha=strength*0.55;
+    ctx.globalCompositeOperation='screen';ctx.globalAlpha=strength*0.45;
     ctx.filter='blur(15px) saturate(1.4)';
     ctx.drawImage(low,0,0,outW,outH);ctx.restore();
   }
-  ctx.imageSmoothingEnabled=true;
-  ctx.drawImage(low,0,0,outW,outH);
 }
 
 function drawContours(

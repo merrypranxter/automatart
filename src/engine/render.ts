@@ -97,17 +97,18 @@ export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,ou
   ctx.fillStyle='#090617';ctx.fillRect(0,0,outW,outH);
   ctx.imageSmoothingEnabled=a.skin!=='pixels';
   ctx.imageSmoothingQuality='high';
-  if(a.skin==='glow'&&(a.glowStrength??0.8)>0){
-    ctx.save();
-    ctx.globalCompositeOperation='screen';
-    ctx.globalAlpha=clamp(a.glowStrength??0.8,0,1);
-    ctx.filter='blur('+Math.round(6+15*(a.glowStrength??0.8))+'px) saturate(1.75)';
-    ctx.drawImage(low,0,0,outW,outH);
-    ctx.restore();
-    ctx.imageSmoothingEnabled=true;
-  }
   if(!renderSpecialSkin(ctx,low,world,a,palette,outW,outH)){
     ctx.drawImage(low,0,0,outW,outH);
+    // The bloom must be composited AFTER the opaque base frame; otherwise the
+    // second base draw hides the blur completely.
+    if(a.skin==='glow'&&(a.glowStrength??0.8)>0){
+      ctx.save();
+      ctx.globalCompositeOperation='screen';
+      ctx.globalAlpha=clamp(a.glowStrength??0.8,0,1)*0.75;
+      ctx.filter='blur('+Math.round(6+15*(a.glowStrength??0.8))+'px) saturate(1.75)';
+      ctx.drawImage(low,0,0,outW,outH);
+      ctx.restore();
+    }
   }
   if(a.showGrid){
     const dx=outW/w,dy=outH/h,stride=Math.ceil(Math.max(w,h)/175);
