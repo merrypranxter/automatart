@@ -5,7 +5,7 @@ export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'custom';
 export type PatternId = 'noise' | 'center' | 'rings' | 'stripes' | 'checker' | 'spiral' | 'web';
 export type AspectId = 'square' | 'portrait' | 'landscape';
 export type ColorBy = 'state' | 'age' | 'neighbors' | 'events' | 'radius' | 'x' | 'activity';
-export type SkinId = 'pixels' | 'soft' | 'glow';
+export type SkinId = 'pixels' | 'soft' | 'glow' | 'contours' | 'mercury' | 'relief' | 'glass';
 export type NeighborShape = 'moore' | 'vonNeumann';
 
 export interface SimSettings {
@@ -53,6 +53,13 @@ export interface Appearance {
   contrast: number;
   brightness: number;
   glowStrength: number;
+  skinThreshold: number;
+  contourLines: number;
+  contourWidth: number;
+  chromeStrength: number;
+  glassLines: number;
+  temporalRGB: number;
+  fossilOpacity: number;
 }
 export interface World {
   engine: EngineId;
@@ -64,6 +71,10 @@ export interface World {
   neighbors: Uint8Array;
   events: Uint8Array;
   traces: Float32Array;
+  // Stored for visualization only; these never influence next cell states.
+  previousCells?: Uint8Array;
+  olderCells?: Uint8Array;
+  fossils?: Float32Array;
 }
 
 export const PALETTE_LIBRARY = paletteLibrary.palettes;
@@ -86,7 +97,9 @@ export const INITIAL_APPEARANCE: Appearance = {
   palette:[...PALETTES['RADIOACTIVE CANDY']],
   colorBy:'state',skin:'glow',showGrid:false,trails:true,
   paletteOffset:0,paletteCycle:0,paletteReverse:false,smoothPalette:false,
-  saturation:1,contrast:1,brightness:1,glowStrength:0.8
+  saturation:1,contrast:1,brightness:1,glowStrength:0.8,
+  skinThreshold:0.42,contourLines:5,contourWidth:1.5,
+  chromeStrength:0.8,glassLines:0.7,temporalRGB:0,fossilOpacity:0
 };
 export const LIFE_RULES: Record<LifeRule,{birth:number[];survive:number[];label:string}> = {
   conway:{birth:[3],survive:[2,3],label:'Conway · B3/S23'},

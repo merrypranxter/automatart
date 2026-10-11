@@ -52,6 +52,21 @@ try{
   await page.locator('#species-count').fill('4');
   await page.locator('#species-brush').selectOption('2');
   await page.locator('#engine').selectOption('cyclic');
+  await page.locator('.transport .primary').click(); // pause for deterministic skin comparison
+  const skinImages=[];
+  for(const skin of ['pixels','soft','glow','contours','mercury','relief','glass']){
+    await page.locator('#skin').selectOption(skin);
+    await page.waitForTimeout(60);
+    skinImages.push(await page.locator('.canvas-wrap canvas').evaluate(c=>c.toDataURL('image/png')));
+  }
+  assert.equal(new Set(skinImages).size,7,'Every visual skin must look different in the actual canvas');
+  await page.locator('#skin').selectOption('mercury');
+  assert(await page.locator('#skin-threshold').isVisible(),'Liquid density control appears');
+  assert(await page.locator('#chrome-strength').isVisible(),'Chrome reflection control appears');
+  assert(await page.locator('#temporal-rgb').isVisible(),'RGB time ghost control appears');
+  assert(await page.locator('#fossil-opacity').isVisible(),'Cell fossil control appears');
+  await page.locator('#temporal-rgb').focus();
+  await page.locator('#temporal-rgb').press('End'); // capture visible time ghosts too
   await page.locator('#duration-preset').selectOption('custom');
   await page.locator('#custom-seconds').fill('1');
   await page.locator('#export-fps').selectOption('5');
@@ -94,7 +109,7 @@ try{
   await page.locator('.stage-capture-success .dismiss-export').click();
   assert.equal(await page.locator('.stage-capture-success').count(),0,'X dismisses sticky export banner');
   assert.equal(await page.locator('.finished-export').count(),0,'X also removes finished preview from controls');
-  console.log('PASS: original 12-stop palette, 8 mode controls, and dismissible export panels');
+  console.log('PASS: original 12-stop palette, 8 modes, 7 distinct skins, and dismissible export panels');
 }finally{
   await browser?.close();
   server.kill('SIGTERM');

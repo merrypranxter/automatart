@@ -3,7 +3,7 @@
 A zero-subscription, browser-based **cellular automata art instrument**. Not just Life with a palette: the long-term design connects cell states and mathematical events to colors, visual treatments, and eventually other rules through a Rule-to-Art Patchbay.
 
 ## Status
-**Phases 0–1, chroma controls, Z1 Mutant Zoo and early recorder shipped:** responsive app foundation, eight simulation families, live painting, colorful rendering, PNG stills, JSON recipes, browser-local GIF export and MP4/WebM video recording. Expanded patch cables, APNG and loop-hunting are future phases.
+**Phases 0–1, chroma controls, Z1 Mutant Zoo, Z2 Skin Machine and early recorder shipped:** responsive app foundation, eight simulation families, live painting, colorful rendering, PNG stills, JSON recipes, browser-local GIF export and MP4/WebM video recording. Expanded patch cables, APNG and loop-hunting are future phases.
 
 ## Getting started
 ```bash
@@ -66,3 +66,11 @@ Original art/code project by merrypranxter.
 - iPhone does not auto-trigger the download: tap **SAVE / SHARE** in the sticky status area or Recorder when complete.
 - Initial mobile-friendly GIF defaults are 10 seconds, 360p, and 10 FPS; users can still select longer/larger exports.
 - The app yields two browser paint frames before initiating recording so the progress surface and recorder canvas are ready.
+
+## Z2 Skin Machine (2026-10-11)
+- **7 render skins:** pixel, smooth, phosphor glow, *Topological Lace* (marching-squares contour isolines), *Mercury Flesh* (smoothed density membrane), *Metallic Relief* (slope-dependent illumination), *Living Stained Glass* (cell state transition boundaries).
+- **History overlays on any skin:** Temporal RGB maps current, previous and earlier generations to separate channels; chromatic fossil strength decays from death/change events. Added history typed arrays are simulation metadata only and **never** influence transition rules.
+- **Controls:** threshold, line count/thickness, metallic highlights, pane-leading strength, time ghost strength, fossil visibility, and material glow. Same render function is called by live preview, PNG, GIF and video exporter.
+- **Browser/performance:** contours sample a capped density grid to limit draw work on phones. High resolution export still costs CPU/memory. GPU rendering and true 3D materials remain future work.
+- **Recorder clone:** new history arrays are copied when recording an already-running world. Older JSON recipes load with migration defaults.
+- **Quality gates:** automated pure sim/history/render pixel comparison, GIF encode/decode, and production browser test with all skins.

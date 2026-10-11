@@ -3,6 +3,7 @@ import type { ChangeEvent, PointerEvent } from 'react';
 import { createWorld, paintWorld, stepWorld } from './engine/sim';
 import { renderWorld } from './engine/render';
 import MutantControls from './components/MutantControls';
+import SkinControls from './components/SkinControls';
 import {
   captureAnimation, chooseVideoMime, recommendedDimensions, CaptureCancelled
 } from './engine/capture';
@@ -229,13 +230,23 @@ export default function App(){
       const a:Appearance={...INITIAL_APPEARANCE,...data.appearance};
       if(!Array.isArray(a.palette)||a.palette.length<2||a.palette.length>32||a.palette.some(v=>typeof v!=='string'||!/^#[0-9a-f]{6}$/i.test(v)))throw new Error('Invalid palette');
       if(!['state','age','neighbors','events','radius','x','activity'].includes(a.colorBy))throw new Error('Invalid color mapping');
-      if(!['pixels','soft','glow'].includes(a.skin))throw new Error('Invalid skin');
+      if(!['pixels','soft','glow','contours','mercury','relief','glass'].includes(a.skin))throw new Error('Invalid skin');
       a.paletteOffset=Math.min(31,Math.max(-31,Number(a.paletteOffset)||0));
       a.paletteCycle=Math.min(1,Math.max(-1,Number(a.paletteCycle)||0));
       a.saturation=Math.min(3,Math.max(0,Number(a.saturation)??1));
       a.contrast=Math.min(3,Math.max(0.2,Number(a.contrast)||1));
       a.brightness=Math.min(2.5,Math.max(0.15,Number(a.brightness)||1));
       a.glowStrength=Math.min(1,Math.max(0,Number(a.glowStrength)??0.8));
+      const numeric=(value:unknown,min:number,max:number,fallback:number)=>{
+        const n=Number(value);return Number.isFinite(n)?Math.max(min,Math.min(max,n)):fallback;
+      };
+      a.skinThreshold=numeric(a.skinThreshold,0.05,0.95,0.42);
+      a.contourLines=Math.round(numeric(a.contourLines,2,9,5));
+      a.contourWidth=numeric(a.contourWidth,0.5,6,1.5);
+      a.chromeStrength=numeric(a.chromeStrength,0,1.5,0.8);
+      a.glassLines=numeric(a.glassLines,0,1,0.7);
+      a.temporalRGB=numeric(a.temporalRGB,0,1,0);
+      a.fossilOpacity=numeric(a.fossilOpacity,0,1,0);
       a.paletteReverse=!!a.paletteReverse;
       a.smoothPalette=!!a.smoothPalette;
       setSettings(s);setAppearance(a);setResetNumber(n=>n+1);
@@ -368,7 +379,7 @@ export default function App(){
           </div>}
         </section>
         <section className="rack" aria-label="Simulation controls">
-          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>MUTANT ZOO / Z1</span></div>
+          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>SKIN MACHINE / Z2</span></div>
           <section className="module">
             <div className="module-heading"><span className="module-num">01</span><h2>WORLD MACHINE</h2><span className="module-symbol">◎</span></div>
             <label className="input-label" htmlFor="aspect">Canvas geometry</label>
@@ -509,12 +520,19 @@ export default function App(){
               <option value="pixels">CRISP / PIXELATED</option>
               <option value="soft">SOFT / LIQUID</option>
               <option value="glow">PHOSPHOR / GLOW</option>
+              <optgroup label="Z2 · ADVANCED VISUAL SKINS">
+                <option value="contours">TOPOLOGICAL LACE · ISOLINES</option>
+                <option value="mercury">MERCURY FLESH · LIQUID MEMBRANE</option>
+                <option value="relief">METALLIC RELIEF · CHROME</option>
+                <option value="glass">LIVING STAINED GLASS</option>
+              </optgroup>
             </select>
             {appearance.skin==='glow'&&<>
               <label className="input-label" htmlFor="glow-strength">Fluorescent bloom <em>{Math.round(appearance.glowStrength*100)}%</em></label>
               <input id="glow-strength" type="range" min="0" max="1" step=".05" value={appearance.glowStrength}
                 onChange={e=>updateAppearance('glowStrength',Number(e.target.value))}/>
             </>}
+            <SkinControls appearance={appearance} setAppearance={setAppearance}/>
             {settings.engine!=='cyclic'&&<>
               <label className="input-label" htmlFor="trail-persistence">Cell afterimage persistence <em>{Math.round(settings.trailDecay*100)}%</em></label>
               <input id="trail-persistence" type="range" min=".65" max=".99" step=".01" value={settings.trailDecay}

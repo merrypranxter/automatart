@@ -23,6 +23,8 @@ jobs:
         run: npm install --no-save --no-audit --no-fund @napi-rs/canvas gifuct-js
       - name: Encode and decode a truly animated GIF
         run: node scripts/recording-smoke.mjs
+      - name: Verify mathematical skins and history overlays
+        run: node scripts/skin-smoke.mjs
 
       - name: Install Chromium and browser automation for recorder UI test
         run: |

@@ -91,3 +91,16 @@ input[type=range]{width:100%;margin:4px 0 7px;accent-color:#f62eb8;cursor:pointe
 .mutant-controls .mutant-range{display:flex;flex-direction:column;gap:2px}
 .mutant-controls .range-hint{color:#b5a1d7;font:500 11px/1.35 'Chakra Petch',monospace}
 .mutant-controls .custom-rule-editor{margin:0}
+
+/* Z2 — visual-only mathematical skins */
+.skin-laboratory{border:1px solid #37bbdc88;background:linear-gradient(165deg,#091f39e8,#211334);padding:15px 12px;border-radius:10px;margin:10px 0;display:flex;flex-direction:column;gap:8px}
+.skin-label{font:700 13px 'Chakra Petch',monospace;color:#2feff2;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;border-bottom:1px solid #54b7d833;padding-bottom:10px}
+.skin-label span{font-size:9px;color:#e2ef51;letter-spacing:0}
+.skin-control{display:flex;flex-direction:column;gap:2px}
+.skin-control .input-label{margin-top:4px}
+.skin-control .input-label em{color:#f3e83e}
+.skin-effects{display:flex;flex-direction:column;gap:5px;background:#0d142599;padding:11px;border:1px dashed #654e99;border-radius:8px}
+.skin-effects strong{font:700 11px 'Chakra Petch',monospace;color:#fd67c3;letter-spacing:1px}
+.skin-description{font:500 11px/1.5 'Chakra Petch',monospace;color:#bdadd8;margin:0 0 5px}
+.skin-laboratory .reset-color{margin-top:4px}
+@media(max-width:450px){.skin-laboratory{padding:10px 8px}.skin-label{font-size:12px}}

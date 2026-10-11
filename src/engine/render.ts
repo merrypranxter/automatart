@@ -1,4 +1,5 @@
 import type { Appearance, World } from './types';
+import { renderSpecialSkin } from './skins';
 
 const bg:[number,number,number]=[9,6,23];
 const backBuffers=new WeakMap<HTMLCanvasElement,HTMLCanvasElement>();
@@ -39,8 +40,10 @@ export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,ou
   const brightness=clamp(a.brightness??1,0.15,2.5);
   for(let i=0;i<world.cells.length;i++){
     const state=world.cells[i],trace=world.traces[i],k=i*4;
+    const fossil=world.fossils?.[i]??0;
     const visible=world.engine==='cyclic'||state!==0||
-      ((a.trails&&trace>0.025)||(a.colorBy==='events'&&world.events[i]!==0));
+      ((a.trails&&trace>0.025)||(a.colorBy==='events'&&world.events[i]!==0)||
+      ((a.fossilOpacity??0)>0&&fossil>0.02));
     if(!visible){pixels[k]=bg[0];pixels[k+1]=bg[1];pixels[k+2]=bg[2];pixels[k+3]=255;continue;}
     const x=i%w,y=Math.floor(i/w);
     let index=0;
@@ -69,7 +72,24 @@ export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,ou
     for(let j=0;j<3;j++){
       const vivid=gray+(raw[j]-gray)*saturation;
       const processed=((vivid-127.5)*contrast+127.5)*brightness;
-      pixels[k+j]=Math.round(clamp(bg[j]+(processed-bg[j])*intensity,0,255));
+      let value=clamp(bg[j]+(processed-bg[j])*intensity,0,255);
+      // History deposits tint into empty places only; never participates in
+      // the automaton's transition rules.
+      if((a.fossilOpacity??0)>0&&fossil>0.02){
+        const fossilColor=palette[(Math.floor(i/w+i%w+world.generation/9)+palette.length*100)%palette.length];
+        const alpha=Math.min(0.84,(a.fossilOpacity??0)*fossil)*0.9;
+        value=value*(1-alpha)+fossilColor[j]*alpha;
+      }
+      if((a.temporalRGB??0)>0){
+        const current=world.engine==='cyclic'?((state%7)+1)/8:(state>0?1:0);
+        const previous=world.previousCells?.[i]??state;
+        const older=world.olderCells?.[i]??previous;
+        const signal=(v:number)=>world.engine==='cyclic'?((v%7)+1)/8:(v>0?1:0);
+        const channel=j===0?current:j===1?signal(previous):signal(older);
+        const alpha=clamp(a.temporalRGB??0,0,1);
+        value=value*(1-alpha)+(15+240*channel)*alpha;
+      }
+      pixels[k+j]=Math.round(clamp(value,0,255));
     }
     pixels[k+3]=255;
   }
@@ -86,7 +106,9 @@ export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,ou
     ctx.restore();
     ctx.imageSmoothingEnabled=true;
   }
-  ctx.drawImage(low,0,0,outW,outH);
+  if(!renderSpecialSkin(ctx,low,world,a,palette,outW,outH)){
+    ctx.drawImage(low,0,0,outW,outH);
+  }
   if(a.showGrid){
     const dx=outW/w,dy=outH/h,stride=Math.ceil(Math.max(w,h)/175);
     ctx.save();ctx.strokeStyle='rgba(255,255,255,0.16)';

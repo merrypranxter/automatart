@@ -42,7 +42,8 @@ export function createWorld(s:SimSettings):World{
     if(cells[p]>0||s.engine==='cyclic'){ages[p]=1;traces[p]=1;}
   }
   return {engine:s.engine,width,height,generation:0,cells,ages,
-    neighbors:new Uint8Array(n),events:new Uint8Array(n),traces};
+    neighbors:new Uint8Array(n),events:new Uint8Array(n),traces,
+    previousCells:cells.slice(),olderCells:cells.slice(),fossils:new Float32Array(n)};
 }
 
 function valueAt(cells:Uint8Array,w:number,h:number,x:number,y:number,wrap:boolean):number{
@@ -55,6 +56,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
   const {width:w,height:h,cells,ages,traces}=prev,n=w*h;
   const next=new Uint8Array(n),nextAges=new Uint16Array(n);
   const neighbors=new Uint8Array(n),events=new Uint8Array(n),nextTraces=new Float32Array(n);
+  const nextFossils=new Float32Array(n);
   if(s.engine==='wolfram'){
     // History scrolls one row upward. New state comes from the previous bottom row.
     next.set(cells.subarray(w),0);
@@ -140,9 +142,17 @@ export function stepWorld(prev:World,s:SimSettings):World{
     else if(old!==0&&now===0)events[i]=2;
     else if(old!==now)events[i]=3;
     nextTraces[i]=s.engine==='cyclic'?1:Math.max(now>0?1:0,traces[i]*(s.trailDecay??0.89));
+    // Rendering archive: death (or cyclic state transition) leaves a fading
+    // fossil. This information never enters the cellular transition rules.
+    const deposit=s.engine==='cyclic'?(old!==now?0.8:0)
+      :(old!==0&&now===0?1:old!==now?0.12:0);
+    nextFossils[i]=Math.max(deposit,(prev.fossils?.[i]??0)*0.986);
   }
   return {engine:s.engine,width:w,height:h,generation:prev.generation+1,
-    cells:next,ages:nextAges,neighbors,events,traces:nextTraces};
+    cells:next,ages:nextAges,neighbors,events,traces:nextTraces,
+    previousCells:cells.slice(),
+    olderCells:prev.previousCells?.slice()??cells.slice(),
+    fossils:nextFossils};
 }
 export function paintWorld(world:World,s:SimSettings,x:number,y:number,radius:number,erase=false,species=1):void{
   for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){
@@ -155,5 +165,6 @@ export function paintWorld(world:World,s:SimSettings,x:number,y:number,radius:nu
     world.ages[p]=erase?0:1;
     world.traces[p]=erase?0:1;
     world.events[p]=erase?2:1;
+    if(world.fossils)world.fossils[p]=erase?1:0;
   }
 }

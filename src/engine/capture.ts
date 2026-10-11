@@ -47,7 +47,9 @@ export function recommendedDimensions(s:SimSettings,size:ExportResolution):[numb
 export function cloneWorld(w:World):World{
   return {engine:w.engine,width:w.width,height:w.height,generation:w.generation,
     cells:w.cells.slice(),ages:w.ages.slice(),neighbors:w.neighbors.slice(),
-    events:w.events.slice(),traces:w.traces.slice()};
+    events:w.events.slice(),traces:w.traces.slice(),
+    previousCells:w.previousCells?.slice(),olderCells:w.olderCells?.slice(),
+    fossils:w.fossils?.slice()};
 }
 export function equalCells(a:Uint8Array,b:Uint8Array):boolean{
   if(a.length!==b.length)return false;

@@ -22,10 +22,10 @@ Four families: Life-like, Brian's Brain, cyclic, Wolfram 1D. World, painting, re
 - Each engine gets visible active controls, painting, correct seed behavior, recipes, color mappings, recorder compatibility.
 - Engine-specific deterministic tests + preservation of existing GIF browser smoke. Cap large-neighborhood radius on mobile.
 
-### Z2 — THE SKIN MACHINE (NEXT)
-- Three genuinely separate **VISUAL** surfaces: contour isolines of a local state-density field, smooth metaball threshold surface, raised relief with normals. Morphological and metallic shaders may need GPU rendering.
-- Temporal RGB ghosting (previous states), chromatic fossils (death-activity accumulation), simulated stained glass. Rendering must not feed back into CA, until user chooses hybrid coupling.
-- Visual knobs: contour count/thickness, thresholds, glow material, texture amount, spectral split, history decay.
+### Z2 — THE SKIN MACHINE (IMPLEMENTED: v1; future polish remains possible)
+- Shipped four distinct **VISUAL** skins: contour isolines of a smoothed cell-density field, density-thresholded mercury membrane, slope-lit relief, and stained-glass cell-state boundaries. Later GPU shaders and full physically-based materials remain possible.
+- Shipped temporal RGB ghosting (two past-state snapshots) and chromatic fossils (decaying death/change accumulation). Rendering never feeds back into CA.
+- Shipped contour count/thickness, density thresholds, glow, chrome highlights, glass leading, temporal RGB and fossil intensity; further material texture and history decay tuning remain possible.
 - Output parity for PNG, GIF, video and no black alpha matte; bounded history memory.
 
 ### Z3 — STRANGE LATTICES
