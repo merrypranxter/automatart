@@ -26,11 +26,7 @@ export function createWorld(s:SimSettings):World{
     if(s.pattern==='checker')chance=((Math.floor(x/5)+Math.floor(y/5))%2===0)?s.density*1.9:s.density*0.08;
     if(s.pattern==='spiral')chance=Math.sin(r*62+Math.atan2(dy,dx)*8)>0.4?s.density*2:s.density*0.05;
     if(s.pattern==='web')chance=Math.sin((x-cx)*0.36)*Math.sin((y-cy)*0.36)>0.25?s.density*1.9:s.density*0.08;
-    if(s.engine==='margolus'){
-    // The 2x2 block rotation is a bijection for every partition. Alternating
-    // its staggered partitions yields a reversible, deterministic block CA.
-    next.set(rotateBlocks(cells,w,h,(prev.generation%2) as 0|1));
-  }else if(s.engine==='wolfram'){
+    if(s.engine==='wolfram'){
       if(y!==height-1)continue;
       cells[p]=s.pattern==='center'?(x===Math.floor(cx)?1:0):(rand()<chance?1:0);
     }else if(s.engine==='cyclic'){
@@ -62,7 +58,10 @@ export function stepWorld(prev:World,s:SimSettings):World{
   const next=new Uint8Array(n),nextAges=new Uint16Array(n);
   const neighbors=new Uint8Array(n),events=new Uint8Array(n),nextTraces=new Float32Array(n);
   const nextFossils=new Float32Array(n);
-  if(s.engine==='wolfram'){
+  if(s.engine==='margolus'){
+    // Staggered 2x2 partitions and an invertible local clockwise permutation.
+    next.set(rotateBlocks(cells,w,h,(prev.generation%2) as 0|1));
+  }else if(s.engine==='wolfram'){
     // History scrolls one row upward. New state comes from the previous bottom row.
     next.set(cells.subarray(w),0);
     const row=(h-1)*w;
