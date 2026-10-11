@@ -63,6 +63,7 @@ export default function App(){
   const [exportFps,setExportFps]=useState(10);
   const [restartCapture,setRestartCapture]=useState(false);
   const [capturing,setCapturing]=useState(false);
+  const [lastExport,setLastExport]=useState<{name:string;blob:Blob}|null>(null);
   const [captureProgress,setCaptureProgress]=useState<CaptureProgress|null>(null);
   const controllerRef=useRef<AbortController|null>(null);
   const recordingRef=useRef(false);
@@ -180,8 +181,23 @@ export default function App(){
       setMessage('Could not load recipe: '+(err instanceof Error?err.message:'Unknown error'));
     }
   }
+  async function saveLastExport(){
+    if(!lastExport)return;
+    const file=new File([lastExport.blob],lastExport.name,{type:lastExport.blob.type});
+    if(typeof navigator.share==='function'&&typeof navigator.canShare==='function'
+      &&navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({files:[file],title:'Automatart animation'});
+        return;
+      }catch(error){
+        if(error instanceof DOMException&&error.name==='AbortError')return;
+      }
+    }
+    download(lastExport.name,lastExport.blob);
+  }
   async function startCapture(){
     if(recordingRef.current)return;
+    setLastExport(null);
     recordingRef.current=true;
     const controller=new AbortController();
     controllerRef.current=controller;
@@ -198,8 +214,10 @@ export default function App(){
       },setCaptureProgress,controller.signal);
       const label=result.ended==='settled'?'settled naturally':
         result.ended==='limit'?'reached the 10-minute safety limit':'complete';
-      download('automatart-'+settings.engine+'-'+(restartCapture?'seed'+settings.seed:'gen'+generation)+'-'+Math.round(result.elapsed)+'s.'+result.extension,result.blob);
-      setMessage('Export '+label+': '+result.extension.toUpperCase()+' · '+result.frames+' frames. File download started.');
+      const name='automatart-'+settings.engine+'-'+(restartCapture?'seed'+settings.seed:'gen'+generation)+'-'+Math.round(result.elapsed)+'s.'+result.extension;
+      setLastExport({name,blob:result.blob});
+      download(name,result.blob);
+      setMessage('Export '+label+': '+result.extension.toUpperCase()+' · '+result.frames+' frames. Use SAVE / SHARE below if the automatic download was blocked.');
     }catch(error){
       if(error instanceof CaptureCancelled||controller.signal.aborted){
         setMessage('Recording cancelled. Your live universe is unharmed.');
@@ -429,6 +447,10 @@ export default function App(){
                   onClick={startCapture}>{capturing?'● RECORDING':'● RECORD '+captureFormat.toUpperCase()}</button>
                 {capturing&&<button className="cancel-button" onClick={()=>controllerRef.current?.abort()}>✕ CANCEL</button>}
               </div>
+              {lastExport&&!capturing&&<div className="finished-export" role="status">
+                <div><b>✓ EXPORT READY</b><span>{lastExport.name}</span></div>
+                <button onClick={saveLastExport}>⇩ SAVE / SHARE TO FILES</button>
+              </div>}
               <p className="module-note">
                 Video is recorded in real time and may save as MP4 or WebM depending on your browser.
                 GIF is rendered frame by frame. Recording copies your current universe without changing the live one.
