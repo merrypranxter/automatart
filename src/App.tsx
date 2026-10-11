@@ -9,10 +9,10 @@ import type {
   CaptureFormat, CaptureProgress, DurationMode, ExportResolution
 } from './engine/capture';
 import {
-  INITIAL_APPEARANCE, INITIAL_SETTINGS, LIFE_RULES, PALETTES
+  INITIAL_APPEARANCE, INITIAL_SETTINGS, LIFE_RULES, PALETTES, MOIRE_PALETTE_NAMES, AUTOMATART_PALETTE_NAMES
 } from './engine/types';
 import type {
-  Appearance, AspectId, ColorBy, EngineId, LifeRule, PatternId, SimSettings, SkinId, World
+  Appearance, AspectId, ColorBy, EngineId, LifeRule, NeighborShape, PatternId, SimSettings, SkinId, World
 } from './engine/types';
 
 const ENGINES: {id:EngineId;name:string;hint:string}[] = [
@@ -30,7 +30,10 @@ const PATTERNS: {value:PatternId;name:string}[]=[
   {value:'noise',name:'Random soup'},
   {value:'center',name:'Center infection'},
   {value:'rings',name:'Concentric rings'},
-  {value:'stripes',name:'Diagonal stripes'}
+  {value:'stripes',name:'Diagonal stripes'},
+  {value:'checker',name:'Checkerboard spores'},
+  {value:'spiral',name:'Spiral arms'},
+  {value:'web',name:'Alien lattice web'}
 ];
 
 function download(name:string, content:Blob | string):void{
@@ -78,15 +81,29 @@ export default function App(){
     setSettings(s=>({...s,[key]:value}));
   const updateAppearance=<K extends keyof Appearance>(key:K,value:Appearance[K])=>
     setAppearance(a=>({...a,[key]:value}));
+  const toggleCustomRule=(kind:'customBirth'|'customSurvive',number:number)=>{
+    setSettings(s=>({...s,lifeRule:'custom',
+      [kind]:s[kind].includes(number)?s[kind].filter(v=>v!==number):[...s[kind],number].sort((a,b)=>a-b)}));
+  };
+  const mutateColors=()=>{
+    const names=Object.keys(PALETTES);
+    const pick=PALETTES[names[Math.floor(Math.random()*names.length)]];
+    setAppearance(a=>({...a,palette:[...pick],paletteOffset:Math.floor(Math.random()*pick.length),
+      paletteCycle:Math.random()<0.6?0:(Math.random()*0.35+0.03),
+      paletteReverse:Math.random()<0.5}));
+  };
   const draw=useCallback(()=>{
     if(canvasRef.current)renderWorld(canvasRef.current,worldRef.current,appearance,900);
   },[appearance]);
 
+  // Recreate only when initial-world geometry/seed changes.
+  // Rule, color and trail adjustments now affect the running simulation.
   useEffect(()=>{
     worldRef.current=createWorld(settings);
     setGeneration(0);
     setPopulation(stat(worldRef.current));
-  },[settings,resetNumber]);
+  },[settings.engine,settings.cellCount,settings.aspect,settings.seed,
+      settings.pattern,settings.density,settings.cyclicStates,resetNumber]);
   useEffect(()=>{draw();},[draw,settings,resetNumber]);
 
   useEffect(()=>{
@@ -167,7 +184,7 @@ export default function App(){
       const s:SimSettings={...INITIAL_SETTINGS,...data.settings};
       if(!ENGINES.some(v=>v.id===s.engine))throw new Error('Unknown engine');
       if(!['square','portrait','landscape'].includes(s.aspect))throw new Error('Invalid aspect');
-      if(!['noise','center','rings','stripes'].includes(s.pattern))throw new Error('Invalid seed pattern');
+      if(!['noise','center','rings','stripes','checker','spiral','web'].includes(s.pattern))throw new Error('Invalid seed pattern');
       if(!Object.hasOwn(LIFE_RULES,s.lifeRule))throw new Error('Invalid life rule');
       if(!Number.isInteger(s.cellCount)||s.cellCount<32||s.cellCount>256)throw new Error('Invalid grid size');
       if(!Number.isFinite(s.density)||s.density<0||s.density>1)throw new Error('Invalid density');
@@ -175,10 +192,24 @@ export default function App(){
       s.seed=s.seed>>>0;s.cyclicStates=Math.max(3,Math.min(24,Math.floor(s.cyclicStates)||12));
       s.cyclicThreshold=Math.max(1,Math.min(8,Math.floor(s.cyclicThreshold)||2));
       s.wolframRule=Math.max(0,Math.min(255,Math.floor(s.wolframRule)||30));
+      if(!['moore','vonNeumann'].includes(s.neighborShape))s.neighborShape='moore';
+      for(const k of ['customBirth','customSurvive'] as const){
+        if(!Array.isArray(s[k]))s[k]=k==='customBirth'?[3]:[2,3];
+        s[k]=[...new Set(s[k].filter((n:unknown)=>Number.isInteger(n)&&Number(n)>=0&&Number(n)<=8))].sort((a,b)=>a-b);
+      }
+      s.trailDecay=Math.min(0.99,Math.max(0.65,Number(s.trailDecay)||0.89));
       const a:Appearance={...INITIAL_APPEARANCE,...data.appearance};
-      if(!Array.isArray(a.palette)||a.palette.length!==6||a.palette.some(v=>typeof v!=='string'||!/^#[0-9a-f]{6}$/i.test(v)))throw new Error('Invalid palette');
-      if(!['state','age','neighbors','events'].includes(a.colorBy))throw new Error('Invalid color mapping');
+      if(!Array.isArray(a.palette)||a.palette.length<2||a.palette.length>32||a.palette.some(v=>typeof v!=='string'||!/^#[0-9a-f]{6}$/i.test(v)))throw new Error('Invalid palette');
+      if(!['state','age','neighbors','events','radius','x','activity'].includes(a.colorBy))throw new Error('Invalid color mapping');
       if(!['pixels','soft','glow'].includes(a.skin))throw new Error('Invalid skin');
+      a.paletteOffset=Math.min(31,Math.max(-31,Number(a.paletteOffset)||0));
+      a.paletteCycle=Math.min(1,Math.max(-1,Number(a.paletteCycle)||0));
+      a.saturation=Math.min(3,Math.max(0,Number(a.saturation)??1));
+      a.contrast=Math.min(3,Math.max(0.2,Number(a.contrast)||1));
+      a.brightness=Math.min(2.5,Math.max(0.15,Number(a.brightness)||1));
+      a.glowStrength=Math.min(1,Math.max(0,Number(a.glowStrength)??0.8));
+      a.paletteReverse=!!a.paletteReverse;
+      a.smoothPalette=!!a.smoothPalette;
       setSettings(s);setAppearance(a);setResetNumber(n=>n+1);
       setMessage('Recipe loaded. Exact seed restored.');
     }catch(err){
@@ -309,7 +340,7 @@ export default function App(){
           </div>}
         </section>
         <section className="rack" aria-label="Simulation controls">
-          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>PHASE 1 BUILD</span></div>
+          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>CHROMA LAB / PHASE 2</span></div>
           <section className="module">
             <div className="module-heading"><span className="module-num">01</span><h2>WORLD MACHINE</h2><span className="module-symbol">◎</span></div>
             <label className="input-label" htmlFor="aspect">Canvas geometry</label>
@@ -334,11 +365,29 @@ export default function App(){
             <select id="engine" value={settings.engine} onChange={e=>updateSetting('engine',e.target.value as EngineId)}>
               {ENGINES.map(x=><option key={x.id} value={x.id}>{x.name} — {x.hint}</option>)}
             </select>
+            {settings.engine!=='wolfram'&&<>
+              <label className="input-label" htmlFor="neighbor-shape">Neighborhood geometry</label>
+              <select id="neighbor-shape" value={settings.neighborShape}
+                onChange={e=>updateSetting('neighborShape',e.target.value as NeighborShape)}>
+                <option value="moore">Moore / 8 surrounding cells</option>
+                <option value="vonNeumann">Von Neumann / 4 orthogonal cells</option>
+              </select>
+            </>}
             {settings.engine==='life'&&<>
               <label className="input-label" htmlFor="life">Birth / survival</label>
               <select id="life" value={settings.lifeRule} onChange={e=>updateSetting('lifeRule',e.target.value as LifeRule)}>
                 {Object.entries(LIFE_RULES).map(([id,r])=><option key={id} value={id}>{r.label}</option>)}
               </select>
+              {settings.lifeRule==='custom'&&<div className="custom-rule-editor">
+                <p>Choose how many neighbors cause birth or survival. Changes apply live.</p>
+                {(['customBirth','customSurvive'] as const).map(kind=><div key={kind}>
+                  <b>{kind==='customBirth'?'BIRTH · B':'SURVIVE · S'}{settings[kind].join('')}</b>
+                  <div className="rule-bits">{Array.from({length:9},(_,i)=><button type="button" key={i}
+                    aria-pressed={settings[kind].includes(i)} className={settings[kind].includes(i)?'active':''}
+                    onClick={()=>toggleCustomRule(kind,i)}>{i}</button>)}</div>
+                </div>)}
+                <span>B/S rules use the neighborhood geometry selected above.</span>
+              </div>}
             </>}
             {settings.engine==='brians'&&<p className="module-note">Three-state Brain: OFF → FIRING → REFRACTORY → OFF. Exactly two firing neighbors cause ignition.</p>}
             {settings.engine==='cyclic'&&<>
@@ -373,13 +422,25 @@ export default function App(){
               <option value="age">Cell age → palette</option>
               <option value="neighbors">Neighbor count → palette</option>
               <option value="events">Birth / death / change → palette</option>
+              <option value="radius">Distance from center → rainbow rings</option>
+              <option value="x">Horizontal position → chromatic bands</option>
+              <option value="activity">Age + neighbors + events → mixed signal</option>
             </select>
             <label className="input-label" htmlFor="palette">Load a color universe</label>
-            <select id="palette" value={Object.keys(PALETTES).find(k=>PALETTES[k].every((c,i)=>c.toLowerCase()===appearance.palette[i]?.toLowerCase()))||'CUSTOM'}
+            <select id="palette" value={Object.keys(PALETTES).find(k=>PALETTES[k].length===appearance.palette.length&&PALETTES[k].every((c,i)=>c.toLowerCase()===appearance.palette[i]?.toLowerCase()))||'CUSTOM'}
               onChange={e=>{if(PALETTES[e.target.value])updateAppearance('palette',[...PALETTES[e.target.value]]);}}>
-              {Object.keys(PALETTES).map(k=><option key={k} value={k}>{k}</option>)}
+              <optgroup label="IT'S A MOIRÉ · 26 ORIGINAL 12-COLOR PALETTES">
+                {MOIRE_PALETTE_NAMES.map(k=><option key={k} value={k}>{k}</option>)}
+              </optgroup>
+              <optgroup label="AUTOMATART · 5 ORIGINAL PALETTES">
+                {AUTOMATART_PALETTE_NAMES.map(k=><option key={k} value={k}>{k}</option>)}
+              </optgroup>
               <option value="CUSTOM">CUSTOM MIX</option>
             </select>
+            <div className="palette-summary">
+              <span>{MOIRE_PALETTE_NAMES.length+AUTOMATART_PALETTE_NAMES.length} PALETTES · {appearance.palette.length} COLOR STOPS</span>
+              <button type="button" onClick={mutateColors}>✳ RANDOM PALETTE</button>
+            </div>
             <div className="color-wells">
               {appearance.palette.map((c,i)=><label key={i} title={'Edit color '+(i+1)}>
                 <input aria-label={'Edit palette color '+(i+1)} type="color" value={c}
@@ -387,7 +448,30 @@ export default function App(){
                 <span>{String(i+1).padStart(2,'0')}</span>
               </label>)}
             </div>
-            <p className="module-note">These are actual state/event-driven color mappings, not a filter slapped over a recording. More patch cables and rule-controlled colors arrive in Phase 2.</p>
+            <div className="advanced-color-controls">
+              <h3>CHROMATIC MISBEHAVIOR</h3>
+              <label className="input-label" htmlFor="palette-offset">Palette offset <em>{appearance.paletteOffset.toFixed(1)}</em></label>
+              <input id="palette-offset" type="range" min="-12" max="12" step=".25" value={appearance.paletteOffset}
+                onChange={e=>updateAppearance('paletteOffset',Number(e.target.value))}/>
+              <label className="input-label" htmlFor="palette-cycle">Palette cycling per generation <em>{appearance.paletteCycle.toFixed(2)} stops</em></label>
+              <input id="palette-cycle" type="range" min="-1" max="1" step=".02" value={appearance.paletteCycle}
+                onChange={e=>updateAppearance('paletteCycle',Number(e.target.value))}/>
+              <label className="toggle"><input type="checkbox" checked={appearance.paletteReverse}
+                onChange={e=>updateAppearance('paletteReverse',e.target.checked)}/><span>Reverse color direction</span></label>
+              <label className="toggle"><input type="checkbox" checked={appearance.smoothPalette}
+                onChange={e=>updateAppearance('smoothPalette',e.target.checked)}/><span>Smoothly blend color stops</span></label>
+              <label className="input-label" htmlFor="color-saturation">Saturation <em>{Math.round(appearance.saturation*100)}%</em></label>
+              <input id="color-saturation" type="range" min="0" max="3" step=".05" value={appearance.saturation}
+                onChange={e=>updateAppearance('saturation',Number(e.target.value))}/>
+              <label className="input-label" htmlFor="color-contrast">Contrast <em>{appearance.contrast.toFixed(2)}×</em></label>
+              <input id="color-contrast" type="range" min=".2" max="3" step=".05" value={appearance.contrast}
+                onChange={e=>updateAppearance('contrast',Number(e.target.value))}/>
+              <label className="input-label" htmlFor="color-brightness">Brightness <em>{appearance.brightness.toFixed(2)}×</em></label>
+              <input id="color-brightness" type="range" min=".15" max="2.5" step=".05" value={appearance.brightness}
+                onChange={e=>updateAppearance('brightness',Number(e.target.value))}/>
+              <button className="reset-color" onClick={()=>setAppearance(a=>({...a,paletteOffset:0,paletteCycle:0,paletteReverse:false,smoothPalette:false,saturation:1,contrast:1,brightness:1}))}>↺ RESET COLOR MODIFIERS</button>
+            </div>
+            <p className="module-note">All 26 original It's a Moiré 12-stop palettes are intact. Cycle colors through generations, reverse their order, or route cell activity and position into the same color system. These controls apply to GIF and video exports too.</p>
           </section>
           <section className="module">
             <div className="module-heading"><span className="module-num">04</span><h2>SKIN + HARVEST</h2><span className="module-symbol">◈</span></div>
@@ -397,6 +481,16 @@ export default function App(){
               <option value="soft">SOFT / LIQUID</option>
               <option value="glow">PHOSPHOR / GLOW</option>
             </select>
+            {appearance.skin==='glow'&&<>
+              <label className="input-label" htmlFor="glow-strength">Fluorescent bloom <em>{Math.round(appearance.glowStrength*100)}%</em></label>
+              <input id="glow-strength" type="range" min="0" max="1" step=".05" value={appearance.glowStrength}
+                onChange={e=>updateAppearance('glowStrength',Number(e.target.value))}/>
+            </>}
+            {settings.engine!=='cyclic'&&<>
+              <label className="input-label" htmlFor="trail-persistence">Cell afterimage persistence <em>{Math.round(settings.trailDecay*100)}%</em></label>
+              <input id="trail-persistence" type="range" min=".65" max=".99" step=".01" value={settings.trailDecay}
+                onChange={e=>updateSetting('trailDecay',Number(e.target.value))}/>
+            </>
             <label className="toggle"><input type="checkbox" checked={appearance.showGrid} onChange={e=>updateAppearance('showGrid',e.target.checked)}/><span>Show mathematical grid</span></label>
             <label className="toggle"><input type="checkbox" checked={appearance.trails} onChange={e=>updateAppearance('trails',e.target.checked)}/><span>Show cell afterimages</span></label>
             <div className="export-grid">

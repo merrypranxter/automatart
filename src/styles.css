@@ -65,3 +65,22 @@ input[type=range]{width:100%;margin:4px 0 7px;accent-color:#f62eb8;cursor:pointe
 .dismiss-export{margin-left:auto!important;flex:0 0 auto!important;min-width:34px;min-height:34px;border-radius:8px;background:#1e1528!important;color:#fff!important;border:1px solid #ffffff75!important;font:700 24px/1 system-ui,sans-serif!important;cursor:pointer}
 .dismiss-export:hover{background:#623251!important}
 .finished-export-top{display:flex!important;flex-direction:row!important;justify-content:space-between;align-items:center;gap:8px}
+
+/* Phase 2A: shareable color vault, expanded controls, programmable rules. */
+.palette-summary{display:flex;align-items:center;justify-content:space-between;gap:7px;flex-wrap:wrap;margin:5px 0 2px}
+.palette-summary span{color:#19e5dc;font:700 10px 'Chakra Petch',monospace;letter-spacing:.5px}
+.palette-summary button,.reset-color{border:1px solid #d7e936;border-radius:7px;background:#332e19;color:#eaff5b;font:700 10px 'Chakra Petch',monospace;padding:10px 12px;min-height:38px}
+.palette-summary button:hover,.reset-color:hover{background:#4e471c}
+.advanced-color-controls{display:flex;flex-direction:column;gap:7px;border:1px solid #41698a;background:linear-gradient(160deg,#0b2033b8,#1d1539);padding:12px;border-radius:9px;margin-top:11px}
+.advanced-color-controls h3{font:700 14px 'Chakra Petch',monospace;letter-spacing:1px;color:#36eff1;margin:0 0 2px}
+.advanced-color-controls .toggle{padding:3px 0}
+.advanced-color-controls .reset-color{margin-top:7px}
+.custom-rule-editor{display:flex;flex-direction:column;gap:12px;background:#0f1927a8;border:1px solid #68778a;padding:11px;border-radius:9px;margin-top:9px}
+.custom-rule-editor p,.custom-rule-editor span{font:500 11px/1.5 'Chakra Petch',monospace;color:#b9a8ce;margin:0}
+.custom-rule-editor>div{display:flex;flex-direction:column;gap:7px}
+.custom-rule-editor b{font:700 12px 'Chakra Petch',monospace;color:#2cf2e8}
+.rule-bits{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:4px}
+.rule-bits button{padding:0;min-width:0;height:33px;border-radius:5px;border:1px solid #675a7d;background:#241a37;color:#c0accf;font:700 12px 'Chakra Petch',monospace}
+.rule-bits button.active{border-color:#f8e72e;background:#eaff1e;color:#1a0d28}
+.rule-bits button:hover{border-color:#2fedeb}
+@media(max-width:450px){.color-wells{gap:5px}.color-wells input[type=color]{height:39px}.advanced-color-controls{padding:9px}.rule-bits{gap:3px}.rule-bits button{height:30px}}

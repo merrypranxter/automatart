@@ -28,6 +28,9 @@ export function createWorld(s: SimSettings): World {
     if(s.pattern==='center') chance = r < 0.16 ? s.density*1.7 : 0;
     if(s.pattern==='rings') chance = Math.sin(r*85)>0.55 ? s.density*1.8 : s.density*0.05;
     if(s.pattern==='stripes') chance = ((x+y*0.19)%17)<7 ? s.density*1.7 : s.density*0.04;
+    if(s.pattern==='checker') chance = ((Math.floor(x/5)+Math.floor(y/5))%2===0) ? s.density*1.9:s.density*0.08;
+    if(s.pattern==='spiral') chance = Math.sin(r*62+Math.atan2(dy,dx)*8)>0.4 ? s.density*2:s.density*0.05;
+    if(s.pattern==='web') chance = (Math.sin((x-cx)*0.36)*Math.sin((y-cy)*0.36)>0.25) ? s.density*1.9:s.density*0.08;
     if(s.engine === 'wolfram') {
       if (y !== height-1) continue;
       cells[p]=s.pattern==='center' ? (x===Math.floor(cx)?1:0) : (rand()<chance?1:0);
@@ -65,13 +68,16 @@ export function stepWorld(prev:World,s:SimSettings):World {
       next[(h-1)*w+x]=(s.wolframRule>>bit)&1;
     }
   } else {
-    const life=LIFE_RULES[s.lifeRule];
+    const life=s.lifeRule==='custom'
+      ? {birth:s.customBirth??[3],survive:s.customSurvive??[2,3]}
+      : LIFE_RULES[s.lifeRule];
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
       const p=y*w+x, old=cells[p];
       let count=0;
       const sought=s.engine==='cyclic' ? (old+1)%s.cyclicStates : 1;
       for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){
         if(ox===0&&oy===0)continue;
+        if(s.neighborShape==='vonNeumann'&&Math.abs(ox)+Math.abs(oy)!==1)continue;
         const v=valueAt(cells,w,h,x+ox,y+oy,s.wrap);
         if(s.engine==='cyclic' ? v===sought : v===1)count++;
       }
@@ -94,7 +100,7 @@ export function stepWorld(prev:World,s:SimSettings):World {
     }else if(old===0&&now!==0)events[i]=1;
     else if(old!==0&&now===0)events[i]=2;
     else if(old!==now)events[i]=3;
-    nextTraces[i]=s.engine==='cyclic'?1:Math.max(now>0?1:0,traces[i]*0.89);
+    nextTraces[i]=s.engine==='cyclic'?1:Math.max(now>0?1:0,traces[i]*(s.trailDecay??0.89));
   }
   return {engine:s.engine,width:w,height:h,generation:prev.generation+1,
     cells:next,ages:nextAges,neighbors,events,traces:nextTraces};
