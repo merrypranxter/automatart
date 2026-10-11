@@ -82,3 +82,10 @@ Original art/code project by merrypranxter.
 - **Real geometric rendering:** hex/triangle polygons project the existing seven skins and all palettes onto their genuine lattice cells; canvas tap/paint uses the same cell geometry projection.
 - **Export parity:** recording clones lattice/history metadata. GIF/video/still export use the same shape projection as playback. Large mobile render costs remain bounded; 9:16/1:1/16:9 canvas can stretch the visible polygon aspect for the requested art format, but local adjacency stays mathematically exact.
 - **Validated:** symmetric neighbor graphs, actual birth counts, oriented symmetry, 12-tick forward-and-inverse block evolution, geometric tapping, deterministic replay, and a real-browser hex GIF test.
+
+## Recorder reliability / dismissible UI fix (2026-10-11)
+- The old mobile GIF preflight estimate multiplied width × height × requested frames and treated all raw pixel work as retained memory, rejecting valid 720p/30-second exports before they began.
+- GIF rendering still processes one frame at a time, with compression off the main thread. The worker now measures **actual encoded GIF bytes** every six frames and, if it reaches a device-aware output limit (96 MiB on mobile, 256 MiB elsewhere), finishes and saves the partial GIF with an explicit size-limit message. Arbitrarily huge GIFs may still be constrained by device memory.
+- Every persistent UI notice has a labeled **✕**: sticky export errors, inline export errors, large GIF advice, unavailable video support, static-animation warning, finished exports, and transient status messages. Shared recorder errors dismiss together; status toasts auto-dismiss after seven seconds.
+- Recording restores live play/pause state after finishing, cancellation, or failure.
+- Browser smoke test checks 720p/30s actually starts encoding, verifies the large-GIF advisory and both failure alerts dismiss, then encodes/decodes an actual short GIF.

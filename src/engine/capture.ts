@@ -27,7 +27,7 @@ export interface CaptureResult {
   extension: 'gif' | 'mp4' | 'webm';
   frames: number;
   elapsed: number;
-  ended: 'duration' | 'settled' | 'limit';
+  ended: 'duration' | 'settled' | 'limit' | 'size-limit';
   distinctFrames: number;
 }
 
@@ -152,7 +152,7 @@ export function countGifFrames(data:Uint8Array):number{
   return n;
 }
 
-interface EncoderReply { type:'ready'|'frame-done'|'done'|'error'; message?:string; buffer?:ArrayBuffer; frames?:number }
+interface EncoderReply { type:'ready'|'frame-done'|'done'|'error'; message?:string; buffer?:ArrayBuffer; frames?:number; encodedBytes?:number; sizeLimitHit?:boolean }
 function roundTrip(worker:Worker,payload:object,transfer:Transferable[],signal:AbortSignal):Promise<EncoderReply>{
   return new Promise((resolve,reject)=>{
     if(signal.aborted){reject(new CaptureCancelled());return;}
@@ -195,13 +195,12 @@ export async function captureAnimation(
   const cursor=createCaptureCursor(opt.restart?createWorld(s):startingWorld,s,opt.fps,opt.stepsPerSecond);
   const [width,height]=recommendedDimensions(s,opt.resolution);
   const totalFrames=Math.ceil(opt.seconds*opt.fps);
-  // Prevent mobile browser tab eviction on combinations likely to exhaust RAM.
-  const budget=/iPhone|iPad|Android/i.test(navigator.userAgent)?110_000_000:350_000_000;
-  if(opt.format==='gif'){
-    if(opt.mode==='fixed'&&width*height*totalFrames>budget){
-      throw new Error('GIF is too big for reliable encoding on this device. Try 360/480p, fewer seconds or lower FPS; use video for long HD clips.');
-    }
-  }
+  // Do NOT reject an export on width × height × frame count: this is raw
+  // pixel work, NOT compressed GIF bytes. The Worker processes one frame at a
+  // time and measures the ACTUAL output size. Stop gracefully with a usable
+  // partial recording if the encoded file approaches a mobile memory limit.
+  const maxGifBytes=/iPhone|iPad|Android/i.test(navigator.userAgent)
+    ?96*1024*1024:256*1024*1024;
   const canvas=document.createElement('canvas');
   canvas.width=width;canvas.height=height;
   canvas.className='capture-preview-canvas';
@@ -216,7 +215,7 @@ export async function captureAnimation(
   let frames=0,distinctFrames=0,ended:CaptureResult['ended']='duration';
   try{
     if(opt.format==='gif'){
-      const frameLimit=Math.min(totalFrames,Math.max(1,Math.floor(budget/(width*height))));
+      const frameLimit=totalFrames;
       const useWorker=typeof Worker!=='undefined'&&typeof window!=='undefined';
       const worker=useWorker ? new Worker(new URL('./gif.worker.ts',import.meta.url),{type:'module'}) : null;
       const gif=worker?null:GIFEncoder();
@@ -224,14 +223,16 @@ export async function captureAnimation(
       try{
         if(worker){
           update('Starting GIF encoder…',0);
-          await roundTrip(worker,{type:'init',width,height,fps:opt.fps,repeat:opt.mode==='settled'?-1:0},[],signal);
+          await roundTrip(worker,{type:'init',width,height,fps:opt.fps,repeat:opt.mode==='settled'?-1:0,maxBytes:maxGifBytes},[],signal);
         }
         for(let i=0;i<frameLimit;i++){
           notCancelled(signal);
           renderWorld(canvas,cursor.current,a,width,height);
           const pixels=ctx.getImageData(0,0,width,height).data;
+          let reachedSizeLimit=false;
           if(worker){
-            await roundTrip(worker,{type:'frame',rgba:pixels.buffer},[pixels.buffer as ArrayBuffer],signal);
+            const response=await roundTrip(worker,{type:'frame',rgba:pixels.buffer},[pixels.buffer as ArrayBuffer],signal);
+            reachedSizeLimit=!!response.sizeLimitHit;
           }else if(gif){
             if(i===0){
               const colors=quantize(pixels,256,{format:'rgb565'});
@@ -240,11 +241,13 @@ export async function captureAnimation(
                 palette:colors,delay:Math.round(1000/opt.fps),repeat:opt.mode==='settled'?-1:0
               });
             }else gif.writeFrame(map(pixels),width,height,{delay:Math.round(1000/opt.fps)});
+            if(i%6===5)reachedSizeLimit=gif.bytes().byteLength>=maxGifBytes;
           }
           frames++;
           const transition=cursor.advance();
           if(transition.changed)distinctFrames++;
-          update('Encoding animated GIF',frames);
+          update(reachedSizeLimit?'Finishing at compressed GIF size limit':'Encoding animated GIF',frames);
+          if(reachedSizeLimit){ended='size-limit';break;}
           if(opt.mode==='settled'&&transition.settled){ended='settled';break;}
           if(i===frameLimit-1&&opt.mode==='settled')ended='limit';
           if(!worker)await delay(0);

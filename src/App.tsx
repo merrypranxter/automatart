@@ -69,7 +69,7 @@ export default function App(){
   const [generation,setGeneration]=useState(0);
   const [population,setPopulation]=useState(0);
   const [resetNumber,setResetNumber]=useState(0);
-  const [message,setMessage]=useState('Paint the canvas, scramble the rules, and watch the mathematics get weird.');
+  const [message,setMessage]=useState('');
   const [captureFormat,setCaptureFormat]=useState<CaptureFormat>('gif');
   const [durationMode,setDurationMode]=useState<DurationMode>('fixed');
   const [durationPreset,setDurationPreset]=useState('10');
@@ -81,6 +81,18 @@ export default function App(){
   const [lastExport,setLastExport]=useState<{name:string;blob:Blob;url:string;frames:number;distinctFrames:number;elapsed:number;extension:string}|null>(null);
   const [captureProgress,setCaptureProgress]=useState<CaptureProgress|null>(null);
   const [captureError,setCaptureError]=useState<string|null>(null);
+  const [hiddenWarnings,setHiddenWarnings]=useState<string[]>([]);
+  const [hideStaticWarning,setHideStaticWarning]=useState(false);
+  const hideWarning=(key:string)=>setHiddenWarnings(v=>v.includes(key)?v:[...v,key]);
+  const dismissFailure=()=>{
+    setCaptureError(null);
+    setMessage(v=>v.startsWith('Export failed:')?'':v);
+  };
+  useEffect(()=>{
+    if(!message)return;
+    const timeout=window.setTimeout(()=>setMessage(''),7000);
+    return ()=>window.clearTimeout(timeout);
+  },[message]);
   const controllerRef=useRef<AbortController|null>(null);
   const recordingRef=useRef(false);
   useEffect(()=>()=>{if(lastExport)URL.revokeObjectURL(lastExport.url);},[lastExport]);
@@ -328,8 +340,10 @@ export default function App(){
   }
   async function startCapture(){
     if(recordingRef.current)return;
+    const resumeAfter=playing;
     setLastExport(null);
     setCaptureError(null);
+    setHideStaticWarning(false);
     recordingRef.current=true;
     const controller=new AbortController();
     controllerRef.current=controller;
@@ -350,7 +364,8 @@ export default function App(){
         fps:exportFps,resolution,restart:restartCapture,stepsPerSecond:speed
       },setCaptureProgress,controller.signal);
       const label=result.ended==='settled'?'settled naturally':
-        result.ended==='limit'?'reached the 10-minute safety limit':'complete';
+        result.ended==='size-limit'?'stopped at the real compressed GIF size limit (partial animation saved)':
+        result.ended==='limit'?'reached the duration safety limit':'complete';
       const name='automatart-'+settings.engine+'-'+(restartCapture?'seed'+settings.seed:'gen'+generation)+'-'+Math.round(result.elapsed)+'s.'+result.extension;
       setLastExport({name,blob:result.blob,url:URL.createObjectURL(result.blob),frames:result.frames,distinctFrames:result.distinctFrames,elapsed:result.elapsed,extension:result.extension});
       if(!/iPad|iPhone|iPod/i.test(navigator.userAgent))download(name,result.blob);
@@ -368,12 +383,16 @@ export default function App(){
       recordingRef.current=false;
       setCapturing(false);
       setCaptureProgress(null);
+      // Restore user's play state after completion, cancellation or error.
+      setPlaying(resumeAfter);
     }
   }
   const activeEngine=ENGINES.find(e=>e.id===settings.engine);
   const outputSize=recommendedDimensions(settings,resolution);
   const videoSupported=typeof window!=='undefined'&&chooseVideoMime()!==null;
   const predictedFrames=(durationMode==='settled'?600:durationPreset==='custom'?customSeconds:Number(durationPreset))*exportFps;
+  const largeGifWarningKey='gif:'+durationMode+':'+durationPreset+':'+customSeconds+':'+resolution+':'+exportFps;
+  const largeGif=(captureFormat==='gif'&&(predictedFrames>250||resolution>=720&&predictedFrames>80));
   const densityLabel=Math.round(settings.density*100)+'%';
   return (
     <div className="app-shell">
@@ -420,6 +439,7 @@ export default function App(){
             <b>EXPORT FAILED</b>
             <span>{captureError}</span>
             <button onClick={jumpToRecorder}>BACK TO RECORDER ↓</button>
+            <button type="button" className="dismiss-export" aria-label="Close export failed notification" onClick={dismissFailure}>×</button>
           </div>}
           {!capturing&&lastExport&&<div className="stage-capture-success" role="status">
             <div className="stage-success-top"><b>✓ ANIMATION READY</b><span>{lastExport.frames} frames · {lastExport.elapsed.toFixed(1)} sec</span>
@@ -681,17 +701,26 @@ export default function App(){
                 onChange={e=>setRestartCapture(e.target.checked)}/>
                 <span>Restart from original seed before recording</span>
               </label>
-              {captureFormat==='gif'&&predictedFrames>250&&
-                <p className="capture-warning">⚠ {Math.ceil(predictedFrames)} frames at this resolution can make a very large GIF. Start with 480p / 10 FPS; especially on iPhone.</p>}
-              {captureFormat==='video'&&!videoSupported&&
-                <p className="capture-warning">This browser has not reported a supported video encoder. GIF recording should still work.</p>}
+              {largeGif&&!hiddenWarnings.includes(largeGifWarningKey)&&
+                <div className="capture-warning dismissable-notice" role="note">
+                  <span>⚠ {Math.ceil(predictedFrames)} frames at {outputSize[0]} × {outputSize[1]} may make a large GIF. We'll attempt the export and measure actual compressed bytes; if the file reaches the device safety limit, the finished partial animation will still be saved.</span>
+                  <button type="button" className="dismiss-export" aria-label="Dismiss large GIF advisory" onClick={()=>hideWarning(largeGifWarningKey)}>×</button>
+                </div>}
+              {captureFormat==='video'&&!videoSupported&&!hiddenWarnings.includes('video-unsupported')&&
+                <div className="capture-warning dismissable-notice" role="note">
+                  <span>This browser has not reported a supported video encoder. GIF recording should still work.</span>
+                  <button type="button" className="dismiss-export" aria-label="Dismiss video encoder warning" onClick={()=>hideWarning('video-unsupported')}>×</button>
+                </div>}
               <div id="capture-canvas-mount" className={capturing?'capture-live':'capture-live capture-hidden'} aria-label="Live export preview" />
               {capturing&&captureProgress&&<div className="capture-progress" role="status">
                 <div><b>{captureProgress.phase}</b><span>{Math.floor(captureProgress.seconds)}s · {captureProgress.frames} frames</span></div>
                 <progress max="1" value={captureProgress.fraction}/>
                 <p>Keep this tab open while recording. Video exports run in real time.</p>
               </div>}
-              {captureError&&!capturing&&<p className="capture-warning" role="alert">EXPORT FAILED: {captureError}</p>}
+              {captureError&&!capturing&&<div className="capture-warning dismissable-notice" role="alert">
+                <span>EXPORT FAILED: {captureError}</span>
+                <button type="button" className="dismiss-export" aria-label="Close recorder error" onClick={dismissFailure}>×</button>
+              </div>}
               <div className="capture-buttons">
                 <button className="record-button" disabled={capturing||(captureFormat==='video'&&!videoSupported)}
                   onClick={startCapture}>{capturing?'● RECORDING':'● RECORD '+captureFormat.toUpperCase()}</button>
@@ -709,14 +738,14 @@ export default function App(){
                     <img src={lastExport.url} alt="Preview of exported animated GIF" />:
                     <video src={lastExport.url} controls autoPlay muted loop playsInline preload="metadata" />}
                 </div>
-                {lastExport.distinctFrames===0&&<p className="capture-warning">
-                  The mathematical state didn't change during recording, so every frame shows the same picture.
-                  Try NEW SEED, a different automaton, or restart from the original seed.
-                </p>}
+                {lastExport.distinctFrames===0&&!hideStaticWarning&&<div className="capture-warning dismissable-notice">
+                  <span>The mathematical state didn't change during recording, so every frame shows the same picture. Try NEW SEED, a different automaton, or restart from the original seed.</span>
+                  <button type="button" className="dismiss-export" aria-label="Dismiss static animation warning" onClick={()=>setHideStaticWarning(true)}>×</button>
+                </div>}
                 <button onClick={saveLastExport}>⇩ SAVE / SHARE TO FILES</button>
               </div>}
               <p className="module-note">
-                GIF encoding runs on a separate worker thread so the app can show progress and cancel. For first exports, try 360p at 10 FPS for 10 seconds.
+                GIF encoding runs on a separate worker thread with actual compressed-byte size monitoring. Long GIFs are attempted instead of being rejected by a raw-pixel estimate; very large exports may finish early with a clearly labeled partial animation.
                 Video is recorded in real time and may save as MP4 or WebM depending on your browser.
                 GIF is rendered frame by frame. Recording copies your current universe without changing the live one.
                 Larger/longer recordings need more memory. Video contains no audio.
@@ -736,7 +765,10 @@ export default function App(){
           <footer className="footer">AUTOMATART / CHAOS WITH A REPRODUCIBLE SEED · <a href="https://github.com/merrypranxter/automatart" target="_blank" rel="noreferrer">GITHUB ↗</a></footer>
         </section>
       </main>
-      <div aria-live="polite" className="status-msg">{message}</div>
+      {message&&<div role="status" aria-live="polite" className="status-msg">
+        <span>{message}</span>
+        <button type="button" className="dismiss-export" aria-label="Dismiss status message" onClick={()=>setMessage('')}>×</button>
+      </div>}
     </div>
   );
 }

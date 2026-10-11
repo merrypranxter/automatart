@@ -121,3 +121,14 @@ input[type=range]{width:100%;margin:4px 0 7px;accent-color:#f62eb8;cursor:pointe
 .rewind-button{padding:12px;border:1px solid #d4ff31;background:#dfff2a;border-radius:7px;color:#152210;font:700 12px 'Chakra Petch',monospace}
 .rewind-button:disabled{opacity:.4;cursor:not-allowed}
 @media(max-width:450px){.strange-rule{padding:10px}.direction-grid button,.direction-center{height:38px}}
+
+/* Dismissible notices: persistent alerts never imprison the preview on mobile. */
+.dismissable-notice{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.dismissable-notice>span{flex:1;min-width:0;overflow-wrap:anywhere}
+.dismissable-notice>.dismiss-export{min-width:30px!important;min-height:30px!important;width:30px;height:30px;padding:0!important;font-size:22px!important}
+.stage-capture-error{display:flex;align-items:center;gap:8px}
+.stage-capture-error>.dismiss-export{margin-left:auto!important}
+.status-msg{pointer-events:auto;display:flex;align-items:center;gap:10px;text-align:left;border-radius:12px}
+.status-msg>span{flex:1;min-width:0;overflow-wrap:anywhere}
+.status-msg>.dismiss-export{width:30px;height:30px;min-width:30px!important;min-height:30px!important;padding:0!important;font-size:20px!important}
+@media(max-width:450px){.stage-capture-error{gap:6px}.stage-capture-error>.dismiss-export{min-width:30px!important;min-height:30px!important;width:30px;height:30px;padding:0!important}}

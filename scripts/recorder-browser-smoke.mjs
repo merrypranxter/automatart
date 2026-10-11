@@ -31,6 +31,42 @@ try{
     };
   });
   await page.goto(url,{waitUntil:'networkidle'});
+  await page.locator('.transport .surprise').click();
+  await page.locator('.status-msg').waitFor({state:'visible'});
+  await page.getByRole('button',{name:'Dismiss status message'}).click();
+  assert.equal(await page.locator('.status-msg').count(),0,'Status toast has a working X');
+
+  // Regression: 720p / 30s / 10 FPS was rejected immediately by the old
+  // width*height*frames budget despite the Worker encoding sequentially.
+  await page.locator('#export-resolution').selectOption('720');
+  await page.locator('#duration-preset').selectOption('30');
+  const advisory=page.locator('.capture-warning').filter({hasText:'300 frames'});
+  assert(await advisory.isVisible(),'Large recording gets an advisory, not a preflight failure');
+  await page.getByRole('button',{name:'Dismiss large GIF advisory'}).click();
+  assert.equal(await advisory.count(),0,'Large GIF advisory can be dismissed');
+  await page.locator('.record-button').click();
+  await page.waitForFunction(()=>Number(document.querySelector('.stage-capture-head span')?.textContent?.match(/^\d+/)?.[0]||0)>=1,{},{timeout:45000});
+  assert.equal(await page.locator('.stage-capture-error').count(),0,'720p / 30s must begin encoding');
+  await page.locator('.stage-capture-foot button').click();
+  await page.locator('.stage-capture-state').waitFor({state:'hidden',timeout:10000});
+  assert.equal(await page.locator('.stage-capture-error').count(),0,'Cancellation is not an export error');
+
+  // Force a Worker initialization error to verify BOTH failure notices can
+  // be dismissed from the sticky preview and the recorder drawer.
+  await page.evaluate(()=>{
+    window.__savedWorker=window.Worker;
+    window.Worker=class {constructor(){throw new Error('Simulated encoder failure');}};
+  });
+  await page.locator('#duration-preset').selectOption('10');
+  await page.locator('#export-resolution').selectOption('360');
+  await page.locator('.record-button').click();
+  await page.locator('.stage-capture-error').waitFor({state:'visible',timeout:10000});
+  assert(await page.locator('.capture-warning[role="alert"]').isVisible(),'Duplicate inline alert visible');
+  await page.getByRole('button',{name:'Close export failed notification'}).click();
+  assert.equal(await page.locator('.stage-capture-error').count(),0,'Error banner dismisses');
+  assert.equal(await page.locator('.capture-warning[role="alert"]').count(),0,'Inline error also disappears');
+  await page.evaluate(()=>{window.Worker=window.__savedWorker;});
+
   // Palette import + new phase-2 controls must work in the actual UI.
   await page.locator('#palette').selectOption('OPAL PRISM');
   assert.equal(await page.locator('.color-wells input[type=color]').count(),12,

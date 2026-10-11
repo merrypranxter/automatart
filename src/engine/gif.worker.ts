@@ -4,13 +4,13 @@
 import { GIFEncoder, quantize } from 'gifenc';
 
 type Request =
-  | { type:'init'; width:number; height:number; fps:number; repeat:number }
+  | { type:'init'; width:number; height:number; fps:number; repeat:number; maxBytes:number }
   | { type:'frame'; rgba:ArrayBuffer }
   | { type:'finish' };
 const ctx=self as unknown as { onmessage:((event:MessageEvent<Request>)=>void)|null; postMessage:(data:unknown,transfer?:Transferable[])=>void };
 
 let encoder:ReturnType<typeof GIFEncoder>|null=null;
-let width=0,height=0,delay=100,repeat=0,frames=0;
+let width=0,height=0,delay=100,repeat=0,frames=0,maxBytes=96*1024*1024;
 let palette:number[][]|null=null;
 let paletteLookup:((pixels:Uint8ClampedArray)=>Uint8Array)|null=null;
 
@@ -44,7 +44,7 @@ ctx.onmessage=(event:MessageEvent<Request>)=>{
     const msg=event.data;
     if(msg.type==='init'){
       width=msg.width;height=msg.height;
-      delay=Math.round(1000/msg.fps);repeat=msg.repeat;
+      delay=Math.round(1000/msg.fps);repeat=msg.repeat;maxBytes=msg.maxBytes;
       encoder=GIFEncoder();frames=0;palette=null;paletteLookup=null;
       ctx.postMessage({type:'ready'});return;
     }
@@ -60,7 +60,13 @@ ctx.onmessage=(event:MessageEvent<Request>)=>{
       if(frames===0)encoder.writeFrame(indices,width,height,{palette,delay,repeat});
       else encoder.writeFrame(indices,width,height,{delay});
       frames++;
-      ctx.postMessage({type:'frame-done',frames});
+      // GIF compression runs in this Worker. The old width*height*frames
+      // estimate wildly overcounted final file size and rejected good exports.
+      // Inspect the actual compressed byte stream instead, occasionally,
+      // keeping memory bounded without throwing away usable partial results.
+      const encodedBytes=frames%6===0?encoder.bytes().byteLength:0;
+      const sizeLimitHit=encodedBytes>=maxBytes;
+      ctx.postMessage({type:'frame-done',frames,encodedBytes,sizeLimitHit});
       return;
     }
     if(msg.type==='finish'){
