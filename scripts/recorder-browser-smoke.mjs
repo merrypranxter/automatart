@@ -120,7 +120,7 @@ try{
   await page.locator('#temporal-rgb').press('End'); // capture visible time ghosts too
   await page.locator('#duration-preset').selectOption('custom');
   await page.locator('#custom-seconds').fill('1');
-  await page.locator('#export-fps').selectOption('5');
+  await page.locator('#export-fps').selectOption('10'); // exercise compressed-byte sampling at frame 6
   await page.locator('.record-button').click();
   await page.locator('.stage-capture-state').waitFor({state:'visible',timeout:10000});
   await page.locator('.stage-capture-success').waitFor({state:'visible',timeout:45000});
@@ -153,7 +153,7 @@ try{
   assert(!result.error,result.error||'');
   assert(result.workers>=2,'Cancelled long export and finished short export must each create a real Web Worker');
   assert.equal(result.header,'GIF89a','Should produce GIF content');
-  assert.equal(result.frames,5,'Should encode all five frames (1 sec at 5 FPS)');
+  assert.equal(result.frames,10,'Should encode ten frames and exercise real byte-size monitoring');
   assert(result.frameDetail.includes('changing steps'),'UI should explain whether cells changed');
   assert(result.size>1000,'GIF must be nonempty');
   console.log('PASS: REAL BROWSER GIF worker='+result.workers+' frames='+result.frames+' bytes='+result.size);
