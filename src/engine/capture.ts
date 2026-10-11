@@ -154,7 +154,9 @@ interface EncoderReply { type:'ready'|'frame-done'|'done'|'error'; message?:stri
 function roundTrip(worker:Worker,payload:object,transfer:Transferable[],signal:AbortSignal):Promise<EncoderReply>{
   return new Promise((resolve,reject)=>{
     if(signal.aborted){reject(new CaptureCancelled());return;}
+    let watchdog:ReturnType<typeof setTimeout>|undefined;
     const clean=()=>{
+      if(watchdog!==undefined)clearTimeout(watchdog);
       worker.removeEventListener('message',onMessage);
       worker.removeEventListener('error',onError);
       signal.removeEventListener('abort',onAbort);
@@ -171,6 +173,10 @@ function roundTrip(worker:Worker,payload:object,transfer:Transferable[],signal:A
     worker.addEventListener('message',onMessage);
     worker.addEventListener('error',onError);
     signal.addEventListener('abort',onAbort,{once:true});
+    watchdog=setTimeout(()=>{
+      clean();
+      reject(new Error('GIF encoder stopped responding. Try 360p / 10 FPS, a shorter duration, or video instead.'));
+    },60000);
     try{worker.postMessage(payload,transfer);}catch(error){clean();reject(error);}
   });
 }
