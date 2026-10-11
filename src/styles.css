@@ -84,3 +84,10 @@ input[type=range]{width:100%;margin:4px 0 7px;accent-color:#f62eb8;cursor:pointe
 .rule-bits button.active{border-color:#f8e72e;background:#eaff1e;color:#1a0d28}
 .rule-bits button:hover{border-color:#2fedeb}
 @media(max-width:450px){.color-wells{gap:5px}.color-wells input[type=color]{height:39px}.advanced-color-controls{padding:9px}.rule-bits{gap:3px}.rule-bits button{height:30px}}
+
+/* Mutant Zoo Z1 — engines live in their own responsive control drawer. */
+.mutant-controls{display:flex;flex-direction:column;gap:8px;border:1px solid #7c4fa5;background:linear-gradient(148deg,#27103f,#120e26);border-radius:10px;padding:14px;margin:9px 0}
+.mutant-controls .module-note{margin:0 0 7px;border-left-color:#f2e521}
+.mutant-controls .mutant-range{display:flex;flex-direction:column;gap:2px}
+.mutant-controls .range-hint{color:#b5a1d7;font:500 11px/1.35 'Chakra Petch',monospace}
+.mutant-controls .custom-rule-editor{margin:0}

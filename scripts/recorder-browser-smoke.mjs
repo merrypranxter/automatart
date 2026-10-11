@@ -42,6 +42,15 @@ try{
   await page.locator('#life').selectOption('custom');
   await page.locator('.rule-bits').first().locator('button').nth(4).click();
   assert.equal(await page.locator('.rule-bits').first().locator('button').nth(4).getAttribute('aria-pressed'),'true');
+  for(const [mode,selector] of [
+    ['generations','#gen-states'],['excitable','#excite-states'],
+    ['larger','#large-radius'],['species','#species-count']
+  ]){
+    await page.locator('#engine').selectOption(mode);
+    assert(await page.locator(selector).isVisible(),mode+' has real rule controls');
+  }
+  await page.locator('#species-count').fill('4');
+  await page.locator('#species-brush').selectOption('2');
   await page.locator('#engine').selectOption('cyclic');
   await page.locator('#duration-preset').selectOption('custom');
   await page.locator('#custom-seconds').fill('1');
@@ -85,7 +94,7 @@ try{
   await page.locator('.stage-capture-success .dismiss-export').click();
   assert.equal(await page.locator('.stage-capture-success').count(),0,'X dismisses sticky export banner');
   assert.equal(await page.locator('.finished-export').count(),0,'X also removes finished preview from controls');
-  console.log('PASS: original 12-stop palette, extra rules, and dismissible export panels');
+  console.log('PASS: original 12-stop palette, 8 mode controls, and dismissible export panels');
 }finally{
   await browser?.close();
   server.kill('SIGTERM');

@@ -15,6 +15,8 @@ jobs:
       - run: npm install --no-audit --no-fund
       - name: Type-check and production build
         run: npm run build
+      - name: Verify eight deterministic CA engines
+        run: node scripts/mutant-engines-smoke.mjs
       - name: Verify shared palette library
         run: node scripts/palette-smoke.mjs
       - name: Install headless canvas and GIF decoder for export smoke test

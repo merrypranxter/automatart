@@ -3,7 +3,7 @@
 A zero-subscription, browser-based **cellular automata art instrument**. Not just Life with a palette: the long-term design connects cell states and mathematical events to colors, visual treatments, and eventually other rules through a Rule-to-Art Patchbay.
 
 ## Status
-**Phases 0–1 complete; Phase 4 early recorder shipped:** responsive app foundation, four simulation families, live painting, colorful rendering, PNG stills, JSON recipes, browser-local GIF export and MP4/WebM video recording. Expanded patch cables, APNG and loop-hunting are future phases.
+**Phases 0–1, chroma controls, Z1 Mutant Zoo and early recorder shipped:** responsive app foundation, eight simulation families, live painting, colorful rendering, PNG stills, JSON recipes, browser-local GIF export and MP4/WebM video recording. Expanded patch cables, APNG and loop-hunting are future phases.
 
 ## Getting started
 ```bash
@@ -17,10 +17,20 @@ Open the localhost URL printed by Vite. Production: `npm run build`, output in `
 - **Generations:** Brian's Brain, with firing, refractory, and resting cells.
 - **Cyclic:** multistate predator/chaser automata, with configurable number of states and threshold.
 - **Wolfram 1D:** Rule 30, 90, 110 and custom 0–255, drawn as scrolling history.
+- **Afterlife / Generations B/S/C:** customizable birth/survival counts and 3–24 total states; 1=live, 2..C−1=refractory.
+- **Excitable Flesh:** Greenberg–Hastings-style local waves with 3–24 recovery states and editable excitation threshold.
+- **Larger Than Life-inspired:** binary range-totalistic rules over square neighborhoods of radius 1–5.
+- **Species War:** original deterministic local competition between 2–8 species; tie-breaking, defense, survival and invasion parameters.
+
+New species and states are ordinary data in the simulation and are rendered with the same shared palettes and export mechanisms. These are real automata transition functions, not visual-filter mode names.
 
 The model uses typed arrays, seeded generation, wrap/no-wrap boundaries and separate rendering; controls preserve the deterministic seed where applicable.
 
-## Roadmap
+## Mutant Zoo Master Roadmap
+
+See [the complete 10-milestone implementation plan](docs/MUTANT_ZOO_ROADMAP.md). **Z1 shipped**: four new local-rule CA families. Z2–Z9 are planned, NOT shipped.
+
+## Original Roadmap
 - [x] Repository initialized
 - [x] **Phase 0:** Vite + React + TypeScript shell, responsive pinned preview, clean deployment config
 - [x] **Phase 1:** Four running engines; start/pause/step/reset; paint; cell resolution; saved recipe; grid overlay

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, PointerEvent } from 'react';
 import { createWorld, paintWorld, stepWorld } from './engine/sim';
 import { renderWorld } from './engine/render';
+import MutantControls from './components/MutantControls';
 import {
   captureAnimation, chooseVideoMime, recommendedDimensions, CaptureCancelled
 } from './engine/capture';
@@ -19,7 +20,11 @@ const ENGINES: {id:EngineId;name:string;hint:string}[] = [
   {id:'life',name:'LIFE-LIKE',hint:'Birth / survival rules'},
   {id:'brians',name:"BRIAN'S BRAIN",hint:'Electric decay and firing'},
   {id:'cyclic',name:'CYCLIC',hint:'Rainbow species chase'},
-  {id:'wolfram',name:'WOLFRAM',hint:'One-dimensional rule history'}
+  {id:'wolfram',name:'WOLFRAM',hint:'One-dimensional rule history'},
+  {id:'generations',name:'AFTERLIFE',hint:'B/S/C living fossils'},
+  {id:'excitable',name:'EXCITABLE FLESH',hint:'Excitation/recovery waves'},
+  {id:'larger',name:'LARGER THAN LIFE',hint:'Wide-neighborhood growth'},
+  {id:'species',name:'SPECIES WAR',hint:'Territorial competition'}
 ];
 const ASPECTS: {value:AspectId;name:string}[]=[
   {value:'square',name:'1:1 SQUARE'},
@@ -54,6 +59,7 @@ export default function App(){
   const [speed,setSpeed]=useState(18);
   const [brush,setBrush]=useState(2);
   const [erase,setErase]=useState(false);
+  const [paintSpecies,setPaintSpecies]=useState(1);
   const [generation,setGeneration]=useState(0);
   const [population,setPopulation]=useState(0);
   const [resetNumber,setResetNumber]=useState(0);
@@ -103,7 +109,8 @@ export default function App(){
     setGeneration(0);
     setPopulation(stat(worldRef.current));
   },[settings.engine,settings.cellCount,settings.aspect,settings.seed,
-      settings.pattern,settings.density,settings.cyclicStates,resetNumber]);
+      settings.pattern,settings.density,settings.cyclicStates,
+      settings.genStates,settings.exciteStates,settings.speciesCount,resetNumber]);
   useEffect(()=>{draw();},[draw,settings,resetNumber]);
 
   useEffect(()=>{
@@ -152,7 +159,7 @@ export default function App(){
     const x=Math.floor((e.clientX-r.left)*world.width/r.width);
     const y=Math.floor((e.clientY-r.top)*world.height/r.height);
     if(x<0||x>=world.width||y<0||y>=world.height)return;
-    paintWorld(world,settings,x,y,brush,erase);
+    paintWorld(world,settings,x,y,brush,erase,paintSpecies);
     setPopulation(stat(world));
     draw();
   }
@@ -198,6 +205,27 @@ export default function App(){
         s[k]=[...new Set(s[k].filter((n:unknown)=>Number.isInteger(n)&&Number(n)>=0&&Number(n)<=8))].sort((a,b)=>a-b);
       }
       s.trailDecay=Math.min(0.99,Math.max(0.65,Number(s.trailDecay)||0.89));
+      const bounded=(v:unknown,min:number,max:number,fallback:number)=>{
+        const n=Number(v);
+        return Number.isFinite(n)?Math.min(max,Math.max(min,Math.floor(n))):fallback;
+      };
+      s.genStates=bounded(s.genStates,3,24,8);
+      s.exciteStates=bounded(s.exciteStates,3,24,8);
+      s.exciteThreshold=bounded(s.exciteThreshold,1,8,2);
+      s.largeRadius=bounded(s.largeRadius,1,5,2);
+      const maxNear=(2*s.largeRadius+1)**2-1;
+      s.largeBirthMin=bounded(s.largeBirthMin,0,maxNear,6);
+      s.largeBirthMax=bounded(s.largeBirthMax,s.largeBirthMin,maxNear,9);
+      s.largeSurviveMin=bounded(s.largeSurviveMin,0,maxNear,5);
+      s.largeSurviveMax=bounded(s.largeSurviveMax,s.largeSurviveMin,maxNear,12);
+      s.speciesCount=bounded(s.speciesCount,2,8,3);
+      s.speciesBirth=bounded(s.speciesBirth,1,8,2);
+      s.speciesSurvive=bounded(s.speciesSurvive,0,8,1);
+      s.speciesAttackBias=bounded(s.speciesAttackBias,0,8,1);
+      for(const key of ['genBirth','genSurvive'] as const){
+        if(!Array.isArray(s[key]))s[key]=key==='genBirth'?[3]:[2,3];
+        s[key]=[...new Set(s[key].filter((v:unknown)=>Number.isInteger(v)&&Number(v)>=0&&Number(v)<=8))].sort((a,b)=>a-b);
+      }
       const a:Appearance={...INITIAL_APPEARANCE,...data.appearance};
       if(!Array.isArray(a.palette)||a.palette.length<2||a.palette.length>32||a.palette.some(v=>typeof v!=='string'||!/^#[0-9a-f]{6}$/i.test(v)))throw new Error('Invalid palette');
       if(!['state','age','neighbors','events','radius','x','activity'].includes(a.colorBy))throw new Error('Invalid color mapping');
@@ -340,7 +368,7 @@ export default function App(){
           </div>}
         </section>
         <section className="rack" aria-label="Simulation controls">
-          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>CHROMA LAB / PHASE 2</span></div>
+          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>MUTANT ZOO / Z1</span></div>
           <section className="module">
             <div className="module-heading"><span className="module-num">01</span><h2>WORLD MACHINE</h2><span className="module-symbol">◎</span></div>
             <label className="input-label" htmlFor="aspect">Canvas geometry</label>
@@ -365,7 +393,7 @@ export default function App(){
             <select id="engine" value={settings.engine} onChange={e=>updateSetting('engine',e.target.value as EngineId)}>
               {ENGINES.map(x=><option key={x.id} value={x.id}>{x.name} — {x.hint}</option>)}
             </select>
-            {settings.engine!=='wolfram'&&<>
+            {settings.engine!=='wolfram'&&settings.engine!=='larger'&&<>
               <label className="input-label" htmlFor="neighbor-shape">Neighborhood geometry</label>
               <select id="neighbor-shape" value={settings.neighborShape}
                 onChange={e=>updateSetting('neighborShape',e.target.value as NeighborShape)}>
@@ -396,6 +424,7 @@ export default function App(){
               <label className="input-label" htmlFor="threshold">Chase threshold <em>{settings.cyclicThreshold} neighbors</em></label>
               <input id="threshold" type="range" min="1" max="8" value={settings.cyclicThreshold} onChange={e=>updateSetting('cyclicThreshold',Number(e.target.value))}/>
             </>}
+            <MutantControls settings={settings} setSettings={setSettings} paintSpecies={paintSpecies} setPaintSpecies={setPaintSpecies}/>
             {settings.engine==='wolfram'&&<>
               <label className="input-label" htmlFor="rule">Wolfram rule number (0–255)</label>
               <input id="rule" type="number" min="0" max="255" value={settings.wolframRule} onChange={e=>updateSetting('wolframRule',Math.max(0,Math.min(255,Number(e.target.value)||0)))}/>

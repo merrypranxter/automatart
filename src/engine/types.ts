@@ -1,6 +1,6 @@
 import paletteLibrary from '../palettes/astral-trash-palettes.json';
 
-export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram';
+export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species';
 export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'custom';
 export type PatternId = 'noise' | 'center' | 'rings' | 'stripes' | 'checker' | 'spiral' | 'web';
 export type AspectId = 'square' | 'portrait' | 'landscape';
@@ -24,6 +24,20 @@ export interface SimSettings {
   cyclicStates: number;
   cyclicThreshold: number;
   wolframRule: number;
+  genStates: number;
+  genBirth: number[];
+  genSurvive: number[];
+  exciteStates: number;
+  exciteThreshold: number;
+  largeRadius: number;
+  largeBirthMin: number;
+  largeBirthMax: number;
+  largeSurviveMin: number;
+  largeSurviveMax: number;
+  speciesCount: number;
+  speciesBirth: number;
+  speciesSurvive: number;
+  speciesAttackBias: number;
 }
 export interface Appearance {
   palette: string[];
@@ -63,7 +77,10 @@ export const INITIAL_SETTINGS: SimSettings = {
   engine: 'cyclic', lifeRule:'conway', cellCount:96, aspect:'square',
   seed:82641, density:0.36, wrap:true, pattern:'noise',
   neighborShape:'moore',customBirth:[3],customSurvive:[2,3],trailDecay:0.89,
-  cyclicStates:12,cyclicThreshold:2,wolframRule:30
+  cyclicStates:12,cyclicThreshold:2,wolframRule:30,
+  genStates:8,genBirth:[3],genSurvive:[2,3],exciteStates:8,exciteThreshold:2,
+  largeRadius:2,largeBirthMin:6,largeBirthMax:9,largeSurviveMin:5,largeSurviveMax:12,
+  speciesCount:3,speciesBirth:2,speciesSurvive:1,speciesAttackBias:1
 };
 export const INITIAL_APPEARANCE: Appearance = {
   palette:[...PALETTES['RADIOACTIVE CANDY']],
