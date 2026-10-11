@@ -49,3 +49,10 @@ Original art/code project by merrypranxter.
 - Video capture uses an attached, visible recording canvas and does not resize the captureStream surface. It yields to requestAnimationFrame to publish pixels; MediaRecorder support remains browser-dependent.
 - GIF uses one coherent palette and maps subsequent frames to it, greatly reducing per-frame quantization work; the completed GIF is structurally scanned to confirm its frame count.
 - High-resolution/long GIFs can overwhelm mobile Safari, so fixed-duration oversize runs are rejected with advice to use video. Until-settled GIFs apply a frame-budget safety cap.
+
+## 2026-10-11 recorder usability repair
+- GIF encoding is moved to a dedicated Web Worker with frame-by-frame backpressure. The UI reports progress and supports cancellation instead of appearing frozen during expensive quantization.
+- Export status, save/share, and failure messages are shown directly under the sticky preview, not only down inside the control rack (which was invisible on iPhone while recording).
+- iPhone does not auto-trigger the download: tap **SAVE / SHARE** in the sticky status area or Recorder when complete.
+- Initial mobile-friendly GIF defaults are 10 seconds, 360p, and 10 FPS; users can still select longer/larger exports.
+- The app yields two browser paint frames before initiating recording so the progress surface and recorder canvas are ready.

@@ -57,20 +57,23 @@ export default function App(){
   const [message,setMessage]=useState('Paint the canvas, scramble the rules, and watch the mathematics get weird.');
   const [captureFormat,setCaptureFormat]=useState<CaptureFormat>('gif');
   const [durationMode,setDurationMode]=useState<DurationMode>('fixed');
-  const [durationPreset,setDurationPreset]=useState('30');
+  const [durationPreset,setDurationPreset]=useState('10');
   const [customSeconds,setCustomSeconds]=useState(45);
-  const [resolution,setResolution]=useState<ExportResolution>(480);
+  const [resolution,setResolution]=useState<ExportResolution>(360);
   const [exportFps,setExportFps]=useState(10);
   const [restartCapture,setRestartCapture]=useState(true);
   const [capturing,setCapturing]=useState(false);
   const [lastExport,setLastExport]=useState<{name:string;blob:Blob;url:string;frames:number;distinctFrames:number;elapsed:number;extension:string}|null>(null);
   const [captureProgress,setCaptureProgress]=useState<CaptureProgress|null>(null);
+  const [captureError,setCaptureError]=useState<string|null>(null);
   const controllerRef=useRef<AbortController|null>(null);
   const recordingRef=useRef(false);
   useEffect(()=>()=>{if(lastExport)URL.revokeObjectURL(lastExport.url);},[lastExport]);
   const worldRef=useRef<World>(createWorld(INITIAL_SETTINGS));
   const canvasRef=useRef<HTMLCanvasElement>(null);
   const loadRef=useRef<HTMLInputElement>(null);
+  const recorderRef=useRef<HTMLDivElement>(null);
+  const jumpToRecorder=()=>recorderRef.current?.scrollIntoView({behavior:'smooth',block:'center'});
   const updateSetting=<K extends keyof SimSettings>(key:K,value:SimSettings[K])=>
     setSettings(s=>({...s,[key]:value}));
   const updateAppearance=<K extends keyof Appearance>(key:K,value:Appearance[K])=>
@@ -199,6 +202,7 @@ export default function App(){
   async function startCapture(){
     if(recordingRef.current)return;
     setLastExport(null);
+    setCaptureError(null);
     recordingRef.current=true;
     const controller=new AbortController();
     controllerRef.current=controller;
@@ -209,6 +213,11 @@ export default function App(){
     const safeSeconds=Math.min(600,Math.max(1,Math.floor(seconds)||30));
     const startedAt=worldRef.current;
     try{
+      // Give React two paint turns to show the sticky progress panel and attach
+      // the recorder canvas before CPU-heavy work starts, especially on iOS.
+      await new Promise<void>(resolve=>requestAnimationFrame(()=>
+        requestAnimationFrame(()=>resolve())));
+      if(controller.signal.aborted)throw new CaptureCancelled();
       const result=await captureAnimation(startedAt,settings,appearance,{
         format:captureFormat,mode:durationMode,seconds:safeSeconds,
         fps:exportFps,resolution,restart:restartCapture,stepsPerSecond:speed
@@ -217,13 +226,15 @@ export default function App(){
         result.ended==='limit'?'reached the 10-minute safety limit':'complete';
       const name='automatart-'+settings.engine+'-'+(restartCapture?'seed'+settings.seed:'gen'+generation)+'-'+Math.round(result.elapsed)+'s.'+result.extension;
       setLastExport({name,blob:result.blob,url:URL.createObjectURL(result.blob),frames:result.frames,distinctFrames:result.distinctFrames,elapsed:result.elapsed,extension:result.extension});
-      download(name,result.blob);
-      setMessage('Export '+label+': '+result.frames+' recorded frames / '+result.distinctFrames+' changing steps. Play the preview below to verify motion before saving.');
+      if(!/iPad|iPhone|iPod/i.test(navigator.userAgent))download(name,result.blob);
+      setMessage('GIF/video export '+label+'. '+result.frames+' frames created. Preview, save and share below.');
     }catch(error){
       if(error instanceof CaptureCancelled||controller.signal.aborted){
         setMessage('Recording cancelled. Your live universe is unharmed.');
       }else{
-        setMessage('Export failed: '+(error instanceof Error?error.message:'Unknown recording error'));
+        const detail=error instanceof Error?error.message:'Unknown recording error';
+        setCaptureError(detail);
+        setMessage('Export failed: '+detail);
       }
     }finally{
       controllerRef.current=null;
@@ -248,7 +259,7 @@ export default function App(){
         <section className="stage" aria-label="Live automaton preview">
           <div className="stage-header">
             <div><b className="eyebrow">LIVE UNIVERSE</b><span className="stage-engine">{activeEngine?.name}</span></div>
-            <span className={'live-label '+(playing?'':'is-paused')}>{playing?'● LIVE':'Ⅱ PAUSED'}</span>
+            <span className={'live-label '+(playing?'':'is-paused')}>{capturing?'● EXPORTING':playing?'● LIVE':'Ⅱ PAUSED'}</span>
           </div>
           <div className="canvas-wrap">
             <canvas ref={canvasRef} aria-label="Interactive cellular automata canvas. Drag to paint cells." onPointerDown={onPointerDown} onPointerMove={onPointerMove} />
@@ -267,6 +278,29 @@ export default function App(){
             <span><b>{population.toLocaleString()}</b> NONZERO CELLS</span>
             <span><b>{worldRef.current.width}×{worldRef.current.height}</b> GRID</span>
           </div>
+          {capturing&&<div className="stage-capture-state" role="status" aria-live="polite">
+            <div className="stage-capture-head">
+              <b>● RECORDING {captureFormat.toUpperCase()}</b>
+              <span>{captureProgress?.frames||0} frames / {Math.round((captureProgress?.fraction||0)*100)}%</span>
+            </div>
+            <progress max="1" value={captureProgress?.fraction||0}/>
+            <div className="stage-capture-foot">
+              <span>{captureProgress?.phase||'Preparing…'} · Live playback paused for export</span>
+              <button onClick={()=>controllerRef.current?.abort()}>CANCEL</button>
+            </div>
+          </div>}
+          {!capturing&&captureError&&<div className="stage-capture-error" role="alert">
+            <b>EXPORT FAILED</b>
+            <span>{captureError}</span>
+            <button onClick={jumpToRecorder}>BACK TO RECORDER ↓</button>
+          </div>}
+          {!capturing&&lastExport&&<div className="stage-capture-success" role="status">
+            <div><b>✓ ANIMATION READY</b><span>{lastExport.frames} frames · {lastExport.elapsed.toFixed(1)} sec</span></div>
+            <div className="stage-capture-buttons">
+              <button onClick={saveLastExport}>SAVE / SHARE</button>
+              <button onClick={jumpToRecorder}>PLAY PREVIEW ↓</button>
+            </div>
+          </div>}
         </section>
         <section className="rack" aria-label="Simulation controls">
           <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>PHASE 1 BUILD</span></div>
@@ -365,7 +399,7 @@ export default function App(){
               <button onClick={()=>loadRef.current?.click()} className="export">⇧ LOAD RECIPE</button>
               <input className="sr-only" ref={loadRef} type="file" accept=".json,application/json" onChange={loadRecipe}/>
             </div>
-            <div className="recorder-panel">
+            <div className="recorder-panel" ref={recorderRef}>
               <div className="recorder-heading"><span>✹ ANIMATION RECORDER</span><span className="recorder-ready">EXPORT LAB / EARLY PHASE 4</span></div>
               <label className="input-label" htmlFor="export-format">Animation format</label>
               <select id="export-format" value={captureFormat} disabled={capturing}
@@ -373,7 +407,7 @@ export default function App(){
                   const format=e.target.value as CaptureFormat;
                   setCaptureFormat(format);
                   setExportFps(format==='gif'?10:30);
-                  setResolution(format==='gif'?480:720);
+                  setResolution(format==='gif'?360:720);
                 }}>
                 <option value="gif">GIF · LOOPING ANIMATION</option>
                 <option value="video">VIDEO · MP4 / WEBM (BROWSER-DEPENDENT)</option>
@@ -444,6 +478,7 @@ export default function App(){
                 <progress max="1" value={captureProgress.fraction}/>
                 <p>Keep this tab open while recording. Video exports run in real time.</p>
               </div>}
+              {captureError&&!capturing&&<p className="capture-warning" role="alert">EXPORT FAILED: {captureError}</p>}
               <div className="capture-buttons">
                 <button className="record-button" disabled={capturing||(captureFormat==='video'&&!videoSupported)}
                   onClick={startCapture}>{capturing?'● RECORDING':'● RECORD '+captureFormat.toUpperCase()}</button>
@@ -465,6 +500,7 @@ export default function App(){
                 <button onClick={saveLastExport}>⇩ SAVE / SHARE TO FILES</button>
               </div>}
               <p className="module-note">
+                GIF encoding runs on a separate worker thread so the app can show progress and cancel. For first exports, try 360p at 10 FPS for 10 seconds.
                 Video is recorded in real time and may save as MP4 or WebM depending on your browser.
                 GIF is rendered frame by frame. Recording copies your current universe without changing the live one.
                 Larger/longer recordings need more memory. Video contains no audio.

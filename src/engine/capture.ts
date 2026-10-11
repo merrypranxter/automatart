@@ -150,6 +150,31 @@ export function countGifFrames(data:Uint8Array):number{
   return n;
 }
 
+interface EncoderReply { type:'ready'|'frame-done'|'done'|'error'; message?:string; buffer?:ArrayBuffer; frames?:number }
+function roundTrip(worker:Worker,payload:object,transfer:Transferable[],signal:AbortSignal):Promise<EncoderReply>{
+  return new Promise((resolve,reject)=>{
+    if(signal.aborted){reject(new CaptureCancelled());return;}
+    const clean=()=>{
+      worker.removeEventListener('message',onMessage);
+      worker.removeEventListener('error',onError);
+      signal.removeEventListener('abort',onAbort);
+    };
+    const onMessage=(event:MessageEvent<EncoderReply>)=>{
+      clean();
+      if(event.data?.type==='error')reject(new Error('GIF encoder: '+(event.data.message||'Unknown error')));
+      else resolve(event.data);
+    };
+    const onError=(event:ErrorEvent)=>{
+      clean();reject(new Error('GIF worker failed: '+event.message));
+    };
+    const onAbort=()=>{clean();reject(new CaptureCancelled());};
+    worker.addEventListener('message',onMessage);
+    worker.addEventListener('error',onError);
+    signal.addEventListener('abort',onAbort,{once:true});
+    try{worker.postMessage(payload,transfer);}catch(error){clean();reject(error);}
+  });
+}
+
 export async function captureAnimation(
   startingWorld:World,s:SimSettings,a:Appearance,options:CaptureOptions,
   onProgress:(progress:CaptureProgress)=>void,signal:AbortSignal
@@ -183,41 +208,58 @@ export async function captureAnimation(
   let frames=0,distinctFrames=0,ended:CaptureResult['ended']='duration';
   try{
     if(opt.format==='gif'){
-      const gif=GIFEncoder();
       const frameLimit=Math.min(totalFrames,Math.max(1,Math.floor(budget/(width*height))));
+      const useWorker=typeof Worker!=='undefined'&&typeof window!=='undefined';
+      const worker=useWorker ? new Worker(new URL('./gif.worker.ts',import.meta.url),{type:'module'}) : null;
+      const gif=worker?null:GIFEncoder();
       let map:(pixels:Uint8ClampedArray)=>Uint8Array=()=>new Uint8Array();
-      for(let i=0;i<frameLimit;i++){
-        notCancelled(signal);
-        renderWorld(canvas,cursor.current,a,width,height);
-        const pixels=ctx.getImageData(0,0,width,height).data;
-        if(i===0){
-          const palette=quantize(pixels,256,{format:'rgb565'});
-          map=makePaletteIndex(palette);
-          gif.writeFrame(map(pixels),width,height,{
-            palette,delay:Math.round(1000/opt.fps),repeat:opt.mode==='settled'?-1:0
-          });
-        }else{
-          gif.writeFrame(map(pixels),width,height,{delay:Math.round(1000/opt.fps)});
+      try{
+        if(worker){
+          update('Starting GIF encoder…',0);
+          await roundTrip(worker,{type:'init',width,height,fps:opt.fps,repeat:opt.mode==='settled'?-1:0},[],signal);
         }
-        frames++;
-        const transition=cursor.advance();
-        if(transition.changed)distinctFrames++;
-        if(opt.mode==='settled'&&transition.settled){ended='settled';break;}
-        if(i===frameLimit-1&&opt.mode==='settled')ended='limit';
-        // Yield to the browser on every frame so controls and progress remain responsive.
-        if(i%2===0)update('Encoding animated GIF',frames);
-        await delay(0);
+        for(let i=0;i<frameLimit;i++){
+          notCancelled(signal);
+          renderWorld(canvas,cursor.current,a,width,height);
+          const pixels=ctx.getImageData(0,0,width,height).data;
+          if(worker){
+            await roundTrip(worker,{type:'frame',rgba:pixels.buffer},[pixels.buffer as ArrayBuffer],signal);
+          }else if(gif){
+            if(i===0){
+              const colors=quantize(pixels,256,{format:'rgb565'});
+              map=makePaletteIndex(colors);
+              gif.writeFrame(map(pixels),width,height,{
+                palette:colors,delay:Math.round(1000/opt.fps),repeat:opt.mode==='settled'?-1:0
+              });
+            }else gif.writeFrame(map(pixels),width,height,{delay:Math.round(1000/opt.fps)});
+          }
+          frames++;
+          const transition=cursor.advance();
+          if(transition.changed)distinctFrames++;
+          update('Encoding animated GIF',frames);
+          if(opt.mode==='settled'&&transition.settled){ended='settled';break;}
+          if(i===frameLimit-1&&opt.mode==='settled')ended='limit';
+          if(!worker)await delay(0);
+        }
+        notCancelled(signal);
+        update('Finalizing & checking GIF…',frames);
+        let bytes:Uint8Array;
+        if(worker){
+          const done=await roundTrip(worker,{type:'finish'},[],signal);
+          bytes=new Uint8Array(done.buffer as ArrayBuffer);
+        }else{
+          gif!.finish();
+          bytes=gif!.bytes();
+        }
+        const actual=countGifFrames(bytes);
+        if(actual!==frames)throw new Error('GIF contained '+actual+' frames, expected '+frames+'. Export not saved.');
+        const copy=new Uint8Array(bytes.length);
+        copy.set(bytes);
+        return {blob:new Blob([copy.buffer],{type:'image/gif'}),
+          extension:'gif',frames,distinctFrames,elapsed:frames/opt.fps,ended};
+      }finally{
+        worker?.terminate();
       }
-      notCancelled(signal);
-      update('Verifying GIF frames',frames);
-      gif.finish();
-      const bytes=gif.bytes();
-      const actual=countGifFrames(bytes);
-      if(actual!==frames)throw new Error('GIF contained '+actual+' frames, expected '+frames+'. Export was not saved.');
-      const copy=new Uint8Array(bytes.length);
-      copy.set(bytes);
-      return {blob:new Blob([copy.buffer],{type:'image/gif'}),
-        extension:'gif',frames,distinctFrames,elapsed:frames/opt.fps,ended};
     }
 
     const mime=chooseVideoMime();

@@ -41,3 +41,20 @@ input[type=range]{width:100%;margin:4px 0 7px;accent-color:#f62eb8;cursor:pointe
 .capture-hidden{display:none}
 .export-preview{width:100%;display:flex;justify-content:center;align-items:center;overflow:hidden;background:#090617;border-radius:8px;border:1px solid #ffffff3d}
 .export-preview img,.export-preview video{display:block;max-width:100%;width:auto;height:auto;max-height:330px;object-fit:contain}
+
+/* Export state must be visible above the fold. Previously the iPhone showed
+   only "paused" while all progress/errors lived in a drawer far below. */
+.stage-capture-state,.stage-capture-error,.stage-capture-success{margin-top:10px;padding:10px;border-radius:9px;border:1px solid #dd43aa;background:#35143eea;font:600 11px 'Chakra Petch',monospace}
+.stage-capture-head,.stage-capture-foot{display:flex;align-items:center;justify-content:space-between;gap:8px}.stage-capture-head b{color:#fc54c7;letter-spacing:1px}.stage-capture-head span{color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stage-capture-state progress{width:100%;height:15px;accent-color:#2ffff0;margin:9px 0;display:block}
+.stage-capture-foot span{color:#ddc6ef;line-height:1.3;font-size:10px}
+.stage-capture-foot button,.stage-capture-error button{border:1px solid #fbdf48;background:#5b2c31;color:#fff8af;padding:7px 9px;border-radius:6px;font:700 10px 'Chakra Petch',monospace;white-space:nowrap}
+.stage-capture-error{background:#3d2026;border-color:#ff894b;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.stage-capture-error b{color:#ffac71}.stage-capture-error span{flex:1 1 150px;overflow-wrap:anywhere}
+.stage-capture-success{background:#17352de0;border-color:#3ce6b8;display:flex;flex-direction:column;gap:8px}
+.stage-capture-success>div:first-child{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.stage-capture-success b{color:#65ffcb}.stage-capture-success span{color:#d2efe0}
+.stage-capture-buttons{display:flex;gap:7px}
+.stage-capture-buttons button{flex:1;min-height:37px;border-radius:7px;border:1px solid #35e6d0;background:#15bfa7;color:#0b1420;font:700 11px 'Chakra Petch',monospace}
+.stage-capture-buttons button+button{background:#204b55;color:#c0fff5}
+@media(max-width:450px){.stage-capture-state,.stage-capture-error,.stage-capture-success{padding:7px;margin-top:6px}.stage-capture-foot span{font-size:9px}.stage-capture-state progress{height:11px;margin:6px 0}}
