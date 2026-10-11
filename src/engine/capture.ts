@@ -45,7 +45,7 @@ export function recommendedDimensions(s:SimSettings,size:ExportResolution):[numb
   return [width,height];
 }
 export function cloneWorld(w:World):World{
-  return {engine:w.engine,width:w.width,height:w.height,generation:w.generation,
+  return {engine:w.engine,lattice:w.lattice,width:w.width,height:w.height,generation:w.generation,
     cells:w.cells.slice(),ages:w.ages.slice(),neighbors:w.neighbors.slice(),
     events:w.events.slice(),traces:w.traces.slice(),
     previousCells:w.previousCells?.slice(),olderCells:w.olderCells?.slice(),

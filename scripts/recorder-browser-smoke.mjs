@@ -51,8 +51,23 @@ try{
   }
   await page.locator('#species-count').fill('4');
   await page.locator('#species-brush').selectOption('2');
+  await page.locator('#engine').selectOption('oriented');
+  assert(await page.locator('#oriented-match').isVisible(),'Directional template controls visible');
+  await page.locator('#oriented-symmetry').selectOption('dihedral');
+  assert(await page.locator('.direction-grid button').count()===8,'Eight independently configurable neighbors');
+  await page.locator('#engine').selectOption('margolus');
+  assert(await page.locator('.rewind-button').isVisible(),'Exact cell-state rewind available');
+  assert(await page.locator('#lattice').isDisabled(),'Margolus cannot use triangular / hexagonal partitions');
   await page.locator('#engine').selectOption('cyclic');
   await page.locator('.transport .primary').click(); // pause for deterministic skin comparison
+  const lattices=[];
+  for(const shape of ['square','hex','triangle']){
+    await page.locator('#lattice').selectOption(shape);
+    await page.waitForTimeout(180);
+    lattices.push(await page.locator('.canvas-wrap canvas').evaluate(c=>c.toDataURL('image/png')));
+  }
+  assert.equal(new Set(lattices).size,3,'Actual lattice display geometries must differ');
+  await page.locator('#lattice').selectOption('hex'); // GIF must retain actual hex geometry
   const skinImages=[];
   for(const skin of ['pixels','soft','glow','contours','mercury','relief','glass']){
     await page.locator('#skin').selectOption(skin);
@@ -109,7 +124,7 @@ try{
   await page.locator('.stage-capture-success .dismiss-export').click();
   assert.equal(await page.locator('.stage-capture-success').count(),0,'X dismisses sticky export banner');
   assert.equal(await page.locator('.finished-export').count(),0,'X also removes finished preview from controls');
-  console.log('PASS: original 12-stop palette, 8 modes, 7 distinct skins, and dismissible export panels');
+  console.log('PASS: 10 modes, 3 lattice geometries, 7 skins, original palettes, hex GIF, and export dismissal');
 }finally{
   await browser?.close();
   server.kill('SIGTERM');

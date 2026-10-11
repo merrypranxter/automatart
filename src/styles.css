@@ -104,3 +104,20 @@ input[type=range]{width:100%;margin:4px 0 7px;accent-color:#f62eb8;cursor:pointe
 .skin-description{font:500 11px/1.5 'Chakra Petch',monospace;color:#bdadd8;margin:0 0 5px}
 .skin-laboratory .reset-color{margin-top:4px}
 @media(max-width:450px){.skin-laboratory{padding:10px 8px}.skin-label{font-size:12px}}
+
+/* Z3 — real cell geometry and non-totalistic/reversible controls. */
+.lattice-picker{display:flex;flex-direction:column;gap:7px;margin-top:10px;border-top:1px solid #ffffff19;padding-top:10px}
+.lattice-picker .module-note{border-left-color:#31f5e8;margin:1px 0}
+.lattice-picker select:disabled{opacity:.7;cursor:not-allowed}
+.strange-rule{display:flex;flex-direction:column;gap:9px;padding:13px;margin:12px 0;border:1px solid #a246dc;background:linear-gradient(156deg,#22143d,#0b1834);border-radius:10px}
+.strange-rule h3{font:700 15px 'Chakra Petch',monospace;color:#ffe341;letter-spacing:1px;margin:0}
+.direction-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;max-width:280px}
+.direction-grid button,.direction-center{height:43px;border:1px solid #71568e;background:#261a3e;color:#dfccee;border-radius:6px;font:700 12px 'Chakra Petch',monospace}
+.direction-grid button.selected{background:#ff36b4;border-color:#ff92d9;color:#170924;box-shadow:0 0 12px #ff36b466}
+.direction-grid button:hover{border-color:#3cfff0}
+.direction-center{display:flex;align-items:center;justify-content:center;background:#0a2737;color:#29f9e8;border-color:#16d8da;font-size:20px}
+.strange-rule .chip-row{margin:3px 0 5px}
+.reversible-flow{padding:12px;border-radius:7px;background:#130a2e;border:1px dashed #e3c84c;color:#28f5e5;text-align:center;font:700 11px 'Chakra Petch',monospace;letter-spacing:.6px}
+.rewind-button{padding:12px;border:1px solid #d4ff31;background:#dfff2a;border-radius:7px;color:#152210;font:700 12px 'Chakra Petch',monospace}
+.rewind-button:disabled{opacity:.4;cursor:not-allowed}
+@media(max-width:450px){.strange-rule{padding:10px}.direction-grid button,.direction-center{height:38px}}

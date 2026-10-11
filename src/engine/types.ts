@@ -1,12 +1,15 @@
 import paletteLibrary from '../palettes/astral-trash-palettes.json';
 
-export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species';
+export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus';
 export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'custom';
 export type PatternId = 'noise' | 'center' | 'rings' | 'stripes' | 'checker' | 'spiral' | 'web';
 export type AspectId = 'square' | 'portrait' | 'landscape';
 export type ColorBy = 'state' | 'age' | 'neighbors' | 'events' | 'radius' | 'x' | 'activity';
 export type SkinId = 'pixels' | 'soft' | 'glow' | 'contours' | 'mercury' | 'relief' | 'glass';
 export type NeighborShape = 'moore' | 'vonNeumann';
+export type LatticeId = 'square' | 'hex' | 'triangle';
+export type OrientedSymmetry = 'fixed' | 'rotations' | 'dihedral';
+export type OrientedMatch = 'exact' | 'contains';
 
 export interface SimSettings {
   engine: EngineId;
@@ -18,6 +21,12 @@ export interface SimSettings {
   wrap: boolean;
   pattern: PatternId;
   neighborShape: NeighborShape;
+  lattice: LatticeId;
+  orientedMask: number;
+  orientedSymmetry: OrientedSymmetry;
+  orientedMatch: OrientedMatch;
+  orientedSurviveMin: number;
+  orientedSurviveMax: number;
   customBirth: number[];
   customSurvive: number[];
   trailDecay: number;
@@ -66,6 +75,7 @@ export interface World {
   width: number;
   height: number;
   generation: number;
+  lattice?: LatticeId;
   cells: Uint8Array;
   ages: Uint16Array;
   neighbors: Uint8Array;
@@ -87,7 +97,10 @@ export const AUTOMATART_PALETTE_NAMES = PALETTE_LIBRARY.filter(p=>p.source==='au
 export const INITIAL_SETTINGS: SimSettings = {
   engine: 'cyclic', lifeRule:'conway', cellCount:96, aspect:'square',
   seed:82641, density:0.36, wrap:true, pattern:'noise',
-  neighborShape:'moore',customBirth:[3],customSurvive:[2,3],trailDecay:0.89,
+  neighborShape:'moore',lattice:'square',
+  orientedMask:17,orientedSymmetry:'rotations',orientedMatch:'exact',
+  orientedSurviveMin:2,orientedSurviveMax:3,
+  customBirth:[3],customSurvive:[2,3],trailDecay:0.89,
   cyclicStates:12,cyclicThreshold:2,wolframRule:30,
   genStates:8,genBirth:[3],genSurvive:[2,3],exciteStates:8,exciteThreshold:2,
   largeRadius:2,largeBirthMin:6,largeBirthMax:9,largeSurviveMin:5,largeSurviveMax:12,
@@ -110,7 +123,11 @@ export const LIFE_RULES: Record<LifeRule,{birth:number[];survive:number[];label:
 };
 export function worldDimensions(s:SimSettings):[number,number] {
   const w=s.cellCount;
-  const h=s.aspect==='portrait'?Math.round(w*16/9):
+  let h=s.aspect==='portrait'?Math.round(w*16/9):
     s.aspect==='landscape'?Math.round(w*9/16):w;
-  return [w,Math.max(1,h)];
+  // Both offset-row hex wrap and staggered triangle geometry require even
+  // height for undirected toroidal edge adjacency. Margolus requires even
+  // dimensions too; cellCount is already even in the UI.
+  if((s.lattice==='hex'||s.lattice==='triangle'||s.engine==='margolus')&&h%2!==0)h++;
+  return [w,Math.max(2,h)];
 }

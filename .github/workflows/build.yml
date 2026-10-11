@@ -17,6 +17,8 @@ jobs:
         run: npm run build
       - name: Verify eight deterministic CA engines
         run: node scripts/mutant-engines-smoke.mjs
+      - name: Verify topology, reversible CA, and directional rules
+        run: node scripts/z3-topology-smoke.mjs
       - name: Verify shared palette library
         run: node scripts/palette-smoke.mjs
       - name: Install headless canvas and GIF decoder for export smoke test

@@ -1,5 +1,6 @@
 import { LIFE_RULES, worldDimensions } from './types';
 import type { SimSettings, World } from './types';
+import { neighborOffsets, orientedMatch, ORIENTED_DIRECTIONS, rotateBlocks } from './topology';
 
 function seededRandom(seed:number):()=>number{
   let a=seed>>>0;
@@ -25,7 +26,11 @@ export function createWorld(s:SimSettings):World{
     if(s.pattern==='checker')chance=((Math.floor(x/5)+Math.floor(y/5))%2===0)?s.density*1.9:s.density*0.08;
     if(s.pattern==='spiral')chance=Math.sin(r*62+Math.atan2(dy,dx)*8)>0.4?s.density*2:s.density*0.05;
     if(s.pattern==='web')chance=Math.sin((x-cx)*0.36)*Math.sin((y-cy)*0.36)>0.25?s.density*1.9:s.density*0.08;
-    if(s.engine==='wolfram'){
+    if(s.engine==='margolus'){
+    // The 2x2 block rotation is a bijection for every partition. Alternating
+    // its staggered partitions yields a reversible, deterministic block CA.
+    next.set(rotateBlocks(cells,w,h,(prev.generation%2) as 0|1));
+  }else if(s.engine==='wolfram'){
       if(y!==height-1)continue;
       cells[p]=s.pattern==='center'?(x===Math.floor(cx)?1:0):(rand()<chance?1:0);
     }else if(s.engine==='cyclic'){
@@ -41,7 +46,7 @@ export function createWorld(s:SimSettings):World{
     }else cells[p]=rand()<chance?1:0;
     if(cells[p]>0||s.engine==='cyclic'){ages[p]=1;traces[p]=1;}
   }
-  return {engine:s.engine,width,height,generation:0,cells,ages,
+  return {engine:s.engine,lattice:s.lattice,width,height,generation:0,cells,ages,
     neighbors:new Uint8Array(n),events:new Uint8Array(n),traces,
     previousCells:cells.slice(),olderCells:cells.slice(),fossils:new Float32Array(n)};
 }
@@ -78,18 +83,39 @@ export function stepWorld(prev:World,s:SimSettings):World{
       let count=0;
       const sought=s.engine==='cyclic'?(old+1)%s.cyclicStates:1;
       if(s.engine==='species')speciesCounts.fill(0);
-      for(let oy=-radius;oy<=radius;oy++)for(let ox=-radius;ox<=radius;ox++){
-        if(ox===0&&oy===0)continue;
-        if(s.engine!=='larger'&&s.neighborShape==='vonNeumann'&&Math.abs(ox)+Math.abs(oy)!==1)continue;
-        const v=valueAt(cells,w,h,x+ox,y+oy,s.wrap);
-        if(s.engine==='species'){
-          if(v>0&&v<=s.speciesCount){speciesCounts[v]++;count++;}
-        }else if(s.engine==='cyclic'?v===sought:v===1)count++;
+      let orientedBits=0;
+      if(s.engine==='oriented'){
+        for(let d=0;d<ORIENTED_DIRECTIONS.length;d++){
+          const [ox,oy]=ORIENTED_DIRECTIONS[d];
+          const value=valueAt(cells,w,h,x+ox,y+oy,s.wrap);
+          if(value>0){orientedBits|=1<<d;count++;}
+        }
+      }else{
+        const offsets=s.engine==='larger'?null:neighborOffsets(s.lattice,x,y,s.neighborShape);
+        if(offsets){
+          for(const [ox,oy] of offsets){
+            const value=valueAt(cells,w,h,x+ox,y+oy,s.wrap);
+            if(s.engine==='species'){
+              if(value>0&&value<=s.speciesCount){speciesCounts[value]++;count++;}
+            }else if(s.engine==='cyclic'?value===sought:value===1)count++;
+          }
+        }else{
+          for(let oy=-radius;oy<=radius;oy++)for(let ox=-radius;ox<=radius;ox++){
+            if(ox===0&&oy===0)continue;
+            const value=valueAt(cells,w,h,x+ox,y+oy,s.wrap);
+            if(value===1)count++;
+          }
+        }
       }
       neighbors[p]=Math.min(255,count);
       switch(s.engine){
         case 'life':
           next[p]=old?(life.survive.includes(count)?1:0):(life.birth.includes(count)?1:0);
+          break;
+        case 'oriented':
+          next[p]=old
+            ?(count>=s.orientedSurviveMin&&count<=s.orientedSurviveMax?1:0)
+            :(orientedMatch(orientedBits,s.orientedMask,s.orientedSymmetry,s.orientedMatch)?1:0);
           break;
         case 'brians':
           next[p]=old===1?2:old===2?0:count===2?1:0;
@@ -148,11 +174,33 @@ export function stepWorld(prev:World,s:SimSettings):World{
       :(old!==0&&now===0?1:old!==now?0.12:0);
     nextFossils[i]=Math.max(deposit,(prev.fossils?.[i]??0)*0.986);
   }
-  return {engine:s.engine,width:w,height:h,generation:prev.generation+1,
+  return {engine:s.engine,lattice:s.lattice,width:w,height:h,generation:prev.generation+1,
     cells:next,ages:nextAges,neighbors,events,traces:nextTraces,
     previousCells:cells.slice(),
     olderCells:prev.previousCells?.slice()??cells.slice(),
     fossils:nextFossils};
+}
+/** Exact inverse of Margolus CELL STATES. Ages/fossils are visual history,
+ * not reversible state; we reset them to avoid falsely claiming their inverse.
+ */
+export function rewindWorld(prev:World,s:SimSettings):World{
+  if(s.engine!=='margolus')throw new Error('Rewind is only valid for Margolus');
+  if(prev.generation===0)return prev;
+  const {width:w,height:h,cells}=prev;
+  const phase=((prev.generation-1)%2) as 0|1;
+  const earlier=rotateBlocks(cells,w,h,phase,true);
+  const n=w*h,ages=new Uint16Array(n),traces=new Float32Array(n);
+  const events=new Uint8Array(n);
+  for(let i=0;i<n;i++){
+    ages[i]=earlier[i]?1:0;traces[i]=earlier[i]?1:0;
+    if(!cells[i]&&earlier[i])events[i]=1;
+    else if(cells[i]&&!earlier[i])events[i]=2;
+    else if(cells[i]!==earlier[i])events[i]=3;
+  }
+  return {engine:'margolus',lattice:'square',width:w,height:h,
+    generation:prev.generation-1,cells:earlier,ages,traces,events,
+    neighbors:new Uint8Array(n),previousCells:earlier.slice(),
+    olderCells:earlier.slice(),fossils:new Float32Array(n)};
 }
 export function paintWorld(world:World,s:SimSettings,x:number,y:number,radius:number,erase=false,species=1):void{
   for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){

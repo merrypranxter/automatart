@@ -1,5 +1,6 @@
 import type { Appearance, World } from './types';
 import { renderSpecialSkin } from './skins';
+import { projectionMap } from './topology';
 
 const bg:[number,number,number]=[9,6,23];
 const backBuffers=new WeakMap<HTMLCanvasElement,HTMLCanvasElement>();
@@ -17,7 +18,7 @@ function bufferFor(canvas:HTMLCanvasElement,w:number,h:number):HTMLCanvasElement
 }
 const clamp=(v:number,min:number,max:number)=>Math.min(max,Math.max(min,v));
 const wrap=(value:number,n:number)=>((value%n)+n)%n;
-export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,outputWidth=900,outputHeight?:number):void{
+function renderSquareWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,outputWidth=900,outputHeight?:number):void{
   const w=world.width,h=world.height;
   const outW=outputWidth,outH=outputHeight??Math.round(outputWidth*h/w);
   if(canvas.width!==outW)canvas.width=outW;
@@ -118,4 +119,57 @@ export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,ou
     for(let y=0;y<=h;y+=stride){const yy=Math.round(y*dy)+0.5;ctx.moveTo(0,yy);ctx.lineTo(outW,yy);}
     ctx.stroke();ctx.restore();
   }
+}
+
+const latticeSources=new WeakMap<HTMLCanvasElement,HTMLCanvasElement>();
+/** Project the actual state grid to geometric tiles, AFTER the same visual
+ * renderer used for squares. Both PDF/PNG and frame exporters call here.
+ * Geometry changes neighborhood edges in sim.ts; this step renders them.
+ */
+export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,outputWidth=900,outputHeight?:number):void{
+  if(!world.lattice||world.lattice==='square'){
+    renderSquareWorld(canvas,world,a,outputWidth,outputHeight);
+    return;
+  }
+  const w=world.width,h=world.height;
+  const outW=outputWidth,outH=outputHeight??Math.round(outputWidth*h/w);
+  if(canvas.width!==outW)canvas.width=outW;
+  if(canvas.height!==outH)canvas.height=outH;
+  const ctx=canvas.getContext('2d',{alpha:false});
+  if(!ctx)return;
+  let source=latticeSources.get(canvas);
+  if(!source){source=document.createElement('canvas');latticeSources.set(canvas,source);}
+  const sw=w*2,sh=h*2;
+  renderSquareWorld(source,world,{...a,showGrid:false},sw,sh);
+  const sc=source.getContext('2d');
+  if(!sc)return;
+  const sourcePixels=sc.getImageData(0,0,sw,sh).data;
+  const map=projectionMap(world.lattice,w,h);
+  const projected=bufferFor(canvas,map.width,map.height);
+  const pc=projected.getContext('2d',{alpha:false});
+  if(!pc)return;
+  const frame=pc.createImageData(map.width,map.height),result=frame.data;
+  const {indices,samples,width:pw,height:ph}=map;
+  for(let i=0;i<indices.length;i++){
+    const k=i*4,cell=indices[i];
+    if(cell===0xffffffff){
+      result[k]=9;result[k+1]=6;result[k+2]=23;result[k+3]=255;
+      continue;
+    }
+    const sourceAt=samples[i]*4;
+    let factor=1;
+    if(a.showGrid){
+      const x=i%pw,y=(i/pw)|0;
+      if((x>0&&indices[i-1]!==cell)||(y>0&&indices[i-pw]!==cell))factor=.34;
+    }
+    result[k]=Math.round(sourcePixels[sourceAt]*factor);
+    result[k+1]=Math.round(sourcePixels[sourceAt+1]*factor);
+    result[k+2]=Math.round(sourcePixels[sourceAt+2]*factor);
+    result[k+3]=255;
+  }
+  pc.putImageData(frame,0,0);
+  ctx.fillStyle='#090617';ctx.fillRect(0,0,outW,outH);
+  ctx.imageSmoothingEnabled=a.skin!=='pixels'&&a.skin!=='glass';
+  ctx.imageSmoothingQuality='high';
+  ctx.drawImage(projected,0,0,outW,outH);
 }

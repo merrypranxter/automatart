@@ -3,7 +3,7 @@
 A zero-subscription, browser-based **cellular automata art instrument**. Not just Life with a palette: the long-term design connects cell states and mathematical events to colors, visual treatments, and eventually other rules through a Rule-to-Art Patchbay.
 
 ## Status
-**Phases 0–1, chroma controls, Z1 Mutant Zoo, Z2 Skin Machine and early recorder shipped:** responsive app foundation, eight simulation families, live painting, colorful rendering, PNG stills, JSON recipes, browser-local GIF export and MP4/WebM video recording. Expanded patch cables, APNG and loop-hunting are future phases.
+**Phases 0–1, chroma controls, Z1 Mutant Zoo, Z2 Skin Machine, Z3 Strange Lattices and early recorder shipped:** responsive app foundation, ten simulation families, live painting, colorful rendering, PNG stills, JSON recipes, browser-local GIF export and MP4/WebM video recording. Expanded patch cables, APNG and loop-hunting are future phases.
 
 ## Getting started
 ```bash
@@ -74,3 +74,11 @@ Original art/code project by merrypranxter.
 - **Browser/performance:** contours sample a capped density grid to limit draw work on phones. High resolution export still costs CPU/memory. GPU rendering and true 3D materials remain future work.
 - **Recorder clone:** new history arrays are copied when recording an already-running world. Older JSON recipes load with migration defaults.
 - **Quality gates:** automated pure sim/history/render pixel comparison, GIF encode/decode, and production browser test with all skins.
+
+## Z3 Strange Lattices
+- **New genuine neighborhood graphs:** six-edge hexagonal odd-row offset lattice, and three-edge alternating triangular lattice. Square topology remains; unsupported engines force square with an explanation. For wrap-around, dimensions are even to preserve reciprocal adjacency.
+- **Directional Life:** Eight-neighbor non-totalistic birth stencil (N, NE, E, etc.), exact/contains conditions, fixed orientation or 90° rotated or reflected equivalence, plus independent survival count interval.
+- **Reversible Margolus:** A 2×2 clockwise permutation with staggered 2×2 partitions each generation. Reverse-step is the inverse permutation of the previous block phase; **cell states are exactly reversible**. Color fossils and cell ages are visualization histories, not reversible metadata.
+- **Real geometric rendering:** hex/triangle polygons project the existing seven skins and all palettes onto their genuine lattice cells; canvas tap/paint uses the same cell geometry projection.
+- **Export parity:** recording clones lattice/history metadata. GIF/video/still export use the same shape projection as playback. Large mobile render costs remain bounded; 9:16/1:1/16:9 canvas can stretch the visible polygon aspect for the requested art format, but local adjacency stays mathematically exact.
+- **Validated:** symmetric neighbor graphs, actual birth counts, oriented symmetry, 12-tick forward-and-inverse block evolution, geometric tapping, deterministic replay, and a real-browser hex GIF test.

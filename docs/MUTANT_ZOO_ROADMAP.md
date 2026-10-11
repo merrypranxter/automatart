@@ -28,10 +28,10 @@ Four families: Life-like, Brian's Brain, cyclic, Wolfram 1D. World, painting, re
 - Shipped contour count/thickness, density thresholds, glow, chrome highlights, glass leading, temporal RGB and fossil intensity; further material texture and history decay tuning remain possible.
 - Output parity for PNG, GIF, video and no black alpha matte; bounded history memory.
 
-### Z3 — STRANGE LATTICES
-- Hexagonal offset and triangular adjacency systems with mathematically explicit neighborhoods, matching pick/paint and rendering.
-- Non-totalistic orientation-aware 3x3 rules, rotated/mirrored pattern templates.
-- Reversible Margolus/block CA; block phases and parity saved in recipe.
+### Z3 — STRANGE LATTICES (IMPLEMENTED: v1)
+- Shipped hexagonal odd-row-offset six-neighbor lattice and triangular three-edge-neighbor lattice, mathematically reciprocal neighbor graphs, matching polygon projection/pick/paint and export rendering.
+- Shipped square-lattice Directional Life with eight-neighbor birth stencil, strict/contains template matching, and fixed/quarter-turn/dihedral symmetry.
+- Shipped Margolus 2x2 invertible clockwise block rotation with alternating partition phase (generation parity) and exact backward cell step. Decorative ages/trails are not reversible.
 - Geometry-aware tooltips and performance/determinism tests.
 
 ### Z4 — PHYSICS AND EXOTIC LOCAL RULES

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, PointerEvent } from 'react';
-import { createWorld, paintWorld, stepWorld } from './engine/sim';
+import { createWorld, paintWorld, stepWorld, rewindWorld } from './engine/sim';
+import { lookupCell } from './engine/topology';
 import { renderWorld } from './engine/render';
 import MutantControls from './components/MutantControls';
 import SkinControls from './components/SkinControls';
+import StrangeControls, { SQUARE_ONLY_ENGINES } from './components/StrangeControls';
 import {
   captureAnimation, chooseVideoMime, recommendedDimensions, CaptureCancelled
 } from './engine/capture';
@@ -25,7 +27,9 @@ const ENGINES: {id:EngineId;name:string;hint:string}[] = [
   {id:'generations',name:'AFTERLIFE',hint:'B/S/C living fossils'},
   {id:'excitable',name:'EXCITABLE FLESH',hint:'Excitation/recovery waves'},
   {id:'larger',name:'LARGER THAN LIFE',hint:'Wide-neighborhood growth'},
-  {id:'species',name:'SPECIES WAR',hint:'Territorial competition'}
+  {id:'species',name:'SPECIES WAR',hint:'Territorial competition'},
+  {id:'oriented',name:'DIRECTIONAL LIFE',hint:'Non-totalistic neighbor patterns'},
+  {id:'margolus',name:'REVERSE UNIVERSE',hint:'Reversible 2×2 block CA'}
 ];
 const ASPECTS: {value:AspectId;name:string}[]=[
   {value:'square',name:'1:1 SQUARE'},
@@ -111,7 +115,8 @@ export default function App(){
     setPopulation(stat(worldRef.current));
   },[settings.engine,settings.cellCount,settings.aspect,settings.seed,
       settings.pattern,settings.density,settings.cyclicStates,
-      settings.genStates,settings.exciteStates,settings.speciesCount,resetNumber]);
+      settings.genStates,settings.exciteStates,settings.speciesCount,
+      settings.lattice,resetNumber]);
   useEffect(()=>{draw();},[draw,settings,resetNumber]);
 
   useEffect(()=>{
@@ -145,6 +150,14 @@ export default function App(){
     setPopulation(stat(worldRef.current));
     draw();
   }
+  function rewindStep(){
+    if(settings.engine!=='margolus'||worldRef.current.generation===0)return;
+    setPlaying(false);
+    worldRef.current=rewindWorld(worldRef.current,settings);
+    setGeneration(worldRef.current.generation);
+    setPopulation(stat(worldRef.current));
+    draw();
+  }
   function restart(){
     setResetNumber(n=>n+1);
     setMessage('Universe restarted from its exact seed.');
@@ -157,9 +170,10 @@ export default function App(){
     const canvas=canvasRef.current;if(!canvas)return;
     const r=canvas.getBoundingClientRect();
     const world=worldRef.current;
-    const x=Math.floor((e.clientX-r.left)*world.width/r.width);
-    const y=Math.floor((e.clientY-r.top)*world.height/r.height);
-    if(x<0||x>=world.width||y<0||y>=world.height)return;
+    const selected=lookupCell(world.lattice??'square',world.width,world.height,
+      (e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);
+    if(!selected)return;
+    const [x,y]=selected;
     paintWorld(world,settings,x,y,brush,erase,paintSpecies);
     setPopulation(stat(world));
     draw();
@@ -195,6 +209,16 @@ export default function App(){
       if(!['noise','center','rings','stripes','checker','spiral','web'].includes(s.pattern))throw new Error('Invalid seed pattern');
       if(!Object.hasOwn(LIFE_RULES,s.lifeRule))throw new Error('Invalid life rule');
       if(!Number.isInteger(s.cellCount)||s.cellCount<32||s.cellCount>256)throw new Error('Invalid grid size');
+      // The geometry/partition requires even horizontal dimensions.
+      if(s.cellCount%2!==0)s.cellCount=Math.min(256,s.cellCount+1);
+      if(!['square','hex','triangle'].includes(s.lattice))s.lattice='square';
+      if(SQUARE_ONLY_ENGINES.includes(s.engine))s.lattice='square';
+      if(s.engine==='margolus')s.wrap=true;
+      s.orientedMask=Math.max(1,Math.min(255,Math.floor(Number(s.orientedMask)||34)));
+      if(!['fixed','rotations','dihedral'].includes(s.orientedSymmetry))s.orientedSymmetry='rotations';
+      if(!['exact','contains'].includes(s.orientedMatch))s.orientedMatch='exact';
+      s.orientedSurviveMin=Math.max(0,Math.min(8,Math.floor(Number(s.orientedSurviveMin)??2)));
+      s.orientedSurviveMax=Math.max(s.orientedSurviveMin,Math.min(8,Math.floor(Number(s.orientedSurviveMax)??3)));
       if(!Number.isFinite(s.density)||s.density<0||s.density>1)throw new Error('Invalid density');
       if(!Number.isFinite(s.seed))throw new Error('Invalid seed');
       s.seed=s.seed>>>0;s.cyclicStates=Math.max(3,Math.min(24,Math.floor(s.cyclicStates)||12));
@@ -379,7 +403,7 @@ export default function App(){
           </div>}
         </section>
         <section className="rack" aria-label="Simulation controls">
-          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>SKIN MACHINE / Z2</span></div>
+          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>STRANGE LATTICES / Z3</span></div>
           <section className="module">
             <div className="module-heading"><span className="module-num">01</span><h2>WORLD MACHINE</h2><span className="module-symbol">◎</span></div>
             <label className="input-label" htmlFor="aspect">Canvas geometry</label>
@@ -396,15 +420,23 @@ export default function App(){
             <input id="density" type="range" min="1" max="95" step="1" value={Math.round(settings.density*100)} onChange={e=>updateSetting('density',Number(e.target.value)/100)}/>
             <label className="input-label" htmlFor="seed">Universe seed</label>
             <input id="seed" type="number" min="0" max="4294967295" value={settings.seed} onChange={e=>updateSetting('seed',Number(e.target.value)>>>0)}/>
-            <label className="toggle"><input type="checkbox" checked={settings.wrap} onChange={e=>updateSetting('wrap',e.target.checked)}/><span>Wrap world edges</span></label>
+            <label className="toggle"><input type="checkbox" disabled={settings.engine==='margolus'}
+              checked={settings.engine==='margolus'?true:settings.wrap}
+              onChange={e=>updateSetting('wrap',e.target.checked)}/><span>Wrap world edges</span></label>
+            <StrangeControls settings={settings} setSettings={setSettings} onRewind={rewindStep} generation={generation}/>
           </section>
           <section className="module">
             <div className="module-heading"><span className="module-num">02</span><h2>RULE REACTOR</h2><span className="module-symbol">⌘</span></div>
             <label className="input-label" htmlFor="engine">Automaton species</label>
-            <select id="engine" value={settings.engine} onChange={e=>updateSetting('engine',e.target.value as EngineId)}>
+            <select id="engine" value={settings.engine} onChange={e=>{
+              const engine=e.target.value as EngineId;
+              setSettings(s=>({...s,engine,
+                lattice:SQUARE_ONLY_ENGINES.includes(engine)?'square':s.lattice,
+                wrap:engine==='margolus'?true:s.wrap}));
+            }}>
               {ENGINES.map(x=><option key={x.id} value={x.id}>{x.name} — {x.hint}</option>)}
             </select>
-            {settings.engine!=='wolfram'&&settings.engine!=='larger'&&<>
+            {settings.engine!=='wolfram'&&settings.engine!=='larger'&&settings.engine!=='oriented'&&settings.engine!=='margolus'&&settings.lattice==='square'&&<>
               <label className="input-label" htmlFor="neighbor-shape">Neighborhood geometry</label>
               <select id="neighbor-shape" value={settings.neighborShape}
                 onChange={e=>updateSetting('neighborShape',e.target.value as NeighborShape)}>
