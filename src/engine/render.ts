@@ -27,9 +27,9 @@ export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,ou
   const palette=a.palette.map(rgb);
   for(let i=0;i<world.cells.length;i++){
     const state=world.cells[i], trace=world.traces[i];
-    const visible=state!==0 || a.trails&&trace>0.025 || (a.colorBy==='events'&&world.events[i]!==0);
+    const visible=world.engine==='cyclic' || state!==0 || (a.trails&&trace>0.025) || (a.colorBy==='events'&&world.events[i]!==0);
     const k=i*4;
-    if(!visible && !(world.generation>=0&&state===0&&world.cells.length>0&&false)){
+    if(!visible){
       d[k]=bg[0];d[k+1]=bg[1];d[k+2]=bg[2];d[k+3]=255;continue;
     }
     let index=0;
@@ -38,7 +38,7 @@ export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,ou
     if(a.colorBy==='neighbors')index=world.neighbors[i];
     if(a.colorBy==='events')index=world.events[i]===1?0:world.events[i]===2?3:world.events[i]===3?4:2;
     const color=palette[(index+palette.length)%palette.length];
-    const intensity=state>0?1:(a.trails?Math.min(0.83,trace):world.events[i]===2?0.38:0);
+    const intensity=world.engine==='cyclic'||state>0?1:(a.trails?Math.min(0.83,trace):world.events[i]===2?0.38:0);
     for(let j=0;j<3;j++)d[k+j]=Math.round(bg[j]+(color[j]-bg[j])*intensity);
     d[k+3]=255;
   }

@@ -3,7 +3,7 @@
 A zero-subscription, browser-based **cellular automata art instrument**. Not just Life with a palette: the long-term design connects cell states and mathematical events to colors, visual treatments, and eventually other rules through a Rule-to-Art Patchbay.
 
 ## Status
-**Phases 0–1 in progress:** app foundation + four simulation families + live painting + rendering foundations. Later features are on the roadmap, not represented as already shipped.
+**Phases 0–1 complete:** responsive app foundation, four simulation families, live painting, colorful rendering, PNG stills, and JSON recipes. GIF/video and expanded patch cables are future phases.
 
 ## Getting started
 ```bash
@@ -22,8 +22,8 @@ The model uses typed arrays, seeded generation, wrap/no-wrap boundaries and sepa
 
 ## Roadmap
 - [x] Repository initialized
-- [ ] **Phase 0:** Vite + React + TypeScript shell, responsive pinned preview, clean deployment config
-- [ ] **Phase 1:** Four running engines; start/pause/step/reset; paint; cell resolution; saved recipe; grid overlay
+- [x] **Phase 0:** Vite + React + TypeScript shell, responsive pinned preview, clean deployment config
+- [x] **Phase 1:** Four running engines; start/pause/step/reset; paint; cell resolution; saved recipe; grid overlay
 - [ ] **Phase 2:** Advanced Rule-to-Art mappings (state, age, neighbors, events), custom palette automation
 - [ ] **Phase 3:** Organic skins, contours, particles, glows and alpha-clean compositing
 - [ ] **Phase 4:** Frame-accurate GIF, APNG, WebM/MP4 exports, loop tools, larger renders

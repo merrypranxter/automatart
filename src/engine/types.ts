@@ -26,6 +26,7 @@ export interface Appearance {
   trails: boolean;
 }
 export interface World {
+  engine: EngineId;
   width: number;
   height: number;
   generation: number;

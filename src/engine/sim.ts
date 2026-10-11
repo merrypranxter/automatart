@@ -38,9 +38,9 @@ export function createWorld(s: SimSettings): World {
     } else {
       cells[p]=rand()<chance ? 1 : 0;
     }
-    if(cells[p]>0){ages[p]=1;traces[p]=1;}
+    if(cells[p]>0 || s.engine==='cyclic'){ages[p]=1;traces[p]=1;}
   }
-  return {width,height,generation:0,cells,ages,
+  return {engine:s.engine,width,height,generation:0,cells,ages,
     neighbors:new Uint8Array(n),events:new Uint8Array(n),traces};
 }
 function valueAt(cells:Uint8Array,w:number,h:number,x:number,y:number,wrap:boolean):number{
@@ -57,9 +57,10 @@ export function stepWorld(prev:World,s:SimSettings):World {
     // The history scrolls upward; the last row generates the next one.
     next.set(cells.subarray(w),0);
     for(let x=0;x<w;x++){
-      const l=cells[(h-1)*w+(s.wrap?(x+w-1)%w:x-1)] ?? 0;
-      const c=cells[(h-1)*w+x];
-      const r=cells[(h-1)*w+(s.wrap?(x+1)%w:x+1)] ?? 0;
+      const row=(h-1)*w;
+      const l=!s.wrap&&x===0?0:cells[row+(x+w-1)%w];
+      const c=cells[row+x];
+      const r=!s.wrap&&x===w-1?0:cells[row+(x+1)%w];
       const bit=((l>0?1:0)<<2)|((c>0?1:0)<<1)|(r>0?1:0);
       next[(h-1)*w+x]=(s.wolframRule>>bit)&1;
     }
@@ -87,13 +88,15 @@ export function stepWorld(prev:World,s:SimSettings):World {
   }
   for(let i=0;i<n;i++){
     const old=cells[i], now=next[i];
-    nextAges[i]=now===0?0:(old===now?Math.min(65535,ages[i]+1):1);
-    if(old===0&&now!==0)events[i]=1;
+    nextAges[i]=(now===0&&s.engine!=='cyclic')?0:(old===now?Math.min(65535,ages[i]+1):1);
+    if(s.engine==='cyclic'){
+      if(old!==now)events[i]=3;
+    }else if(old===0&&now!==0)events[i]=1;
     else if(old!==0&&now===0)events[i]=2;
     else if(old!==now)events[i]=3;
-    nextTraces[i]=Math.max(now>0?1:0,traces[i]*0.89);
+    nextTraces[i]=s.engine==='cyclic'?1:Math.max(now>0?1:0,traces[i]*0.89);
   }
-  return {width:w,height:h,generation:prev.generation+1,
+  return {engine:s.engine,width:w,height:h,generation:prev.generation+1,
     cells:next,ages:nextAges,neighbors,events,traces:nextTraces};
 }
 export function paintWorld(world:World,s:SimSettings,x:number,y:number,radius:number,erase=false):void{
