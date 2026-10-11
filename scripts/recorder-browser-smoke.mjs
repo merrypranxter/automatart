@@ -31,6 +31,18 @@ try{
     };
   });
   await page.goto(url,{waitUntil:'networkidle'});
+  // Palette import + new phase-2 controls must work in the actual UI.
+  await page.locator('#palette').selectOption('OPAL PRISM');
+  assert.equal(await page.locator('.color-wells input[type=color]').count(),12,
+    'Original Moire palettes must display all twelve editable stops');
+  await page.locator('#source').selectOption('radius');
+  await page.locator('#neighbor-shape').selectOption('vonNeumann');
+  // Exercise custom birth/survival rule editor, then return to cyclic for GIF.
+  await page.locator('#engine').selectOption('life');
+  await page.locator('#life').selectOption('custom');
+  await page.locator('.rule-bits').first().locator('button').nth(4).click();
+  assert.equal(await page.locator('.rule-bits').first().locator('button').nth(4).getAttribute('aria-pressed'),'true');
+  await page.locator('#engine').selectOption('cyclic');
   await page.locator('#duration-preset').selectOption('custom');
   await page.locator('#custom-seconds').fill('1');
   await page.locator('#export-fps').selectOption('5');
@@ -70,6 +82,10 @@ try{
   assert(result.frameDetail.includes('changing steps'),'UI should explain whether cells changed');
   assert(result.size>1000,'GIF must be nonempty');
   console.log('PASS: REAL BROWSER GIF worker='+result.workers+' frames='+result.frames+' bytes='+result.size);
+  await page.locator('.stage-capture-success .dismiss-export').click();
+  assert.equal(await page.locator('.stage-capture-success').count(),0,'X dismisses sticky export banner');
+  assert.equal(await page.locator('.finished-export').count(),0,'X also removes finished preview from controls');
+  console.log('PASS: original 12-stop palette, extra rules, and dismissible export panels');
 }finally{
   await browser?.close();
   server.kill('SIGTERM');
