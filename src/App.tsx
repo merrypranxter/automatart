@@ -14,6 +14,8 @@ import MutationControls from './components/MutationControls';
 import {mutateAutomatart,requiresWorldRestart,INITIAL_MUTATION_LOCKS} from './engine/mutation-automatart';
 import type {MutationLocks,MutationStrength} from './engine/mutation-automatart';
 import SkinControls from './components/SkinControls';
+import PrintShopControls from './components/PrintShopControls';
+import {validatePrintShop} from './engine/printshop';
 import StrangeControls, { SQUARE_ONLY_ENGINES } from './components/StrangeControls';
 import {
   captureAnimation, chooseVideoMime, recommendedDimensions, CaptureCancelled
@@ -597,6 +599,9 @@ export default function App(){
       if(!['forward','pingpong'].includes(a.paletteMotion))a.paletteMotion='forward';
       a.paletteReverse=!!a.paletteReverse;
       a.smoothPalette=!!a.smoothPalette;
+      // Older JSON recipes have no Print Shop; they stay visually unchanged.
+      // Malformed future print settings are bounded to safe ranges.
+      a.print=validatePrintShop(a.print);
       const restored=data.world?restoreWorldSnapshot(data.world,s):null;
       const brushLoaded=validateAlienBrush(data.alien?.brush,s);
       const recent=Array.isArray(data.alien?.recentStrokes)?
@@ -773,7 +778,7 @@ export default function App(){
           </div>}
         </section>
         <section className="rack" aria-label="Simulation controls">
-          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>FUNHOUSE / F3 ALIEN PAINTBRUSH</span></div>
+          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>FUNHOUSE / F4 PRINT SHOP</span></div>
           <section className="module">
             <div className="module-heading"><span className="module-num">01</span><h2>WORLD MACHINE</h2><span className="module-symbol">◎</span></div>
             <label className="input-label" htmlFor="aspect">Canvas geometry</label>
@@ -935,7 +940,7 @@ export default function App(){
             <p className="module-note">All 26 original It's a Moiré 12-stop palettes are intact. Cycle colors through generations, reverse their order, or route cell activity and position into the same color system. These controls apply to GIF and video exports too.</p>
           </section>
           <section className="module">
-            <div className="module-heading"><span className="module-num">04</span><h2>SKIN + HARVEST</h2><span className="module-symbol">◈</span></div>
+            <div className="module-heading"><span className="module-num">04</span><h2>SKIN / PRINT / HARVEST</h2><span className="module-symbol">◈</span></div>
             <label className="input-label" htmlFor="skin">Rendering skin</label>
             <select id="skin" value={appearance.skin} onChange={e=>updateAppearance('skin',e.target.value as SkinId)}>
               <option value="pixels">CRISP / PIXELATED</option>
@@ -954,6 +959,7 @@ export default function App(){
                 onChange={e=>updateAppearance('glowStrength',Number(e.target.value))}/>
             </>}
             <SkinControls appearance={appearance} setAppearance={setAppearance}/>
+            <PrintShopControls appearance={appearance} setAppearance={setAppearance}/>
             {settings.engine!=='cyclic'&&<>
               <label className="input-label" htmlFor="trail-persistence">Cell afterimage persistence <em>{Math.round(settings.trailDecay*100)}%</em></label>
               <input id="trail-persistence" type="range" min=".65" max=".99" step=".01" value={settings.trailDecay}

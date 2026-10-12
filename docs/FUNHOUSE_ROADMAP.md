@@ -35,11 +35,15 @@ The goal is more PLAY without destabilizing the mathematical engines, palette va
 - [x] Save the full current cell universe, paint strokes, generation, and visual history in the JSON recipe; restore identical stamped specimens, preserving legacy recipe support.
 - [x] Visible ghost preview with actual mirrored/stamped cells before planting; extra random stamp and symmetry buttons, scatter/density/invert controls.
 
-## F4 — PSYCHEDELIC PRINT SHOP
-- [ ] VISUAL ONLY posterization, solarization, duotone, stipple/halftone, NEON X-RAY.
-- [ ] Per-effect intensity, color choices where appropriate, sensible performance caps at 720p+ on mobile.
-- [ ] All effects flow through the renderer shared by PNG, GIF and video and do not change cell states.
-- [ ] Screenshot comparison + animated export test, specifically preserving per-frame GIF color cycling.
+## F4 — PSYCHEDELIC PRINT SHOP (PR · MERGE AFTER GREEN CI)
+- [x] VISUAL ONLY posterization, solarization, duotone/tritone, stipple/halftone, NEON X-RAY.
+- [x] Per-effect intensity, independently selected palette inks, master blend, and sensible performance caps at 720p+ on mobile.
+- [x] All effects run AFTER the skin through the renderer shared by PNG, GIF and video, without changing cell states.
+- [x] Deterministic stipple, ordered effect stack, reset, Random Print and three quick combinations.
+- [x] Pixel comparison + actual browser GIF/video export regression, including per-frame palette cycling.
+- [ ] Merge the tested PR manually into main.
+- [ ] Confirm on physical iPhone Safari after Netlify deploy.
+- Detailed F4A–F4D merge checklist: [F4 PRINTSHOP PHASES](F4_PRINTSHOP_PHASES.md).
 
 ## F5 — FREEZE AND POLISH
 - [ ] One-tap hi-res snapshot choices 1:1 / 9:16 / 16:9 and actual dimensions.

@@ -2,6 +2,7 @@ import type { Appearance, World } from './types';
 import { renderSpecialSkin } from './skins';
 import { projectionMap } from './topology';
 import { palettePhase } from './funhouse';
+import { applyPrintShop } from './printshop';
 
 const bg:[number,number,number]=[9,6,23];
 const backBuffers=new WeakMap<HTMLCanvasElement,HTMLCanvasElement>();
@@ -130,6 +131,7 @@ const latticeSources=new WeakMap<HTMLCanvasElement,HTMLCanvasElement>();
 export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,outputWidth=900,outputHeight?:number):void{
   if(!world.lattice||world.lattice==='square'){
     renderSquareWorld(canvas,world,a,outputWidth,outputHeight);
+    applyPrintShop(canvas,a,world);
     return;
   }
   const w=world.width,h=world.height;
@@ -173,4 +175,5 @@ export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,ou
   ctx.imageSmoothingEnabled=a.skin!=='pixels'&&a.skin!=='glass';
   ctx.imageSmoothingQuality='high';
   ctx.drawImage(projected,0,0,outW,outH);
+  applyPrintShop(canvas,a,world);
 }

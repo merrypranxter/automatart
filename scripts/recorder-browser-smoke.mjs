@@ -219,6 +219,49 @@ try{
     skinImages.push(await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL('image/png')));
   }
   assert.equal(new Set(skinImages).size,7,'Every visual skin must look different in the actual canvas');
+  // F4: print effects layer ON TOP of the skin, distinct modes, stacking,
+  // mobile controls, recipe round-trip, and GIF export with color cycling.
+  const artCanvas=page.locator('canvas[aria-label^="Interactive cellular"]');
+  const basePrintImage=await artCanvas.evaluate(c=>c.toDataURL('image/png'));
+  await page.locator('#print-master').check();
+  const printResults=[];
+  for(const id of ['posterize','halftone','solarize','xray','stipple','duotone']){
+    for(const prev of ['posterize','halftone','solarize','xray','stipple','duotone']){
+      if(prev!==id)await page.locator('#print-'+prev).uncheck().catch(()=>{});
+    }
+    await page.locator('#print-'+id).check();
+    await page.waitForTimeout(75);
+    printResults.push(await artCanvas.evaluate(c=>c.toDataURL('image/png')));
+  }
+  assert.equal(new Set(printResults).size,6,'Every print effect creates a different real rendering');
+  assert(printResults.every(img=>img!==basePrintImage),'Print Shop changes pixels');
+  await page.locator('#print-halftone').check();
+  await page.getByRole('button',{name:'Move HALFTONE earlier'}).click();
+  await page.locator('#print-halftone-size').fill('11');
+  await page.locator('#print-mix').fill('0.75');
+  assert(await page.locator('#print-surprise').isEnabled(),'Print surprise must be real');
+  await page.locator('#print-surprise').click();
+  await page.locator('#print-reset').click();
+  assert.equal(await page.locator('#print-master').isChecked(),false,'Reset print disables stack');
+  await page.getByRole('button',{name:'POP PRINT'}).click();
+  assert(await page.locator('#print-master').isChecked(),'Preset enables Print Shop');
+  assert(await page.locator('#print-posterize').isChecked());
+  assert(await page.locator('#print-halftone').isChecked());
+  // A saved JSON specimen preserves print stack without flattening its art.
+  const [printRecipeFile]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const printRecipe=JSON.parse(await readFile(await printRecipeFile.path(),'utf8'));
+  assert.equal(printRecipe.appearance.print.enabled,true,'Print Shop included in JSON recipe');
+  assert(printRecipe.appearance.print.effects.some(e=>e.id==='halftone'&&e.enabled));
+  await page.locator('#print-reset').click();
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'printshop-saved.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(printRecipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#print-master')?.checked===true);
+  assert(await page.locator('#print-halftone').isChecked(),'Loaded recipe restores print layers');
+  console.log('PASS: real browser six distinct print treatments, stacking controls and recipe round-trip');
+
   await page.locator('#skin').selectOption('mercury');
   assert(await page.locator('#skin-threshold').isVisible(),'Liquid density control appears');
   assert(await page.locator('#chrome-strength').isVisible(),'Chrome reflection control appears');

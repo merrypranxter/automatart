@@ -132,3 +132,12 @@ See [Funhouse Roadmap](docs/FUNHOUSE_ROADMAP.md) for the rest of the finishing p
 - On hexagonal/triangular and rectangular grids, mirrored/radial symmetry is defined in rendered normalized artwork coordinates, **not claimed to be an exact automorphism of that lattice**. Each transformed position maps to a genuine polygon cell.
 - The mutation dice, palette color cycling, GIF, and video export engine are preserved.
 - Rendering skins beyond the current seven are deferred to an F6 backlog stage after F5; no skin changes were made in F3.
+
+## FUNHOUSE F4 — Psychedelic Print Shop (PR)
+Implemented on a separate pull-request branch. See [F4 Print Shop rollout](docs/F4_PRINTSHOP_PHASES.md).
+
+Print Shop is **independent of skins** and VISUAL ONLY. Six effects (posterize, rotated halftone, solarize, Neon X-Ray, seeded stipple, palette-derived duotone/tritone) are blended in a user-defined order. Per-effect intensity, global mix, ink stop choices, density/dot/threshold controls, Random Print and three one-click combinations are included. Disabled by default; older recipes stay visually unchanged.
+
+Print effects run on the exact same renderer shared by live preview, PNG, GIF and video *after* all skin and polygon-lattice projection steps, so there is no independent export implementation to drift. A bounded <=720px work buffer avoids unbounded per-frame HD post-processing; requested canvas/file dimensions remain unchanged. This is CPU-bound, so iPhone performance and long video still require real-device checks. Frame-local GIF palette cycling is retained.
+
+Print settings travel with the existing version-1 JSON recipe as an optional nested `appearance.print` field. Current engine, cell state and palette arrays are untouched. Additional truly different **skins** are deferred to F6 after Funhouse F5.
