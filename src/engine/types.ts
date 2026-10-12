@@ -1,4 +1,6 @@
 import paletteLibrary from '../palettes/astral-trash-palettes.json';
+import {INITIAL_PRINT_SHOP,structuredClonePrint} from './printshop';
+import type {PrintShop} from './printshop';
 
 export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus';
 export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'maze' | 'mazectric' | 'replicator' | 'diamoeba' | 'coral' | 'amoeba' | 'custom';
@@ -49,6 +51,7 @@ export interface SimSettings {
   speciesAttackBias: number;
 }
 export interface Appearance {
+  print?: PrintShop;
   palette: string[];
   colorBy: ColorBy;
   skin: SkinId;
@@ -108,6 +111,7 @@ export const INITIAL_SETTINGS: SimSettings = {
   speciesCount:3,speciesBirth:2,speciesSurvive:1,speciesAttackBias:1
 };
 export const INITIAL_APPEARANCE: Appearance = {
+  print:structuredClonePrint(INITIAL_PRINT_SHOP),
   palette:[...PALETTES['RADIOACTIVE CANDY']],
   colorBy:'state',skin:'glow',showGrid:false,trails:true,
   paletteOffset:0,paletteCycle:0,paletteMotion:'forward',paletteReverse:false,smoothPalette:false,
