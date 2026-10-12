@@ -45,23 +45,33 @@ The goal is more PLAY without destabilizing the mathematical engines, palette va
 - [ ] Confirm on physical iPhone Safari after Netlify deploy.
 - Detailed F4A–F4D merge checklist: [F4 PRINTSHOP PHASES](F4_PRINTSHOP_PHASES.md).
 
-## F5 — FREEZE AND POLISH (IMPLEMENTED IN PR · CI / iPHONE ACCEPTANCE PENDING)
+## F5 — FREEZE AND POLISH (MERGED · REAL iPHONE ACCEPTANCE PENDING)
 - [x] One-tap PNG snapshot sizes 720/1080/1440/2160 (short edge), aspect choices original/1:1/9:16/16:9, true pixel readout and centered matte instead of stretching.
 - [x] PNG on iPhone prepares a separate SAVE / SHARE action, with dismissible ready panel. Desktop PNG downloads automatically.
 - [x] Better help labels, mobile touch targets/safe-area/reduced-motion, robust legacy/current recipe roundtrip and corrupt snapshot rejection.
 - [x] Pre-release validation and physical iPhone acceptance checklist documented in [F5 ACCEPTANCE](F5_ACCEPTANCE.md); don't claim browser CI proves iPhone Safari performance.
-- [ ] GitHub CI entirely green, then **user merges F5 PR**, followed by Netlify deploy.
+- [x] GitHub CI green and user merged F5 PR. Netlify deploy / real iPhone Safari acceptance still require confirmation.
 - [ ] **Real iPhone Safari test** for high-res PNG and long GIF/video, plus a live 20-second Safari stutter check, before any v1.0 decision.
 - [ ] Tag `v1.0` only after real-device acceptance; do not automatically tag a release.
 
-## F6 — DISTINCT NEW SKINS (DEFERRED UNTIL AFTER F5)
-- [ ] More truly different visual skins for Merry and Barry. Consider etching/interference, embroidery, diffraction foil, segmentation—not rebranded color/glow sliders. Respect GIF/video fidelity and all math-engine contracts.
+## F5.5 — ALL MENU EXPANSIONS (PLANNED; NOT YET IMPLEMENTED)
+- [ ] **A1–A2 Color Mapping:** Ten new mathematically grounded color signals and two-source color signal mixing.
+- [ ] **B1–B2 Neighborhoods:** Radius-2 Moore/diamond, directional stencils, touch-editable custom neighborhood.
+- [ ] **C1–C4 New models:** Wireworld, Abelian sandpile, Hodgepodge, seeded Forest Fire, Ising, Langton's Ant/Turmites, and lattice-gas rules. Correct classifications and real state transitions.
+- [ ] **D1–D4 Lattices:** Rhombille, Kagome, Square–octagon, Penrose quasicrystals, and Voronoi cells, each with actual cell adjacency.
+- [ ] Each subphase gets its own tested PR; only merge when green, and obtain physical iPhone acceptance where possible.
+- Detailed approved implementation/merge plan: [MENU EXPANSION + F6 SKINS](MENU_EXPANSION_AND_F6_SKINS.md).
+
+## F6 — DISTINCT NEW SKINS (PLANNED AFTER *ALL* F5.5 MENU EXPANSIONS)
+- [ ] F6S1: Interference Etching, Cellular Embroidery, Silkscreen Topology.
+- [ ] F6S2: Diffraction Foil, Chromatophore Membrane, Opaline Microscopy.
+- [ ] F6S3: Skin-specific controls, Random Skin, recipes and export QA. Keep all seven existing skins intact.
 
 ## Beyond Funhouse
-Z4–Z9 (sandpile / Wireworld / lattice gases, coupled automata, mutation farm/time machine, continuous life, 3D, shared app integrations) remain possible research work after a rest. This Finishing Pass does **not** claim those large milestones are shipped.
+Z4–Z9 (sandpile / Wireworld / lattice gases, coupled automata, mutation farm/time machine, continuous life, 3D, shared app integrations) remain possible research work after a rest. This Finishing Pass does **not** claim those large milestones are shipped. See the new approved F5.5 expansion plan for explicit overlaps with Z4 and true new geometries.
 
 ### Shared-suite strategy
 F2 was first implemented inside Automatart. The portable `src/engine/mutation-core.ts` holds seeded random mutation primitives with **no automata assumptions**. `src/engine/mutation-automatart.ts` applies strict Automatart engine-specific allowed ranges and safe live-world behavior. This code is **not yet installed** in It's a Moiré or Reaction Diffusion Artist. A later Math Art Suite integration can extract the core into a tested shared package and add separate adapters for each app rather than copying controls or mismatching mathematical parameters.
 
 ## Future visual-skin expansion — requested, deliberately DEFERRED
-After the Funhouse feature phases and stability work, design **several genuinely new rendering skins** that look substantially unlike the current seven. Both Merry and Barry especially enjoy the skins. Prioritize fundamentally different visual constructions (e.g. interference etching, cellular embroidery, chromatophore segmentation, diffraction foil, silk screen topology), not renamed brightness/glow filters. Keep skins VISUAL ONLY, expose meaningful controls and preserve GIF/video color fidelity. **Do not implement these during F3.** This is a backlog item so it will not be forgotten; use an F6 skin-research phase after F5.
+After F5.5's four COMPLETE menu-expansion families and stability work, design **several genuinely new rendering skins** that look substantially unlike the current seven. Both Merry and Barry especially enjoy the skins. Prioritize fundamentally different visual constructions (e.g. interference etching, cellular embroidery, chromatophore segmentation, diffraction foil, silk screen topology), not renamed brightness/glow filters. Keep skins VISUAL ONLY, expose meaningful controls and preserve GIF/video color fidelity. **Do not implement these during F3.** This is a backlog item so it will not be forgotten; use an F6 skin-research phase after F5.

@@ -34,6 +34,9 @@ Four families: Life-like, Brian's Brain, cyclic, Wolfram 1D. World, painting, re
 - Shipped Margolus 2x2 invertible clockwise block rotation with alternating partition phase (generation parity) and exact backward cell step. Decorative ages/trails are not reversible.
 - Geometry-aware tooltips and performance/determinism tests.
 
+## 2026-10-12 implementation queue
+The user approved **all** options in the four photographed dropdowns **before** new skins. The dedicated [MENU EXPANSION + F6 SKINS](MENU_EXPANSION_AND_F6_SKINS.md) roadmap is the current ordered implementation queue (F5.5A1–D4, then F6S1–S3). It overlaps selected Z4 engines; **do not duplicate** completed implementations when returning to the older Z4–Z9 exploratory plan. All new features remain PLANNED until tested and merged.
+
 ### Z4 — PHYSICS AND EXOTIC LOCAL RULES
 - Abelian sandpile redistribution (synchronous toppling), stochastic forest-fire/birth/death (seeded RNG), Wireworld, lattice-gas collisions (particle bitsets). Honest distinctions about update schemes.
 - Cell lineage/ancestry as true local state if inherited; paint region selection and crop-to-seed.
