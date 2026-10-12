@@ -40,3 +40,5 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Record GIF through actual browser Worker and verify UI
         run: node scripts/recorder-browser-smoke.mjs
+      - name: Verify smooth real-time video capture in Chromium
+        run: node scripts/video-recorder-browser-smoke.mjs

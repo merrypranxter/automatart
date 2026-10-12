@@ -105,3 +105,11 @@ See [Funhouse Roadmap](docs/FUNHOUSE_ROADMAP.md) for the rest of the finishing p
 - **Two different random buttons.** RANDOM PALETTE chooses from the 31 named presets without changing rule/seed/color modifiers. RANDOM COLORS invents entirely unrestricted RGB colors for every existing editable swatch, retains stop count, and is saved via ordinary palette/recipe export. No special print or style constraints.
 - SHUFFLE STOPS, REVERSE STOPS, ROTATE STOPS reorder only the current palette copy; source presets remain unchanged.
 - Palette Ping-Pong uses a symmetric triangular wave driven by generation number, with deterministic live/GIF/video appearance. The existing continuous mode remains available; recipe loading defaults to continuous for older saved recipes.
+
+## 2026-10-11 video stutter repair
+- Diagnosis from an affected 20.67s sample clip: recurring ~0.7–0.8-second frozen intervals with quick changes and roughly 5 distinct motion updates/second despite a 30fps wrapper. This is *not* a GIF color issue.
+- Likely main-thread encoder blocking pattern: the previous video recorder used `MediaRecorder.start(1000)` to flush chunks each second while rendering on the main thread. Encoder/timeslice flushing can interrupt rendering and then the old absolute-timestamp loop rapidly produced catch-up frames.
+- Video recording now uses `MediaRecorder.start()` with one final Blob (no periodic 1-second flushes), and an automatically updating capture stream with no duplicated `requestFrame()` calls.
+- New frame pacing drops overdue *schedule debt* instead of producing a rapid burst of simulated frames after a UI stall. This may take longer than requested wall-clock duration when a browser is CPU-overloaded; as with every MediaRecorder capture the actual file is real-time, not a guaranteed offline fixed-framerate encoding.
+- GIFs remain in the separate frame-by-frame worker path and retain their per-frame palettes. The recorder progress/preview/cancel/save UX is unchanged.
+- Real browser test decodes several moments of an exported video, verifies temporal diversity and playable duration, and asserts MediaRecorder starts without a 1000ms timeslice. Real iPhone Safari needs another user check.

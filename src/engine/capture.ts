@@ -253,8 +253,11 @@ export async function captureAnimation(
     renderWorld(canvas,cursor.current,a,width,height);
     await nextPaint();
     notCancelled(signal);
+    // AUTOMATIC canvas capture is sufficient here. Do not call
+    // requestFrame() on an already-automatic track: Safari may collect an
+    // extra frame with an inconsistent timestamp.
     const stream=canvas.captureStream(opt.fps);
-    const track=stream.getVideoTracks()[0] as (MediaStreamTrack & {requestFrame?:()=>void})|undefined;
+    const track=stream.getVideoTracks()[0];
     if(!track){stream.getTracks().forEach(t=>t.stop());throw new Error('No video track could be captured.');}
     const chunks:Blob[]=[];
     let recorder:MediaRecorder;
@@ -273,26 +276,32 @@ export async function captureAnimation(
       recorder.onstop=()=>resolve();
     });
     try{
-      recorder.start(1000);
-      const begin=performance.now(),stepMillis=1000/opt.fps;
+      // On WebKit, MediaRecorder.start(1000) can flush/encode on the main
+      // thread every second, freezing the canvas for ~0.7s and then rushing
+      // through many late simulation frames. Collect the finished Blob once.
+      recorder.start();
+      const stepMillis=1000/opt.fps;
+      let nextFrameAt=performance.now();
       for(let i=0;i<totalFrames;i++){
         notCancelled(signal);
+        await delay(Math.max(0,nextFrameAt-performance.now()));
+        notCancelled(signal);
         renderWorld(canvas,cursor.current,a,width,height);
-        // An animation frame lets the compositor publish the new canvas pixels;
-        // optional requestFrame additionally nudges CanvasCaptureMediaStreamTrack.
+        // Let the compositor publish painted canvas pixels. The MediaStream
+        // already captures at opt.fps; don't request duplicate manual frames.
         await nextPaint();
-        if(track.requestFrame){
-          try{track.requestFrame();}catch{ /* Automatic stream capture still runs */ }
-        }
         frames++;
         const transition=cursor.advance();
         if(transition.changed)distinctFrames++;
         if(i%Math.max(1,Math.floor(opt.fps/3))===0)update('Recording video frames',frames);
         if(opt.mode==='settled'&&transition.settled){ended='settled';break;}
         if(i===totalFrames-1&&opt.mode==='settled')ended='limit';
-        await delay(Math.max(0,begin+(i+1)*stepMillis-performance.now()));
+        // If the device is temporarily overloaded, discard the lateness
+        // instead of doing a burst of catch-up paints a few ms apart.
+        nextFrameAt=Math.max(nextFrameAt+stepMillis,performance.now()+stepMillis*0.5);
       }
-      if(!signal.aborted)await delay(Math.ceil(1000/opt.fps));
+      // Publish the final painted frame before stopping the stream.
+      if(!signal.aborted)await delay(Math.ceil(stepMillis));
     }finally{
       if(recorder.state!=='inactive')recorder.stop();
       await finished;
