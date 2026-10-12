@@ -348,7 +348,7 @@ try{
   await page.locator('#source').selectOption('angular');
   assert(await page.locator('#signal-center-x').isVisible(),'Angular center is adjustable');
   await page.locator('#signal-center-x').fill('0.22');
-  await page.locator('#signal-center-y').fill('0.79');
+  await page.locator('#signal-center-y').fill('0.8');
   await page.locator('#source').selectOption('birthFlash');
   assert(await page.locator('#signal-history').isVisible(),'History threshold is adjustable');
   await page.locator('#source').selectOption('generationWave');

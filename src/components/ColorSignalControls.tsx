@@ -23,7 +23,7 @@ export default function ColorSignalControls({appearance:a,setAppearance,world,in
     {(['generationWave','diagonal'] as string[]).includes(a.colorBy)&&
       slider('signal-frequency','Wave frequency','signalFrequency',o.frequency,.2,12,.2)}
     {(['generationWave','diagonal','angular','flow'] as string[]).includes(a.colorBy)&&
-      slider('signal-phase','Phase rotation','signalPhase',o.phase,-6.28,6.28,.1)}
+      slider('signal-phase','Phase rotation','signalPhase',o.phase,-6.28,6.28,.02)}
     {a.colorBy==='angular'&&<>
       {slider('signal-center-x','Rainbow center X','signalCenterX',o.centerX,0,1,.02)}
       {slider('signal-center-y','Rainbow center Y','signalCenterY',o.centerY,0,1,.02)}
