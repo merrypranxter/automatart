@@ -9,7 +9,7 @@ The goal is more PLAY without destabilizing the mathematical engines, palette va
 - New UI controls must have a real implementation and work with touch screens. Use no paid API.
 - Each batch requires type/build and real browser/GIF smoke tests before declaring it shipped.
 
-## F1 — ROULETTE + PRECISE TIME + COLOR TOYS (IMPLEMENTED — awaiting CI smoke)
+## F1 — ROULETTE + PRECISE TIME + COLOR TOYS (SHIPPED — CI GREEN)
 - [x] Plan the entire Funhouse and publish a phase checklist.
 - [x] Separate "RANDOM PALETTE" (existing presets) and "RANDOM COLORS" (entirely arbitrary colors while keeping editable swatches).
 - [x] Rule Roulette: documented, standard Life-like B/S presets (Maze, Mazectric, Replicator, Diamoeba, Coral, Amoeba) alongside existing Conway/HighLife/Seeds/Day & Night. Keep the custom B/S editor.
