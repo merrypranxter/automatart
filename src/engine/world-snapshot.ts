@@ -56,7 +56,7 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
   const getF32=(name:keyof PackedWorld['arrays'])=>
     new Float32Array(get(name,n*4).buffer);
   const original=createWorld(settings);
-  const world:World={...original,generation:s.generation,
+  const world:World={...original,generation:s.generation!,
     cells:get('cells',n),ages:getU16('ages'),neighbors:get('neighbors',n),
     events:get('events',n),traces:getF32('traces'),
     previousCells:get('previousCells',n),olderCells:get('olderCells',n),
