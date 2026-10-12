@@ -13,7 +13,7 @@ import type {SnapshotAspect,SnapshotSize} from './engine/snapshot';
 import { randomColors, rotatedColors, shuffledColors } from './engine/funhouse';
 import MutantControls from './components/MutantControls';
 import NeighborhoodControls from './components/NeighborhoodControls';
-import {maxNeighborCount,supportsNeighborhood,validNeighborhoodSettings} from './engine/neighborhood';
+import {maxNeighborCount,supportsNeighborhood,validNeighborhoodSettings,normalizeActiveVotes} from './engine/neighborhood';
 import MutationControls from './components/MutationControls';
 import {mutateAutomatart,requiresWorldRestart,INITIAL_MUTATION_LOCKS} from './engine/mutation-automatart';
 import type {MutationLocks,MutationStrength} from './engine/mutation-automatart';
@@ -876,10 +876,12 @@ export default function App(){
             <label className="input-label" htmlFor="engine">Automaton species</label>
             <select id="engine" value={settings.engine} onChange={e=>{
               const engine=e.target.value as EngineId;
-              setSettings(s=>({...s,engine,
-                lattice:SQUARE_ONLY_ENGINES.includes(engine)?'square':s.lattice,
-                neighborShape:supportsNeighborhood(engine,s.lattice)?s.neighborShape:'moore',
-                 wrap:engine==='margolus'?true:s.wrap}));
+              setSettings(s=>{
+                const lattice=SQUARE_ONLY_ENGINES.includes(engine)?'square':s.lattice;
+                return normalizeActiveVotes({...s,engine,lattice,
+                  neighborShape:supportsNeighborhood(engine,lattice)?s.neighborShape:'moore',
+                  wrap:engine==='margolus'?true:s.wrap});
+              });
             }}>
               {ENGINES.map(x=><option key={x.id} value={x.id}>{x.name} — {x.hint}</option>)}
             </select>

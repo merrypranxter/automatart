@@ -9,7 +9,8 @@ const files=[
  ['src/engine/types.ts','scripts/.b1-types.mjs'],
  ['src/engine/sim.ts','scripts/.b1-sim.mjs'],
  ['src/engine/mutation-automatart.ts','scripts/.b1-mutation.mjs'],
- ['src/engine/color-signals.ts','scripts/.b1-signals.mjs']
+ ['src/engine/color-signals.ts','scripts/.b1-signals.mjs'],
+ ['src/engine/capture.ts','scripts/.b1-capture.mjs']
 ];
 try{
  await Promise.all(files.map(([entry,outfile])=>build({
@@ -22,6 +23,7 @@ try{
  const {createWorld,stepWorld}=await mod(3);
  const {mutateAutomatart}=await mod(4);
  const {computeColorSignal}=await mod(5);
+ const {cloneWorld:cloneCaptureWorld}=await mod(6);
  const shapeList=[['moore',8],['vonNeumann',4],['square2',24],['diamond2',12]];
  for(const [shape,count] of shapeList){
   const offsets=neighborOffsets('square',10,10,shape,255);
@@ -98,6 +100,9 @@ try{
  assert.equal(computeColorSignal(visual,sampled,'boundaries')[idx],0,
   'Directional color must ignore deselected E neighbor');
  visual.neighborMask=10;
+ const copied=cloneCaptureWorld(visual);
+ assert.equal(copied.neighborMask,10,'GIF/video clone must keep selected directions');
+ assert.equal(copied.neighborShape,'directional','GIF/video clone must keep rule graph');
  assert.equal(computeColorSignal(visual,sampled,'boundaries')[idx],.5,
   'Color signal follows selected N/E voters');
  const {normalizeActiveVotes}=await mod(0);
