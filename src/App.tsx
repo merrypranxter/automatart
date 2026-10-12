@@ -122,7 +122,41 @@ export default function App(){
   const pendingWorldRestoreRef=useRef<World|null>(null);
   const canvasRef=useRef<HTMLCanvasElement>(null);
   const stageRef=useRef<HTMLElement>(null);
+  const viewerWrapRef=useRef<HTMLDivElement>(null);
   const [viewerFullscreen,setViewerFullscreen]=useState(false);
+  // The simulation paints to a fixed-resolution backing canvas; CSS alone
+  // with width:auto never enlarges it for a big desktop monitor. Compute an
+  // actual displayed size that covers as much of the fullscreen frame as
+  // possible, without distorting the cell grid or changing export pixels.
+  useEffect(()=>{
+    const wrap=viewerWrapRef.current;
+    const canvas=canvasRef.current;
+    if(!viewerFullscreen||!wrap||!canvas)return;
+    const fit=()=>{
+      if(!canvas.width||!canvas.height||!wrap.clientWidth||!wrap.clientHeight)return;
+      const availableWidth=Math.max(1,wrap.clientWidth-2);
+      const availableHeight=Math.max(1,wrap.clientHeight-2);
+      const scale=Math.min(availableWidth/canvas.width,availableHeight/canvas.height);
+      wrap.style.setProperty('--fullscreen-preview-width',Math.max(1,Math.floor(canvas.width*scale))+'px');
+      wrap.style.setProperty('--fullscreen-preview-height',Math.max(1,Math.floor(canvas.height*scale))+'px');
+    };
+    const resizeObserver=typeof ResizeObserver!=='undefined'?new ResizeObserver(fit):null;
+    resizeObserver?.observe(wrap);
+    // renderWorld only changes backing dimensions when the grid/aspect changes.
+    // This catches those changes without a resize loop or per-frame layout read.
+    const attributeObserver=new MutationObserver(fit);
+    attributeObserver.observe(canvas,{attributes:true,attributeFilter:['width','height']});
+    window.addEventListener('resize',fit);
+    const initialFrame=window.requestAnimationFrame(fit);
+    return ()=>{
+      resizeObserver?.disconnect();
+      attributeObserver.disconnect();
+      window.removeEventListener('resize',fit);
+      window.cancelAnimationFrame(initialFrame);
+      wrap.style.removeProperty('--fullscreen-preview-width');
+      wrap.style.removeProperty('--fullscreen-preview-height');
+    };
+  },[viewerFullscreen]);
   useEffect(()=>{
     document.body.classList.toggle('art-viewer-open',viewerFullscreen);
     return ()=>document.body.classList.remove('art-viewer-open');
@@ -582,7 +616,7 @@ export default function App(){
               <button type="button" className="viewer-toggle" aria-pressed={viewerFullscreen} onClick={()=>void toggleViewerFullscreen()} title="Fullscreen artwork viewer (Esc to exit)">{viewerFullscreen?'✕ EXIT':'⛶ FULLSCREEN'}</button>
             </div>
           </div>
-          <div className="canvas-wrap">
+          <div className="canvas-wrap" ref={viewerWrapRef}>
             <canvas ref={canvasRef} aria-label="Interactive cellular automata canvas. Drag to paint cells." onPointerDown={onPointerDown} onPointerMove={onPointerMove} />
             <span className="canvas-corner tl">A / {String(generation).padStart(6,'0')}</span>
             <span className="canvas-corner tr">{settings.cellCount} GRID</span>
