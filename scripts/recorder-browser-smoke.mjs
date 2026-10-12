@@ -373,6 +373,65 @@ try{
   assert.equal(await page.locator('#signal-frequency').inputValue(),'7');
   await page.locator('#print-master').check();
   console.log('PASS: ten live Color Lab signals, signal sliders/inspector and A1 recipe roundtrip');
+  // A2 dual source color mapping: endpoint fidelity and composite output.
+  // The Math Lab stays paused so color comparison is exact.
+  await page.locator('#print-master').uncheck();
+  await page.locator('#skin').selectOption('pixels');
+  await page.locator('#source').selectOption('age');
+  const soloAge=await artA1.evaluate(c=>c.toDataURL('image/png'));
+  await page.locator('#source').selectOption('entropy');
+  const soloEntropy=await artA1.evaluate(c=>c.toDataURL('image/png'));
+  await page.locator('#source').selectOption('age');
+  await page.locator('#dual-enabled').check();
+  await page.locator('#dual-source-a').selectOption('age');
+  await page.locator('#dual-source-b').selectOption('entropy');
+  await page.locator('#dual-blend').fill('0');
+  assert.equal(await artA1.evaluate(c=>c.toDataURL('image/png')),soloAge,
+    'A2 blend=0 must render exactly the unchanged standalone A image');
+  await page.locator('#dual-blend').fill('1');
+  assert.equal(await artA1.evaluate(c=>c.toDataURL('image/png')),soloEntropy,
+    'A2 blend=1 must render exactly the unchanged standalone B image');
+  await page.locator('#dual-blend').fill('0.5');
+  const mixedDual=await artA1.evaluate(c=>c.toDataURL('image/png'));
+  assert.notEqual(mixedDual,soloAge,'A2 mixture must differ from A-only');
+  assert.notEqual(mixedDual,soloEntropy,'A2 mixture must differ from B-only');
+  await page.locator('#dual-invert-a').check();
+  assert.notEqual(await artA1.evaluate(c=>c.toDataURL('image/png')),mixedDual,
+    'A2 independent invert A changes visible colors');
+  await page.locator('#dual-invert-a').uncheck();
+  await page.locator('#dual-offset-b').fill('3');
+  await page.locator('#dual-strength-a').fill('1.5');
+  assert.notEqual(await artA1.evaluate(c=>c.toDataURL('image/png')),mixedDual,
+    'Per-source palette offset and scale affect the rendering');
+  const beforeSwapA=await page.locator('#dual-source-a').inputValue();
+  const beforeSwapB=await page.locator('#dual-source-b').inputValue();
+  await page.locator('#dual-swap').click();
+  assert.equal(await page.locator('#dual-source-a').inputValue(),beforeSwapB);
+  assert.equal(await page.locator('#dual-source-b').inputValue(),beforeSwapA);
+  await artA1.click({position:{x:40,y:40}});
+  assert((await page.locator('.dual-math-inspector').innerText()).includes('BLENDED RGB'),
+    'Real tapped-cell dual inspector reports both signals and final RGB');
+  const [dualRecipeDownload]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const dualRecipe=JSON.parse(await readFile(await dualRecipeDownload.path(),'utf8'));
+  assert.equal(dualRecipe.appearance.dualColor.enabled,true);
+  assert.equal(dualRecipe.appearance.dualColor.sourceA,beforeSwapB);
+  await page.locator('#dual-reset').click();
+  assert.equal(await page.locator('#dual-enabled').isChecked(),false,'Dual reset disables the patchbay');
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'a2-dual-mapping.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(dualRecipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#dual-enabled')?.checked===true);
+  assert.equal(await page.locator('#dual-source-a').inputValue(),beforeSwapB,
+    'Loaded recipe recovers channel A source');
+  assert.equal(await page.locator('#dual-offset-b').inputValue(),
+    String(dualRecipe.appearance.dualColor.offsetB),'Loaded recipe recovers B offset');
+  await page.locator('#dual-blend').fill('0.5');
+  await page.locator('#print-master').check();
+  console.log('PASS: A2 dual RGB endpoints, invert/scale/offset, swap, live inspector and recipe roundtrip');
+
   await page.locator('#skin').selectOption('mercury');
   assert(await page.locator('#skin-threshold').isVisible(),'Liquid density control appears');
   assert(await page.locator('#chrome-strength').isVisible(),'Chrome reflection control appears');
@@ -383,7 +442,9 @@ try{
   // Test GIF capture under the A1 interference source. Existing mercury
   // controls were exercised above, but pixels make the signal visibly direct.
   await page.locator('#skin').selectOption('pixels');
-  await page.locator('#source').selectOption('generationWave'); // capture visible time ghosts too
+  await page.locator('#source').selectOption('generationWave');
+  // Record with A2 still on: each GIF frame must contain the same two-source
+  // mathematical composite as the live preview, plus cycling palettes.
   await page.locator('#palette-cycle').focus();
   await page.locator('#palette-cycle').press('End'); // ensure GIF frames require NEW colors
   await page.locator('#duration-preset').selectOption('custom');

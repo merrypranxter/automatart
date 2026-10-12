@@ -19,6 +19,8 @@ import SkinControls from './components/SkinControls';
 import PrintShopControls from './components/PrintShopControls';
 import ColorSignalControls from './components/ColorSignalControls';
 import {NEW_COLOR_SIGNALS,isNewColorSignal,signalOptions} from './engine/color-signals';
+import DualColorControls from './components/DualColorControls';
+import {validateDualColor} from './engine/dual-color';
 import {validatePrintShop} from './engine/printshop';
 import StrangeControls, { SQUARE_ONLY_ENGINES } from './components/StrangeControls';
 import {
@@ -652,6 +654,7 @@ export default function App(){
       // Older JSON recipes have no Print Shop; they stay visually unchanged.
       // Malformed future print settings are bounded to safe ranges.
       a.print=validatePrintShop(a.print);
+      a.dualColor=validateDualColor(a.dualColor);
       const restored=data.world?restoreWorldSnapshot(data.world,s):null;
       const brushLoaded=validateAlienBrush(data.alien?.brush,s);
       const recent=Array.isArray(data.alien?.recentStrokes)?
@@ -829,7 +832,7 @@ export default function App(){
           </div>}
         </section>
         <section className="rack" aria-label="Simulation controls">
-          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>A1 / TEN NEW COLOR SIGNALS</span></div>
+          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>A2 / DUAL COLOR PATCHBAY</span></div>
           <section className="module">
             <div className="module-heading"><span className="module-num">01</span><h2>WORLD MACHINE</h2><span className="module-symbol">◎</span></div>
             <label className="input-label" htmlFor="aspect">Canvas geometry</label>
@@ -930,6 +933,8 @@ export default function App(){
             {isNewColorSignal(appearance.colorBy)&&
               <ColorSignalControls appearance={appearance} setAppearance={setAppearance}
                 inspectedCell={inspectedCell} world={worldRef.current}/>}
+            <DualColorControls appearance={appearance} setAppearance={setAppearance}
+              inspectedCell={inspectedCell} world={worldRef.current}/>
             
             <label className="input-label" htmlFor="palette">Load a color universe</label>
             <select id="palette" value={Object.keys(PALETTES).find(k=>PALETTES[k].length===appearance.palette.length&&PALETTES[k].every((c,i)=>c.toLowerCase()===appearance.palette[i]?.toLowerCase()))||'CUSTOM'}
