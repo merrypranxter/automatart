@@ -342,3 +342,24 @@ body.art-viewer-open{overflow:hidden}
   *,*::before,*::after{scroll-behavior:auto!important;
     animation-duration:0.01ms!important;transition-duration:0.01ms!important}
 }
+
+/* F5.5A1: Mathematical Color Signal Lab; responsive without displacing preview */
+.color-signal-lab{display:flex;flex-direction:column;gap:10px;margin:10px 0 15px;padding:12px;
+  border:1px solid #22e6e0;border-radius:11px;
+  background:linear-gradient(145deg,#0c3540,#1a0e35 67%,#371643)}
+.color-signal-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.color-signal-head b{font:800 12px 'Chakra Petch',monospace;color:#28fbe1;letter-spacing:.75px}
+.color-signal-head span{font:700 9px 'Chakra Petch',monospace;color:#ffcb52}
+.color-signal-lab p{margin:0;color:#dfcfe9;font:500 11px/1.5 'Chakra Petch',monospace}
+.color-signal-slider{display:flex;flex-direction:column;gap:6px}
+.color-signal-slider>span{display:flex;justify-content:space-between;gap:9px;
+  color:#f6deff;font:700 11px 'Chakra Petch',monospace}
+.color-signal-slider em{color:#f9ef57;font-style:normal}
+.color-signal-slider input{accent-color:#ff3ba7;min-height:30px}
+.color-signal-readout{display:flex;flex-direction:column;gap:5px;padding:10px;border-radius:8px;
+  border:1px dashed #69c7dd;background:#0a1326;color:#dcebf4;
+  font:700 11px/1.5 'Chakra Petch',monospace}
+.color-signal-readout b{font-size:11px;color:#5df5db}
+.color-signal-readout strong{font-size:13px;color:#ffde57}
+.color-signal-lab .color-signal-hint{font-size:10px;color:#a4b9c9}
+@media(max-width:460px){.color-signal-lab{padding:10px 9px}.color-signal-head b{font-size:11px}}

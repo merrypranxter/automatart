@@ -60,7 +60,7 @@ export function mutateAutomatart(
   const floatStep=(value:number,range:number,min:number,max:number,precision=2)=>
     jitterMutation(rng,value,range,min,max,precision);
   // VISUAL parameters are always safe; these never recreate the universe.
-  offer('Color signal',()=>{a.colorBy=choose(a.colorBy,['state','age','neighbors','events','radius','x','activity'] as const)});
+  offer('Color signal',()=>{a.colorBy=choose(a.colorBy,['state','age','neighbors','events','radius','x','activity','entropy','boundaries','diversity','flow','birthFlash','deathHeat','generationWave','angular','diagonal','gradient'] as const)});
   offer('Skin material',()=>{a.skin=choose(a.skin,['pixels','soft','glow','contours','mercury','relief','glass'] as const)});
   offer('Chromatic drift',()=>{a.paletteCycle=floatStep(a.paletteCycle,.18,-1,1)});
   offer('Palette offset',()=>{a.paletteOffset=floatStep(a.paletteOffset,3,-12,12)});

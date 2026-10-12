@@ -1,5 +1,6 @@
 import type {Appearance,World} from './types';
 import { palettePhase } from './funhouse';
+import {computeColorSignal,signalIndex} from './color-signals';
 
 type RGB=[number,number,number];
 const clamp=(v:number,min=0,max=1)=>Math.max(min,Math.min(max,v));
@@ -42,6 +43,7 @@ function drawFieldSkin(
   const img=lctx.createImageData(w,h),pixels=img.data;
   const threshold=a.skinThreshold??0.42;
   const chrome=a.chromeStrength??0.8;
+  const coloredSignal=computeColorSignal(world,a);
   for(let y=0;y<h;y++)for(let x=0;x<w;x++){
     const i=y*w+x,k=i*4,height=field[i];
     const xL=field[x>0?i-1:i],xR=field[x<w-1?i+1:i];
@@ -51,7 +53,16 @@ function drawFieldSkin(
     const diffuse=clamp(0.34+height*0.72+nx*0.55-ny*0.46,0,1.8);
     const presence=kind==='mercury'?smoothstep(threshold-0.14,threshold+0.14,height):
       Math.min(1,height*1.8+0.06);
-    const source=color(palette,world.cells[i]+Math.floor(palettePhase(a,world.generation,palette.length)));
+    const cycle=palettePhase(a,world.generation,palette.length);
+    const index=coloredSignal?signalIndex(coloredSignal,i,palette.length):world.cells[i];
+    const phase=((index*(a.paletteReverse?-1:1)+cycle)%palette.length+palette.length)%palette.length;
+    const c0=color(palette,Math.floor(phase)),c1=color(palette,Math.floor(phase)+1);
+    const part=a.smoothPalette?phase-Math.floor(phase):0;
+    const source:RGB=[
+      c0[0]+(c1[0]-c0[0])*part,
+      c0[1]+(c1[1]-c0[1])*part,
+      c0[2]+(c1[2]-c0[2])*part
+    ];
     for(let j=0;j<3;j++){
       // Metal-like material appearance comes from real density gradients.
       const metal=source[j]*(0.12+diffuse*(kind==='mercury'?0.8:0.9))

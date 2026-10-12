@@ -6,7 +6,7 @@ export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' 
 export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'maze' | 'mazectric' | 'replicator' | 'diamoeba' | 'coral' | 'amoeba' | 'custom';
 export type PatternId = 'noise' | 'center' | 'rings' | 'stripes' | 'checker' | 'spiral' | 'web';
 export type AspectId = 'square' | 'portrait' | 'landscape';
-export type ColorBy = 'state' | 'age' | 'neighbors' | 'events' | 'radius' | 'x' | 'activity';
+export type ColorBy = 'state' | 'age' | 'neighbors' | 'events' | 'radius' | 'x' | 'activity' | 'entropy' | 'boundaries' | 'diversity' | 'flow' | 'birthFlash' | 'deathHeat' | 'generationWave' | 'angular' | 'diagonal' | 'gradient';
 export type SkinId = 'pixels' | 'soft' | 'glow' | 'contours' | 'mercury' | 'relief' | 'glass';
 export type NeighborShape = 'moore' | 'vonNeumann';
 export type LatticeId = 'square' | 'hex' | 'triangle';
@@ -54,6 +54,12 @@ export interface Appearance {
   print?: PrintShop;
   palette: string[];
   colorBy: ColorBy;
+  // VISUAL-ONLY signal controls, deterministic by World.generation.
+  signalFrequency?:number;
+  signalPhase?:number;
+  signalCenterX?:number;
+  signalCenterY?:number;
+  signalHistory?:number;
   skin: SkinId;
   showGrid: boolean;
   trails: boolean;
@@ -80,6 +86,8 @@ export interface World {
   height: number;
   generation: number;
   lattice?: LatticeId;
+  wrap?:boolean;
+  neighborShape?:NeighborShape;
   cells: Uint8Array;
   ages: Uint16Array;
   neighbors: Uint8Array;
@@ -113,7 +121,9 @@ export const INITIAL_SETTINGS: SimSettings = {
 export const INITIAL_APPEARANCE: Appearance = {
   print:structuredClonePrint(INITIAL_PRINT_SHOP),
   palette:[...PALETTES['RADIOACTIVE CANDY']],
-  colorBy:'state',skin:'glow',showGrid:false,trails:true,
+  colorBy:'state',
+  signalFrequency:3,signalPhase:0,signalCenterX:.5,
+  signalCenterY:.5,signalHistory:1,skin:'glow',showGrid:false,trails:true,
   paletteOffset:0,paletteCycle:0,paletteMotion:'forward',paletteReverse:false,smoothPalette:false,
   saturation:1,contrast:1,brightness:1,glowStrength:0.8,
   skinThreshold:0.42,contourLines:5,contourWidth:1.5,
