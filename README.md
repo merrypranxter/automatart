@@ -141,3 +141,9 @@ Print Shop is **independent of skins** and VISUAL ONLY. Six effects (posterize, 
 Print effects run on the exact same renderer shared by live preview, PNG, GIF and video *after* all skin and polygon-lattice projection steps, so there is no independent export implementation to drift. A bounded <=720px work buffer avoids unbounded per-frame HD post-processing; requested canvas/file dimensions remain unchanged. This is CPU-bound, so iPhone performance and long video still require real-device checks. Frame-local GIF palette cycling is retained.
 
 Print settings travel with the existing version-1 JSON recipe as an optional nested `appearance.print` field. Current engine, cell state and palette arrays are untouched. Additional truly different **skins** are deferred to F6 after Funhouse F5.
+
+## FUNHOUSE F5 — Final Polish (pull request, pending merge)
+
+The high-resolution Snapshot Studio provides **original ratio, 1:1, 9:16 and 16:9** PNG frames, 720/1080/1440/2160 short-side output, real pixel labels, and no-crop/no-stretch centered matte for mismatched frame ratios. PNG captures the exact current world and the complete skin/color/Print Shop pipeline. On iPhone, a separate **Save / Share** control lets the user open the native share sheet; on desktop the PNG downloads automatically. Files are named with current generation and actual dimensions. Large 4K images may be memory-intensive on Safari.
+
+This phase also includes phone tap-target/safe-area improvements, legacy and corrupt-recipe regression tests, and a documented physical iPhone go/no-go checklist. **No v1.0 tag is created by this PR.** Real-device Safari export tests remain essential: see [F5 Acceptance](docs/F5_ACCEPTANCE.md). The extra visual skins requested by Merry and Barry remain deferred to F6 after polish.
