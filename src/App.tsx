@@ -8,6 +8,8 @@ import type {AlienBrush,BrushSymmetry,StampId} from './engine/alien-paint';
 import {snapshotWorld,restoreWorldSnapshot} from './engine/world-snapshot';
 import AlienPaintControls from './components/AlienPaintControls';
 import { renderWorld } from './engine/render';
+import {INITIAL_SNAPSHOT_OPTIONS,snapshotLayout,renderSnapshot,snapshotPng,snapshotFilename} from './engine/snapshot';
+import type {SnapshotAspect,SnapshotSize} from './engine/snapshot';
 import { randomColors, rotatedColors, shuffledColors } from './engine/funhouse';
 import MutantControls from './components/MutantControls';
 import MutationControls from './components/MutationControls';
@@ -98,6 +100,12 @@ export default function App(){
   const [population,setPopulation]=useState(0);
   const [resetNumber,setResetNumber]=useState(0);
   const [message,setMessage]=useState('');
+  const [snapshotAspect,setSnapshotAspect]=useState<SnapshotAspect>(INITIAL_SNAPSHOT_OPTIONS.aspect);
+  const [snapshotSize,setSnapshotSize]=useState<SnapshotSize>(INITIAL_SNAPSHOT_OPTIONS.shortSide);
+  const [snapshotBusy,setSnapshotBusy]=useState(false);
+  const [lastStill,setLastStill]=useState<{
+    name:string;blob:Blob;url:string;width:number;height:number
+  }|null>(null);
   const [captureFormat,setCaptureFormat]=useState<CaptureFormat>('gif');
   const [durationMode,setDurationMode]=useState<DurationMode>('fixed');
   const [durationPreset,setDurationPreset]=useState('10');
@@ -124,6 +132,7 @@ export default function App(){
   const controllerRef=useRef<AbortController|null>(null);
   const recordingRef=useRef(false);
   useEffect(()=>()=>{if(lastExport)URL.revokeObjectURL(lastExport.url);},[lastExport]);
+  useEffect(()=>()=>{if(lastStill)URL.revokeObjectURL(lastStill.url);},[lastStill]);
   const worldRef=useRef<World>(createWorld(INITIAL_SETTINGS));
   const undoMutationRef=useRef<{
     settings:SimSettings;appearance:Appearance;world:World;
@@ -476,11 +485,44 @@ export default function App(){
     const next=options[Math.floor(Math.random()*options.length)]??'mirror';
     setAlienBrush(b=>({...b,symmetry:next}));
   }
-  function savePng(){
-    const c=document.createElement('canvas');
-    renderWorld(c,worldRef.current,appearance,1400);
-    download('automatart-'+settings.engine+'-gen'+generation+'.png',c.toDataURL('image/png'));
-    setMessage('Still frame saved as PNG. GIF/video animation recording is in the Animation Recorder below.');
+  async function savePng(){
+    if(snapshotBusy||recordingRef.current)return;
+    setSnapshotBusy(true);
+    setMessage('Rendering a full-resolution PNG snapshot…');
+    try{
+      // Snapshot the exact CURRENT world. No seed restart, stepping, or
+      // changed cells. Use the same skins, Print Shop and palette as preview.
+      const source=cloneWorld(worldRef.current);
+      const canvas=document.createElement('canvas');
+      const dimensions=renderSnapshot(canvas,source,settings,appearance,{
+        aspect:snapshotAspect,shortSide:snapshotSize
+      });
+      const blob=await snapshotPng(canvas);
+      const name=snapshotFilename(settings,source,dimensions);
+      setLastStill({blob,name,url:URL.createObjectURL(blob),
+        width:dimensions.width,height:dimensions.height});
+      if(!/iPad|iPhone|iPod/i.test(navigator.userAgent))download(name,blob);
+      setMessage('PNG ready: '+dimensions.width+' × '+dimensions.height+
+        '. On iPhone tap SAVE / SHARE to save to Photos or Files.');
+    }catch(error){
+      setMessage('PNG snapshot failed: '+(error instanceof Error?error.message:'Unknown error'));
+    }finally{
+      setSnapshotBusy(false);
+    }
+  }
+  async function shareStill(){
+    if(!lastStill)return;
+    const file=new File([lastStill.blob],lastStill.name,{type:'image/png'});
+    if(typeof navigator.share==='function'&&typeof navigator.canShare==='function'
+      &&navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({files:[file],title:'Automatart PNG snapshot'});
+        return;
+      }catch(error){
+        if(error instanceof DOMException&&error.name==='AbortError')return;
+      }
+    }
+    download(lastStill.name,lastStill.blob);
   }
   function savePortablePalette(){
     try{
@@ -698,6 +740,7 @@ export default function App(){
   }
   const activeEngine=ENGINES.find(e=>e.id===settings.engine);
   const outputSize=recommendedDimensions(settings,resolution);
+  const stillLayout=snapshotLayout(settings,{aspect:snapshotAspect,shortSide:snapshotSize});
   const videoSupported=typeof window!=='undefined'&&chooseVideoMime()!==null;
   const predictedFrames=(durationMode==='settled'?600:durationPreset==='custom'?customSeconds:Number(durationPreset))*exportFps;
   const largeGifWarningKey='gif:'+durationMode+':'+durationPreset+':'+customSeconds+':'+resolution+':'+exportFps;
@@ -967,14 +1010,52 @@ export default function App(){
             </>}
             <label className="toggle"><input type="checkbox" checked={appearance.showGrid} onChange={e=>updateAppearance('showGrid',e.target.checked)}/><span>Show mathematical grid</span></label>
             <label className="toggle"><input type="checkbox" checked={appearance.trails} onChange={e=>updateAppearance('trails',e.target.checked)}/><span>Show cell afterimages</span></label>
+            <section className="snapshot-studio" aria-label="High-resolution snapshot studio">
+              <div className="snapshot-heading"><b>F5 · SNAPSHOT STUDIO</b><span>EXACT PIXELS · CURRENT GENERATION</span></div>
+              <div className="snapshot-options">
+                <label htmlFor="snapshot-aspect">Canvas frame
+                  <select id="snapshot-aspect" value={snapshotAspect} disabled={snapshotBusy||capturing}
+                    onChange={e=>setSnapshotAspect(e.target.value as SnapshotAspect)}>
+                    <option value="current">MATCH UNIVERSE · NO MATTE</option>
+                    <option value="square">1:1 · SQUARE</option>
+                    <option value="portrait">9:16 · PORTRAIT</option>
+                    <option value="landscape">16:9 · LANDSCAPE</option>
+                  </select>
+                </label>
+                <label htmlFor="snapshot-size">Short side resolution
+                  <select id="snapshot-size" value={snapshotSize} disabled={snapshotBusy||capturing}
+                    onChange={e=>setSnapshotSize(Number(e.target.value) as SnapshotSize)}>
+                    <option value={720}>720 PX</option>
+                    <option value={1080}>1080 PX</option>
+                    <option value={1440}>1440 PX</option>
+                    <option value={2160}>2160 PX · 4K FRAME</option>
+                  </select>
+                </label>
+              </div>
+              <div className="snapshot-dimensions">
+                <b>{stillLayout.width.toLocaleString()} × {stillLayout.height.toLocaleString()} PX</b>
+                <span>{stillLayout.letterboxed?'CENTERED / NO STRETCH / DARK MATTE':'NATIVE RATIO / NO CROP'}</span>
+              </div>
+              {stillLayout.width*stillLayout.height>6_000_000&&
+                <p className="snapshot-advice">Large PNG: it can take a moment to process on iPhone. If Safari runs out of memory, use the 1080 or 1440 option.</p>}
+              <button type="button" className="snapshot-button" disabled={snapshotBusy||capturing}
+                onClick={()=>void savePng()}>{snapshotBusy?'◌ RENDERING PNG…':'⇩ SAVE FULL-RES PNG'}</button>
+              {lastStill&&<div className="snapshot-ready" role="status">
+                <span>✓ PNG READY · {lastStill.width}×{lastStill.height}</span>
+                <button type="button" onClick={()=>void shareStill()}>SAVE / SHARE</button>
+                <button type="button" className="dismiss-export" onClick={()=>setLastStill(null)}
+                  aria-label="Dismiss PNG ready panel">×</button>
+              </div>}
+              <p className="snapshot-advice">Your live world and generation are preserved. Alternate frame shapes center the original artwork with a dark matte instead of stretching or cropping it. On iPhone use SAVE / SHARE after rendering.</p>
+            </section>
             <div className="export-grid">
-              <button onClick={savePng} className="export">⇩ SAVE PNG</button>
+              <button type="button" onClick={()=>void savePng()} disabled={snapshotBusy||capturing} className="export">⇩ QUICK PNG</button>
               <button onClick={saveRecipe} className="export">⇩ SAVE RECIPE</button>
               <button onClick={()=>loadRef.current?.click()} className="export">⇧ LOAD RECIPE</button>
               <input className="sr-only" ref={loadRef} type="file" accept=".json,application/json" onChange={loadRecipe}/>
             </div>
             <div className="recorder-panel" ref={recorderRef}>
-              <div className="recorder-heading"><span>✹ ANIMATION RECORDER</span><span className="recorder-ready">EXPORT LAB / EARLY PHASE 4</span></div>
+              <div className="recorder-heading"><span>✹ ANIMATION RECORDER</span><span className="recorder-ready">EXPORT LAB / F5 VERIFIED</span></div>
               <label className="input-label" htmlFor="export-format">Animation format</label>
               <select id="export-format" value={captureFormat} disabled={capturing}
                 onChange={e=>{

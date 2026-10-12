@@ -39,6 +39,8 @@ jobs:
         run: node scripts/skin-smoke.mjs
       - name: Verify Print Shop effects, compositing and recipe migration
         run: node scripts/printshop-smoke.mjs
+      - name: Verify high-res PNG snapshots and legacy recipe safety
+        run: node scripts/f5-snapshot-smoke.mjs
 
       - name: Install Chromium and browser automation for recorder UI test
         run: |

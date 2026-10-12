@@ -296,3 +296,49 @@ body.art-viewer-open{overflow:hidden}
   .print-effect-line strong{font-size:11px}
   .print-presets button{flex:1 1 92px;font-size:9px}
 }
+
+/* F5 high-resolution Snapshot Studio: comfortably tappable iPhone controls */
+.snapshot-studio{display:flex;flex-direction:column;gap:11px;padding:13px;margin:15px 0 12px;
+  border-radius:11px;border:1px solid #38d8df;
+  background:linear-gradient(150deg,#0e3040,#181334 65%,#3b173c)}
+.snapshot-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;
+  border-bottom:1px solid #36b9c55e;padding-bottom:8px}
+.snapshot-heading b{font:800 13px 'Chakra Petch',monospace;color:#32f6e6;letter-spacing:1px}
+.snapshot-heading span{font:700 9px 'Chakra Petch',monospace;color:#f4f66b}
+.snapshot-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.snapshot-options label{display:flex;flex-direction:column;gap:6px;color:#d3c4ee;
+  font:700 10px 'Chakra Petch',monospace;min-width:0}
+.snapshot-options select{width:100%;min-width:0;font:700 10px 'Chakra Petch',monospace}
+.snapshot-dimensions{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  flex-wrap:wrap;padding:10px;border-radius:8px;background:#070e27;border:1px dashed #4f8eab}
+.snapshot-dimensions b{color:#ffe44a;font:800 16px 'Chakra Petch',monospace}
+.snapshot-dimensions span{color:#adcee0;font:700 9px 'Chakra Petch',monospace}
+.snapshot-button{min-height:49px;border:1px solid #c0ffff;border-radius:8px;
+  background:#2df4dc;color:#091c2c;font:800 13px 'Chakra Petch',monospace}
+.snapshot-button:disabled{opacity:.45;cursor:not-allowed}
+.snapshot-ready{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border:1px solid #b6ff77;
+  border-radius:8px;background:#1a3830;padding:10px;color:#cbffad;
+  font:700 10px 'Chakra Petch',monospace}
+.snapshot-ready span{flex:1 1 120px}
+.snapshot-ready button:not(.dismiss-export){min-height:42px;border:1px solid #beff9f;background:#d2ff8e;
+  border-radius:7px;color:#18301a;padding:8px;font:800 10px 'Chakra Petch',monospace}
+.snapshot-advice{font:500 11px/1.45 'Chakra Petch',monospace;color:#aaa3cd;margin:0}
+@media(max-width:460px){
+  .snapshot-studio{padding:11px 9px}
+  .snapshot-options{grid-template-columns:1fr 1fr}
+  .snapshot-dimensions b{font-size:15px}
+  .snapshot-ready .dismiss-export{min-height:36px;min-width:36px}
+}
+/* F5 phone polish: respect iPhone home indicator and accessible tap sizes. */
+@media(max-width:600px){
+  .app-shell{padding-bottom:max(20px,env(safe-area-inset-bottom))}
+  .recorder-panel input,.recorder-panel select,.snapshot-studio select{font-size:16px}
+  .print-effect-arrows button,.dismiss-export,.print-presets button{min-height:40px;min-width:40px}
+  button:focus-visible,select:focus-visible,input:focus-visible{
+    outline:3px solid #fdde32;outline-offset:2px
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;
+    animation-duration:0.01ms!important;transition-duration:0.01ms!important}
+}

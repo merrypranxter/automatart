@@ -35,21 +35,27 @@ The goal is more PLAY without destabilizing the mathematical engines, palette va
 - [x] Save the full current cell universe, paint strokes, generation, and visual history in the JSON recipe; restore identical stamped specimens, preserving legacy recipe support.
 - [x] Visible ghost preview with actual mirrored/stamped cells before planting; extra random stamp and symmetry buttons, scatter/density/invert controls.
 
-## F4 — PSYCHEDELIC PRINT SHOP (PR · MERGE AFTER GREEN CI)
+## F4 — PSYCHEDELIC PRINT SHOP (MERGED INTO MAIN · CI GREEN)
 - [x] VISUAL ONLY posterization, solarization, duotone/tritone, stipple/halftone, NEON X-RAY.
 - [x] Per-effect intensity, independently selected palette inks, master blend, and sensible performance caps at 720p+ on mobile.
 - [x] All effects run AFTER the skin through the renderer shared by PNG, GIF and video, without changing cell states.
 - [x] Deterministic stipple, ordered effect stack, reset, Random Print and three quick combinations.
 - [x] Pixel comparison + actual browser GIF/video export regression, including per-frame palette cycling.
-- [ ] Merge the tested PR manually into main.
+- [x] Merge the tested PR manually into main.
 - [ ] Confirm on physical iPhone Safari after Netlify deploy.
 - Detailed F4A–F4D merge checklist: [F4 PRINTSHOP PHASES](F4_PRINTSHOP_PHASES.md).
 
-## F5 — FREEZE AND POLISH
-- [ ] One-tap hi-res snapshot choices 1:1 / 9:16 / 16:9 and actual dimensions.
-- [ ] Better help labels, recipe migration tests, iOS Safari checks and export UX.
-- [ ] Pre-release checklist, no misleading “everything tested on iPhone” claims.
-- [ ] Tag `v1.0` only after live-device feedback and regression tests pass; don't auto-tag.
+## F5 — FREEZE AND POLISH (IMPLEMENTED IN PR · CI / iPHONE ACCEPTANCE PENDING)
+- [x] One-tap PNG snapshot sizes 720/1080/1440/2160 (short edge), aspect choices original/1:1/9:16/16:9, true pixel readout and centered matte instead of stretching.
+- [x] PNG on iPhone prepares a separate SAVE / SHARE action, with dismissible ready panel. Desktop PNG downloads automatically.
+- [x] Better help labels, mobile touch targets/safe-area/reduced-motion, robust legacy/current recipe roundtrip and corrupt snapshot rejection.
+- [x] Pre-release validation and physical iPhone acceptance checklist documented in [F5 ACCEPTANCE](F5_ACCEPTANCE.md); don't claim browser CI proves iPhone Safari performance.
+- [ ] GitHub CI entirely green, then **user merges F5 PR**, followed by Netlify deploy.
+- [ ] **Real iPhone Safari test** for high-res PNG and long GIF/video, plus a live 20-second Safari stutter check, before any v1.0 decision.
+- [ ] Tag `v1.0` only after real-device acceptance; do not automatically tag a release.
+
+## F6 — DISTINCT NEW SKINS (DEFERRED UNTIL AFTER F5)
+- [ ] More truly different visual skins for Merry and Barry. Consider etching/interference, embroidery, diffraction foil, segmentation—not rebranded color/glow sliders. Respect GIF/video fidelity and all math-engine contracts.
 
 ## Beyond Funhouse
 Z4–Z9 (sandpile / Wireworld / lattice gases, coupled automata, mutation farm/time machine, continuous life, 3D, shared app integrations) remain possible research work after a rest. This Finishing Pass does **not** claim those large milestones are shipped.

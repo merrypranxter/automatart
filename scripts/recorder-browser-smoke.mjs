@@ -261,6 +261,69 @@ try{
   await page.waitForFunction(()=>document.querySelector('#print-master')?.checked===true);
   assert(await page.locator('#print-halftone').isChecked(),'Loaded recipe restores print layers');
   console.log('PASS: real browser six distinct print treatments, stacking controls and recipe round-trip');
+  // F5 PNG snapshot: actual file bytes must match displayed dimensions,
+  // and alternate aspect ratios must not restart the saved CA universe.
+  const snapshotGen=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  await page.locator('#snapshot-aspect').selectOption('portrait');
+  await page.locator('#snapshot-size').selectOption('720');
+  assert((await page.locator('.snapshot-dimensions').innerText()).includes('720 × 1,280'),
+    '9:16 must preview exact 720x1280 output dimensions');
+  const [snapshotDownload]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE FULL-RES PNG'}).click()
+  ]);
+  const snapshotBytes=await readFile(await snapshotDownload.path());
+  assert.equal(snapshotBytes.toString('ascii',1,4),'PNG','Real PNG file signature');
+  assert.equal(snapshotBytes.readUInt32BE(16),720);
+  assert.equal(snapshotBytes.readUInt32BE(20),1280);
+  assert((await snapshotDownload.suggestedFilename()).includes('720x1280'),
+    'Filename includes actual exported pixel dimensions');
+  assert(await page.locator('.snapshot-ready').isVisible(),'PNG prepared for iPhone Share sheet');
+  assert(await page.locator('.snapshot-ready button').first().isEnabled());
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),
+    snapshotGen,'PNG must NOT advance world');
+  await page.getByRole('button',{name:'Dismiss PNG ready panel'}).click();
+  assert.equal(await page.locator('.snapshot-ready').count(),0);
+  await page.locator('#snapshot-aspect').selectOption('landscape');
+  assert((await page.locator('.snapshot-dimensions').innerText()).includes('1,280 × 720'));
+  await page.locator('#snapshot-aspect').selectOption('square');
+  assert((await page.locator('.snapshot-dimensions').innerText()).includes('720 × 720'));
+  await page.locator('#snapshot-aspect').selectOption('current');
+  assert(await page.locator('.snapshot-dimensions').isVisible());
+  // Legacy recipes (settings + appearance only) retain default OFF Print
+  // Shop, do not require a saved world, and show an accurate migration note.
+  const oldRecipe=structuredClone(printRecipe);
+  delete oldRecipe.world;
+  delete oldRecipe.alien;
+  delete oldRecipe.appearance.print;
+  delete oldRecipe.appearance.paletteMotion;
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'old-automatart-recipe.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(oldRecipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#print-master')?.checked===false);
+  assert(await page.locator('.status-msg').innerText().then(t=>t.includes('Legacy recipe loaded')),
+    'Old settings-only recipe still imports with explicit legacy feedback');
+  assert.equal(await page.locator('#print-master').isChecked(),false,
+    'Old recipe never unexpectedly enables Print Shop');
+  // Bad snapshots must be rejected without overwriting current saved cells.
+  const badRecipe=structuredClone(printRecipe);
+  badRecipe.world.arrays.cells='AQ==';
+  const preBadGen=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'corrupted-world.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(badRecipe))
+  });
+  await page.waitForFunction(()=>(document.querySelector('.status-msg')?.textContent||'').includes('Could not load recipe'));
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),preBadGen,
+    'Corrupt recipe does not change current universe');
+  // Restore F4 print recipe so recorder still verifies post-processing parity.
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'restored-f4-printshop.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(printRecipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#print-master')?.checked===true);
+  console.log('PASS: browser F5 true PNG 9:16 pixels, iPhone share panel, legacy migration, corrupt-file rejection');
+
 
   await page.locator('#skin').selectOption('mercury');
   assert(await page.locator('#skin-threshold').isVisible(),'Liquid density control appears');
