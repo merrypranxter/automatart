@@ -599,8 +599,8 @@ export default function App(){
         throw new Error('Invalid neighborhood rule');
       s.neighborMask=Number.isInteger(s.neighborMask)?s.neighborMask:255;
       if(!validNeighborhoodSettings(s))throw new Error('Neighborhood and engine/lattice are incompatible');
-      const maxVotes=maxNeighborCount(s);
-      // Inactive saved Life/Generations rules may require 24-cell counts.
+      // Validate all saved rules against the largest compatible local graph;
+      // constrain only the active engine after all presets are loaded.
       const savedRuleCap=24;
       s.orientedMask=Math.max(1,Math.min(255,Math.floor(Number(s.orientedMask)||34)));
       if(!['fixed','rotations','dihedral'].includes(s.orientedSymmetry))s.orientedSymmetry='rotations';
@@ -611,7 +611,7 @@ export default function App(){
       if(!Number.isFinite(s.density)||s.density<0||s.density>1)throw new Error('Invalid density');
       if(!Number.isFinite(s.seed))throw new Error('Invalid seed');
       s.seed=s.seed>>>0;s.cyclicStates=Math.max(3,Math.min(24,Math.floor(s.cyclicStates)||12));
-      s.cyclicThreshold=Math.max(1,Math.min(maxVotes,Math.floor(s.cyclicThreshold)||2));
+      s.cyclicThreshold=Math.max(1,Math.min(savedRuleCap,Math.floor(s.cyclicThreshold)||2));
       s.wolframRule=Math.max(0,Math.min(255,Math.floor(s.wolframRule)||30));
 
       for(const k of ['customBirth','customSurvive'] as const){
@@ -625,7 +625,7 @@ export default function App(){
       };
       s.genStates=bounded(s.genStates,3,24,8);
       s.exciteStates=bounded(s.exciteStates,3,24,8);
-      s.exciteThreshold=bounded(s.exciteThreshold,1,maxVotes,2);
+      s.exciteThreshold=bounded(s.exciteThreshold,1,savedRuleCap,2);
       s.largeRadius=bounded(s.largeRadius,1,5,2);
       const maxNear=(2*s.largeRadius+1)**2-1;
       s.largeBirthMin=bounded(s.largeBirthMin,0,maxNear,6);
@@ -633,13 +633,14 @@ export default function App(){
       s.largeSurviveMin=bounded(s.largeSurviveMin,0,maxNear,5);
       s.largeSurviveMax=bounded(s.largeSurviveMax,s.largeSurviveMin,maxNear,12);
       s.speciesCount=bounded(s.speciesCount,2,8,3);
-      s.speciesBirth=bounded(s.speciesBirth,1,maxVotes,2);
-      s.speciesSurvive=bounded(s.speciesSurvive,0,maxVotes,1);
-      s.speciesAttackBias=bounded(s.speciesAttackBias,0,maxVotes,1);
+      s.speciesBirth=bounded(s.speciesBirth,1,savedRuleCap,2);
+      s.speciesSurvive=bounded(s.speciesSurvive,0,savedRuleCap,1);
+      s.speciesAttackBias=bounded(s.speciesAttackBias,0,savedRuleCap,1);
       for(const key of ['genBirth','genSurvive'] as const){
         if(!Array.isArray(s[key]))s[key]=key==='genBirth'?[3]:[2,3];
         s[key]=[...new Set(s[key].filter((v:unknown)=>Number.isInteger(v)&&Number(v)>=0&&Number(v)<=savedRuleCap))].sort((a,b)=>a-b);
       }
+      Object.assign(s,normalizeActiveVotes(s));
       const a:Appearance={...INITIAL_APPEARANCE,...data.appearance};
       if(!Array.isArray(a.palette)||a.palette.length<2||a.palette.length>32||a.palette.some(v=>typeof v!=='string'||!/^#[0-9a-f]{6}$/i.test(v)))throw new Error('Invalid palette');
       if(!['state','age','neighbors','events','radius','x','activity',...NEW_COLOR_SIGNALS.map(v=>v.id)].includes(a.colorBy))throw new Error('Invalid color mapping');
