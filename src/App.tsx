@@ -594,6 +594,11 @@ export default function App(){
       if(!['square','hex','triangle'].includes(s.lattice))s.lattice='square';
       if(SQUARE_ONLY_ENGINES.includes(s.engine))s.lattice='square';
       if(s.engine==='margolus')s.wrap=true;
+      if(!['moore','vonNeumann','square2','diamond2','directional'].includes(s.neighborShape))
+        throw new Error('Invalid neighborhood rule');
+      s.neighborMask=Number.isInteger(s.neighborMask)?s.neighborMask:255;
+      if(!validNeighborhoodSettings(s))throw new Error('Neighborhood and engine/lattice are incompatible');
+      const maxVotes=maxNeighborCount(s);
       s.orientedMask=Math.max(1,Math.min(255,Math.floor(Number(s.orientedMask)||34)));
       if(!['fixed','rotations','dihedral'].includes(s.orientedSymmetry))s.orientedSymmetry='rotations';
       if(!['exact','contains'].includes(s.orientedMatch))s.orientedMatch='exact';
@@ -605,11 +610,7 @@ export default function App(){
       s.seed=s.seed>>>0;s.cyclicStates=Math.max(3,Math.min(24,Math.floor(s.cyclicStates)||12));
       s.cyclicThreshold=Math.max(1,Math.min(maxVotes,Math.floor(s.cyclicThreshold)||2));
       s.wolframRule=Math.max(0,Math.min(255,Math.floor(s.wolframRule)||30));
-      if(!['moore','vonNeumann','square2','diamond2','directional'].includes(s.neighborShape))
-        throw new Error('Invalid neighborhood rule');
-      s.neighborMask=Number.isInteger(s.neighborMask)?s.neighborMask:255;
-      if(!validNeighborhoodSettings(s))throw new Error('Neighborhood and engine/lattice are incompatible');
-      const maxVotes=maxNeighborCount(s);
+
       for(const k of ['customBirth','customSurvive'] as const){
         if(!Array.isArray(s[k]))s[k]=k==='customBirth'?[3]:[2,3];
         s[k]=[...new Set(s[k].filter((n:unknown)=>Number.isInteger(n)&&Number(n)>=0&&Number(n)<=maxVotes))].sort((a,b)=>a-b);
