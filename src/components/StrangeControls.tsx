@@ -22,8 +22,9 @@ export default function StrangeControls({settings:s,setSettings,onRewind,generat
       <label className="input-label" htmlFor="lattice">Mathematical lattice</label>
       <select id="lattice" value={squareOnly?'square':s.lattice}
         disabled={squareOnly}
-        onChange={e=>set('lattice',e.target.value as LatticeId)}>
-        <option value="square">SQUARE · 4 OR 8 NEIGHBORS</option>
+        onChange={e=>setSettings(prev=>({...prev,lattice:e.target.value as LatticeId,
+           neighborShape:e.target.value==='square'?prev.neighborShape:'moore'}))}>
+        <option value="square">SQUARE · 4 / 8 / 12 / 24 OR DIRECTIONAL</option>
         <option value="hex">HEXAGON · 6 GENUINE NEIGHBORS</option>
         <option value="triangle">TRIANGLE · 3 EDGE NEIGHBORS</option>
       </select>
@@ -31,7 +32,7 @@ export default function StrangeControls({settings:s,setSettings,onRewind,generat
         'This engine requires the square lattice to preserve its specified neighborhood or reversible block partition.':
         s.lattice==='hex'?'Real odd-row-offset hexagonal adjacency; six surrounding neighbors, not hexagon-shaped square rules.':
         s.lattice==='triangle'?'Real triangle edge adjacency: left, right and one vertical neighbor determined by alternating triangle orientation.':
-        'Square lattice with your selectable Moore or Von Neumann neighborhood.'}</p>
+        'Square lattice with Moore, Von Neumann, radius-2 square/diamond or directional neighborhoods.'}</p>
     </div>
     {s.engine==='oriented'&&<div className="strange-rule">
       <h3>DIRECTIONAL BIRTH STENCIL</h3>

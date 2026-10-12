@@ -1,5 +1,6 @@
 import type {Appearance,EngineId,LifeRule,SimSettings} from './types';
 import {LIFE_RULES,PALETTES} from './types';
+import {maxNeighborCount,supportsNeighborhood} from './neighborhood';
 import {randomColors,rotatedColors,shuffledColors} from './funhouse';
 import {createMutationRng,clampMutation,distinctMutation,jitterMutation} from './mutation-core';
 
@@ -52,7 +53,7 @@ export function mutateAutomatart(
     Math.max(min,Math.min(max,value+(rng.chance(.5)?-1:1)*rng.int(1,extent)));
   const listMove=(values:number[])=>{
     const current=new Set(values);
-    const index=rng.int(0,8);
+    const index=rng.int(0,maxNeighborCount(s));
     if(current.has(index)&&current.size>1)current.delete(index);
     else current.add(index);
     return [...current].sort((x,y)=>x-y);
@@ -99,7 +100,15 @@ export function mutateAutomatart(
   if(!opts.locks.rule){
     if(s.engine!=='margolus'&&s.engine!=='wolfram'&&s.engine!=='larger'&&s.engine!=='oriented'){
       if(s.lattice==='square'){
-        offer('Neighborhood shape',()=>{s.neighborShape=s.neighborShape==='moore'?'vonNeumann':'moore'});
+        offer('Neighborhood shape',()=>{
+          s.neighborShape=choose(s.neighborShape,['moore','vonNeumann','square2','diamond2','directional'] as const);
+        });
+        offer('Directional compass neighbors',()=>{
+          if(s.neighborShape!=='directional')s.neighborShape='directional';
+          const bit=1<<rng.int(0,7);
+          const next=s.neighborMask^bit;
+          s.neighborMask=next||s.neighborMask;
+        });
       }
     }
     if(s.engine!=='margolus'){
@@ -120,7 +129,7 @@ export function mutateAutomatart(
         });
         break;
       case 'cyclic':
-        offer('Chase threshold',()=>{s.cyclicThreshold=intStep(s.cyclicThreshold,1,s.lattice==='hex'?6:s.lattice==='triangle'?3:s.neighborShape==='vonNeumann'?4:8)});
+        offer('Chase threshold',()=>{s.cyclicThreshold=intStep(s.cyclicThreshold,1,maxNeighborCount(s))});
         break;
       case 'wolfram':
         offer('Wolfram rule',()=>{s.wolframRule=choose(s.wolframRule,[30,54,73,90,105,110,126,150,184,225,254])});
@@ -130,7 +139,7 @@ export function mutateAutomatart(
         offer('Afterlife survival counts',()=>{s.genSurvive=listMove(s.genSurvive)});
         break;
       case 'excitable':
-        offer('Excitation threshold',()=>{s.exciteThreshold=intStep(s.exciteThreshold,1,s.lattice==='hex'?6:s.lattice==='triangle'?3:s.neighborShape==='vonNeumann'?4:8)});
+        offer('Excitation threshold',()=>{s.exciteThreshold=intStep(s.exciteThreshold,1,s.lattice==='hex'?6:s.lattice==='triangle'?3:maxNeighborCount(s))});
         break;
       case 'larger':{
         const max=(2*s.largeRadius+1)**2-1;
@@ -154,8 +163,8 @@ export function mutateAutomatart(
       }
       case 'species':
         offer('Species invasion pressure',()=>{s.speciesBirth=intStep(s.speciesBirth,1,s.neighborShape==='vonNeumann'?4:8)});
-        offer('Species survival',()=>{s.speciesSurvive=intStep(s.speciesSurvive,0,8)});
-        offer('Species defenses',()=>{s.speciesAttackBias=intStep(s.speciesAttackBias,0,8)});
+        offer('Species survival',()=>{s.speciesSurvive=intStep(s.speciesSurvive,0,maxNeighborCount(s))});
+        offer('Species defenses',()=>{s.speciesAttackBias=intStep(s.speciesAttackBias,0,maxNeighborCount(s))});
         break;
       case 'oriented':
         offer('Directional birth stencil',()=>{s.orientedMask=Math.max(1,s.orientedMask^(1<<rng.int(0,7)))});
@@ -176,6 +185,7 @@ export function mutateAutomatart(
       offer('Change automaton engine',()=>{
         s.engine=choose(s.engine,validEngines);
         if(squareOnly.includes(s.engine))s.lattice='square';
+         if(!supportsNeighborhood(s.engine,s.lattice))s.neighborShape='moore';
         if(s.engine==='margolus')s.wrap=true;
       });
     }
@@ -203,6 +213,16 @@ export function mutateAutomatart(
   }
   // Unless user explicitly allows structural resets, the entire running CA
   // state remains intact (even across visual and local-rule mutations).
+  if(!supportsNeighborhood(s.engine,s.lattice)&&!['moore','vonNeumann'].includes(s.neighborShape)){
+    s.neighborShape='moore';
+    changes.push('Restore engine-compatible Moore neighborhood');
+  }
+  const voteCap=maxNeighborCount(s);
+  s.cyclicThreshold=Math.min(s.cyclicThreshold,voteCap);
+  s.exciteThreshold=Math.min(s.exciteThreshold,voteCap);
+  s.speciesBirth=Math.min(s.speciesBirth,voteCap);
+  s.speciesSurvive=Math.min(s.speciesSurvive,voteCap);
+  s.speciesAttackBias=Math.min(s.speciesAttackBias,voteCap);
   const willRestart=requiresWorldRestart(sourceSettings,s);
   if(willRestart&&!opts.allowRestart)throw Error('Mutation attempted an unapproved world reset');
   if(!changes.length&&(originalS===JSON.stringify(s)&&originalA===JSON.stringify(a)))

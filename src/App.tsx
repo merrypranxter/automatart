@@ -12,6 +12,8 @@ import {INITIAL_SNAPSHOT_OPTIONS,snapshotLayout,renderSnapshot,snapshotPng,snaps
 import type {SnapshotAspect,SnapshotSize} from './engine/snapshot';
 import { randomColors, rotatedColors, shuffledColors } from './engine/funhouse';
 import MutantControls from './components/MutantControls';
+import NeighborhoodControls from './components/NeighborhoodControls';
+import {maxNeighborCount,supportsNeighborhood,validNeighborhoodSettings} from './engine/neighborhood';
 import MutationControls from './components/MutationControls';
 import {mutateAutomatart,requiresWorldRestart,INITIAL_MUTATION_LOCKS} from './engine/mutation-automatart';
 import type {MutationLocks,MutationStrength} from './engine/mutation-automatart';
@@ -33,7 +35,7 @@ import {
   INITIAL_APPEARANCE, INITIAL_SETTINGS, LIFE_RULES, PALETTES, PALETTE_LIBRARY, MOIRE_PALETTE_NAMES, AUTOMATART_PALETTE_NAMES
 } from './engine/types';
 import type {
-  Appearance, AspectId, ColorBy, EngineId, LifeRule, NeighborShape, PatternId, SimSettings, SkinId, World
+  Appearance, AspectId, ColorBy, EngineId, LifeRule,  PatternId, SimSettings, SkinId, World
 } from './engine/types';
 
 const ENGINES: {id:EngineId;name:string;hint:string}[] = [
@@ -357,6 +359,12 @@ export default function App(){
       settings.pattern,settings.density,settings.cyclicStates,
       settings.genStates,settings.exciteStates,settings.speciesCount,
       settings.lattice,resetNumber]);
+  useEffect(()=>{
+    // Rule-only neighborhood changes preserve living cells and generation,
+    // but visual entropy/flow inspectors must use the CURRENT rule graph.
+    worldRef.current.neighborShape=settings.neighborShape;
+    worldRef.current.wrap=settings.wrap;
+  },[settings.neighborShape,settings.wrap]);
   useEffect(()=>{draw();},[draw,settings,resetNumber]);
 
   useEffect(()=>{
@@ -586,6 +594,11 @@ export default function App(){
       if(!['square','hex','triangle'].includes(s.lattice))s.lattice='square';
       if(SQUARE_ONLY_ENGINES.includes(s.engine))s.lattice='square';
       if(s.engine==='margolus')s.wrap=true;
+      if(!['moore','vonNeumann','square2','diamond2','directional'].includes(s.neighborShape))
+        throw new Error('Invalid neighborhood rule');
+      s.neighborMask=Number.isInteger(s.neighborMask)?s.neighborMask:255;
+      if(!validNeighborhoodSettings(s))throw new Error('Neighborhood and engine/lattice are incompatible');
+      const maxVotes=maxNeighborCount(s);
       s.orientedMask=Math.max(1,Math.min(255,Math.floor(Number(s.orientedMask)||34)));
       if(!['fixed','rotations','dihedral'].includes(s.orientedSymmetry))s.orientedSymmetry='rotations';
       if(!['exact','contains'].includes(s.orientedMatch))s.orientedMatch='exact';
@@ -595,12 +608,12 @@ export default function App(){
       if(!Number.isFinite(s.density)||s.density<0||s.density>1)throw new Error('Invalid density');
       if(!Number.isFinite(s.seed))throw new Error('Invalid seed');
       s.seed=s.seed>>>0;s.cyclicStates=Math.max(3,Math.min(24,Math.floor(s.cyclicStates)||12));
-      s.cyclicThreshold=Math.max(1,Math.min(8,Math.floor(s.cyclicThreshold)||2));
+      s.cyclicThreshold=Math.max(1,Math.min(maxVotes,Math.floor(s.cyclicThreshold)||2));
       s.wolframRule=Math.max(0,Math.min(255,Math.floor(s.wolframRule)||30));
-      if(!['moore','vonNeumann'].includes(s.neighborShape))s.neighborShape='moore';
+
       for(const k of ['customBirth','customSurvive'] as const){
         if(!Array.isArray(s[k]))s[k]=k==='customBirth'?[3]:[2,3];
-        s[k]=[...new Set(s[k].filter((n:unknown)=>Number.isInteger(n)&&Number(n)>=0&&Number(n)<=8))].sort((a,b)=>a-b);
+        s[k]=[...new Set(s[k].filter((n:unknown)=>Number.isInteger(n)&&Number(n)>=0&&Number(n)<=maxVotes))].sort((a,b)=>a-b);
       }
       s.trailDecay=Math.min(0.99,Math.max(0.65,Number(s.trailDecay)||0.89));
       const bounded=(v:unknown,min:number,max:number,fallback:number)=>{
@@ -609,7 +622,7 @@ export default function App(){
       };
       s.genStates=bounded(s.genStates,3,24,8);
       s.exciteStates=bounded(s.exciteStates,3,24,8);
-      s.exciteThreshold=bounded(s.exciteThreshold,1,8,2);
+      s.exciteThreshold=bounded(s.exciteThreshold,1,maxVotes,2);
       s.largeRadius=bounded(s.largeRadius,1,5,2);
       const maxNear=(2*s.largeRadius+1)**2-1;
       s.largeBirthMin=bounded(s.largeBirthMin,0,maxNear,6);
@@ -617,12 +630,12 @@ export default function App(){
       s.largeSurviveMin=bounded(s.largeSurviveMin,0,maxNear,5);
       s.largeSurviveMax=bounded(s.largeSurviveMax,s.largeSurviveMin,maxNear,12);
       s.speciesCount=bounded(s.speciesCount,2,8,3);
-      s.speciesBirth=bounded(s.speciesBirth,1,8,2);
-      s.speciesSurvive=bounded(s.speciesSurvive,0,8,1);
-      s.speciesAttackBias=bounded(s.speciesAttackBias,0,8,1);
+      s.speciesBirth=bounded(s.speciesBirth,1,maxVotes,2);
+      s.speciesSurvive=bounded(s.speciesSurvive,0,maxVotes,1);
+      s.speciesAttackBias=bounded(s.speciesAttackBias,0,maxVotes,1);
       for(const key of ['genBirth','genSurvive'] as const){
         if(!Array.isArray(s[key]))s[key]=key==='genBirth'?[3]:[2,3];
-        s[key]=[...new Set(s[key].filter((v:unknown)=>Number.isInteger(v)&&Number(v)>=0&&Number(v)<=8))].sort((a,b)=>a-b);
+        s[key]=[...new Set(s[key].filter((v:unknown)=>Number.isInteger(v)&&Number(v)>=0&&Number(v)<=maxVotes))].sort((a,b)=>a-b);
       }
       const a:Appearance={...INITIAL_APPEARANCE,...data.appearance};
       if(!Array.isArray(a.palette)||a.palette.length<2||a.palette.length>32||a.palette.some(v=>typeof v!=='string'||!/^#[0-9a-f]{6}$/i.test(v)))throw new Error('Invalid palette');
@@ -757,6 +770,7 @@ export default function App(){
   const largeGifWarningKey='gif:'+durationMode+':'+durationPreset+':'+customSeconds+':'+resolution+':'+exportFps;
   const largeGif=(captureFormat==='gif'&&(predictedFrames>250||resolution>=720&&predictedFrames>80));
   const densityLabel=Math.round(settings.density*100)+'%';
+  const neighborMax=maxNeighborCount(settings);
   return (
     <div className="app-shell">
       <header className="masthead">
@@ -832,7 +846,7 @@ export default function App(){
           </div>}
         </section>
         <section className="rack" aria-label="Simulation controls">
-          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>A2 / DUAL COLOR PATCHBAY</span></div>
+          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>B1 / NEIGHBORHOOD ANARCHY</span></div>
           <section className="module">
             <div className="module-heading"><span className="module-num">01</span><h2>WORLD MACHINE</h2><span className="module-symbol">◎</span></div>
             <label className="input-label" htmlFor="aspect">Canvas geometry</label>
@@ -861,18 +875,15 @@ export default function App(){
               const engine=e.target.value as EngineId;
               setSettings(s=>({...s,engine,
                 lattice:SQUARE_ONLY_ENGINES.includes(engine)?'square':s.lattice,
-                wrap:engine==='margolus'?true:s.wrap}));
+                neighborShape:supportsNeighborhood(engine,s.lattice)?s.neighborShape:'moore',
+                 wrap:engine==='margolus'?true:s.wrap}));
             }}>
               {ENGINES.map(x=><option key={x.id} value={x.id}>{x.name} — {x.hint}</option>)}
             </select>
-            {settings.engine!=='wolfram'&&settings.engine!=='larger'&&settings.engine!=='oriented'&&settings.engine!=='margolus'&&settings.lattice==='square'&&<>
-              <label className="input-label" htmlFor="neighbor-shape">Neighborhood geometry</label>
-              <select id="neighbor-shape" value={settings.neighborShape}
-                onChange={e=>updateSetting('neighborShape',e.target.value as NeighborShape)}>
-                <option value="moore">Moore / 8 surrounding cells</option>
-                <option value="vonNeumann">Von Neumann / 4 orthogonal cells</option>
-              </select>
-            </>}
+            {supportsNeighborhood(settings.engine,settings.lattice)&&
+              <NeighborhoodControls settings={settings} setSettings={setSettings}/>}
+            {!supportsNeighborhood(settings.engine,settings.lattice)&&
+              <p className="module-note">This lattice or engine has its own specified neighborhood. The B1 square-neighborhood options are disabled here to protect the mathematical rules.</p>}
             {settings.engine==='life'&&<>
               <label className="input-label" htmlFor="life">Birth / survival</label>
               <select id="life" value={settings.lifeRule} onChange={e=>updateSetting('lifeRule',e.target.value as LifeRule)}>
@@ -881,8 +892,8 @@ export default function App(){
               {settings.lifeRule==='custom'&&<div className="custom-rule-editor">
                 <p>Choose how many neighbors cause birth or survival. Changes apply live.</p>
                 {(['customBirth','customSurvive'] as const).map(kind=><div key={kind}>
-                  <b>{kind==='customBirth'?'BIRTH · B':'SURVIVE · S'}{settings[kind].join('')}</b>
-                  <div className="rule-bits">{Array.from({length:9},(_,i)=><button type="button" key={i}
+                  <b>{kind==='customBirth'?'BIRTH · B':'SURVIVE · S'}{settings[kind].join(',')}</b>
+                  <div className="rule-bits">{Array.from({length:neighborMax+1},(_,i)=><button type="button" key={i}
                     aria-pressed={settings[kind].includes(i)} className={settings[kind].includes(i)?'active':''}
                     onClick={()=>toggleCustomRule(kind,i)}>{i}</button>)}</div>
                 </div>)}
@@ -894,7 +905,7 @@ export default function App(){
               <label className="input-label" htmlFor="states">Color species <em>{settings.cyclicStates}</em></label>
               <input id="states" type="range" min="3" max="24" value={settings.cyclicStates} onChange={e=>updateSetting('cyclicStates',Number(e.target.value))}/>
               <label className="input-label" htmlFor="threshold">Chase threshold <em>{settings.cyclicThreshold} neighbors</em></label>
-              <input id="threshold" type="range" min="1" max="8" value={settings.cyclicThreshold} onChange={e=>updateSetting('cyclicThreshold',Number(e.target.value))}/>
+              <input id="threshold" type="range" min="1" max={neighborMax} value={Math.min(settings.cyclicThreshold,neighborMax)} onChange={e=>updateSetting('cyclicThreshold',Number(e.target.value))}/>
             </>}
             <MutantControls settings={settings} setSettings={setSettings} paintSpecies={paintSpecies} setPaintSpecies={setPaintSpecies}/>
             {settings.engine==='wolfram'&&<>

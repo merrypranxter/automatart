@@ -1,10 +1,17 @@
-import type {LatticeId,OrientedSymmetry,OrientedMatch} from './types';
+import type {LatticeId,OrientedSymmetry,OrientedMatch,NeighborShape} from './types';
 
 export const ORIENTED_DIRECTIONS = [
   [-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]
 ] as const; // NW N NE E SE S SW W, clockwise
 
-export function neighborOffsets(lattice:LatticeId,x:number,y:number,shape:'moore'|'vonNeumann'):[number,number][]{
+const radiusSquare2:[number,number][]=[];
+const radiusDiamond2:[number,number][]=[];
+for(let y=-2;y<=2;y++)for(let x=-2;x<=2;x++){
+ if(x===0&&y===0)continue;
+ radiusSquare2.push([x,y]);
+ if(Math.abs(x)+Math.abs(y)<=2)radiusDiamond2.push([x,y]);
+}
+export function neighborOffsets(lattice:LatticeId,x:number,y:number,shape:NeighborShape,mask=255):[number,number][]{
   if(lattice==='hex'){
     const shift=y&1;
     return [[-1,0],[1,0],[-1+shift,-1],[shift,-1],[-1+shift,1],[shift,1]];
@@ -12,6 +19,9 @@ export function neighborOffsets(lattice:LatticeId,x:number,y:number,shape:'moore
   if(lattice==='triangle'){
     return [[-1,0],[1,0],[0,((x+y)&1)===0?-1:1]];
   }
+  if(shape==='square2')return radiusSquare2;
+  if(shape==='diamond2')return radiusDiamond2;
+  if(shape==='directional')return ORIENTED_DIRECTIONS.filter((_,i)=>(mask&(1<<i))!==0).map(([dx,dy])=>[dx,dy] as [number,number]);
   if(shape==='vonNeumann')return [[0,-1],[1,0],[0,1],[-1,0]];
   return [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
 }

@@ -9,7 +9,7 @@ export type PatternId = 'noise' | 'center' | 'rings' | 'stripes' | 'checker' | '
 export type AspectId = 'square' | 'portrait' | 'landscape';
 export type ColorBy = 'state' | 'age' | 'neighbors' | 'events' | 'radius' | 'x' | 'activity' | 'entropy' | 'boundaries' | 'diversity' | 'flow' | 'birthFlash' | 'deathHeat' | 'generationWave' | 'angular' | 'diagonal' | 'gradient';
 export type SkinId = 'pixels' | 'soft' | 'glow' | 'contours' | 'mercury' | 'relief' | 'glass';
-export type NeighborShape = 'moore' | 'vonNeumann';
+export type NeighborShape = 'moore' | 'vonNeumann' | 'square2' | 'diamond2' | 'directional';
 export type LatticeId = 'square' | 'hex' | 'triangle';
 export type OrientedSymmetry = 'fixed' | 'rotations' | 'dihedral';
 export type OrientedMatch = 'exact' | 'contains';
@@ -24,6 +24,8 @@ export interface SimSettings {
   wrap: boolean;
   pattern: PatternId;
   neighborShape: NeighborShape;
+  /** Clockwise NW N NE E SE S SW W selection for directional neighborhoods. */
+  neighborMask: number;
   lattice: LatticeId;
   orientedMask: number;
   orientedSymmetry: OrientedSymmetry;
@@ -111,7 +113,7 @@ export const AUTOMATART_PALETTE_NAMES = PALETTE_LIBRARY.filter(p=>p.source==='au
 export const INITIAL_SETTINGS: SimSettings = {
   engine: 'cyclic', lifeRule:'conway', cellCount:96, aspect:'square',
   seed:82641, density:0.36, wrap:true, pattern:'noise',
-  neighborShape:'moore',lattice:'square',
+  neighborShape:'moore',neighborMask:255,lattice:'square',
   orientedMask:34,orientedSymmetry:'rotations',orientedMatch:'exact',
   orientedSurviveMin:2,orientedSurviveMax:3,
   customBirth:[3],customSurvive:[2,3],trailDecay:0.89,

@@ -413,3 +413,25 @@ body.art-viewer-open{overflow:hidden}
  .dual-source{padding:9px}
  .dual-source select{font-size:16px}
 }
+
+/* B1: real-neighborhood geometry viewer and directional selection */
+.neighborhood-lab{display:flex;flex-direction:column;gap:10px;margin:12px 0;padding:12px;
+ border:1px solid #a7f63c;border-radius:11px;
+ background:linear-gradient(145deg,#26391f,#15162b 62%,#3c153b)}
+.neighborhood-head{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap}
+.neighborhood-head strong{font:800 12px 'Chakra Petch',monospace;color:#eafc73}
+.neighborhood-head span{font:700 10px 'Chakra Petch',monospace;color:#58efe8}
+.neighborhood-display{display:flex;gap:15px;align-items:center;flex-wrap:wrap}
+.neighborhood-preview{width:min(172px,100%);aspect-ratio:1;display:grid;grid-template-columns:repeat(5,1fr);
+  padding:6px;gap:4px;background:#100e29;border:1px solid #786989;border-radius:9px}
+.neighborhood-preview span{display:grid;place-items:center;border-radius:4px;
+ background:#302d44;color:#d3c6e2;font:900 18px monospace}
+.neighborhood-preview span.active{background:#21cbbd;color:#101933}
+.neighborhood-preview span.center{background:#e6f148;color:#181528}
+.neighborhood-count{display:flex;flex-direction:column;gap:5px;font:700 10px 'Chakra Petch',monospace;color:#bfe7d5}
+.neighborhood-count b{font:900 36px 'Chakra Petch',monospace;color:#ff42be}
+.neighborhood-count small{color:#a3a8b6}
+.neighborhood-note{font:500 10px/1.5 'Chakra Petch',monospace;color:#c6bad3;margin:0}
+.neighborhood-directions button{min-height:43px;min-width:0}
+@media(max-width:420px){.neighborhood-lab{padding:10px 8px}.neighborhood-preview{width:130px}
+.neighborhood-count b{font-size:30px}}
