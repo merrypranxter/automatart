@@ -18,7 +18,7 @@ Automatart remains an instrument in **MATHEMAGICAL! — a Math Art Suite**. This
 
 ## The build queue (four menu expansions, then skins)
 
-### F5.5A1 — TEN MORE COLOR SIGNALS (VISUAL, lowest risk)
+### F5.5A1 — TEN MORE COLOR SIGNALS (IMPLEMENTED IN PR — CI / MERGE PENDING)
 **What appears:** Expand the Color Mapping selector from the current seven options with all ten named modes below. Make each mode accurate at the cell-neighborhood scale and compelling with the existing palettes:
 - **Local entropy** — Shannon entropy of neighbor state frequencies, normalized for actual neighbor degree and state diversity (do not confuse entropy with noise).
 - **Cell boundaries** — number/strength of local unlike-state adjacencies.
@@ -32,6 +32,8 @@ Automatart remains an instrument in **MATHEMAGICAL! — a Math Art Suite**. This
 - **Neighborhood gradient** — local density/variation gradient magnitude, with optional directional sign.
 **Controls:** map-specific frequency/phase, center, and recent-history sensitivity shown only when relevant; live Math Inspector describes the observed signal. No new engine or world reset required.
 **Done when:** all ten produce deterministic, visibly distinct output, and at least one PNG, cycling GIF, and video preserve the same phases.
+**Current delivery:** Ten definitions implemented in `src/engine/color-signals.ts`; live Color Lab selector, source-specific sliders (frequency/phase/center/history), numeric cell inspector, World boundary-aware neighbor queries, recipe defaults/migration, renderer integration and Mutation Dice support. `scripts/a1-color-signals-smoke.mjs` checks normalized mathematical signals in all three lattices, visual differences, immutable states, and timing. Real browser GIF/video/export smoke extended to exercise live control selection and GIF interference/cycling. **Not merged; physical iPhone testing still needed.**
+
 
 ### F5.5A2 — DUAL COLOR MAPPING / SIGNAL PATCHBAY (VISUAL)
 - Source A and source B dropdowns drawn from the existing seven + new ten mappings; A/B blend, invert/swap, optional separate palette offsets and strengths. Begin with common current editable palette and preserve all 31 official presets.

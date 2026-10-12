@@ -3,6 +3,7 @@ import { renderSpecialSkin } from './skins';
 import { projectionMap } from './topology';
 import { palettePhase } from './funhouse';
 import { applyPrintShop } from './printshop';
+import {computeColorSignal,isNewColorSignal,signalIndex} from './color-signals';
 
 const bg:[number,number,number]=[9,6,23];
 const backBuffers=new WeakMap<HTMLCanvasElement,HTMLCanvasElement>();
@@ -38,6 +39,7 @@ function renderSquareWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,out
   const direction=a.paletteReverse?-1:1;
   const cycle=palettePhase(a,world.generation,n);
   const smooth=a.smoothPalette??false;
+  const mappedSignal=computeColorSignal(world,a);
   const saturation=clamp(a.saturation??1,0,3);
   const contrast=clamp(a.contrast??1,0.2,3);
   const brightness=clamp(a.brightness??1,0.15,2.5);
@@ -45,7 +47,9 @@ function renderSquareWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,out
     const state=world.cells[i],trace=world.traces[i],k=i*4;
     const fossil=world.fossils?.[i]??0;
     const visible=world.engine==='cyclic'||state!==0||
-      ((a.trails&&trace>0.025)||(a.colorBy==='events'&&world.events[i]!==0)||
+      ((a.trails&&trace>0.025)||
+        ((a.colorBy==='events'||a.colorBy==='birthFlash')&&world.events[i]!==0)||
+        (a.colorBy==='deathHeat'&&(world.events[i]===2||fossil>0.005))||
       ((a.fossilOpacity??0)>0&&fossil>0.02));
     if(!visible){pixels[k]=bg[0];pixels[k+1]=bg[1];pixels[k+2]=bg[2];pixels[k+3]=255;continue;}
     const x=i%w,y=Math.floor(i/w);
@@ -59,13 +63,15 @@ function renderSquareWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,out
       case 'x':index=(x/w)*n;break;
       case 'activity':index=(world.neighbors[i]*0.65+world.ages[i]*0.065+world.events[i]*2);break;
     }
+    if(mappedSignal&&isNewColorSignal(a.colorBy))index=signalIndex(mappedSignal,i,n);
     const phase=wrap(direction*index+cycle,n);
     const first=Math.floor(phase);
     const second=(first+1)%n;
     const mix=smooth?phase-first:0;
     const c0=palette[first],c1=palette[second];
     const intensity=world.engine==='cyclic'||state>0?1:
-      (a.trails?Math.min(0.92,trace):world.events[i]===2?0.38:0);
+      (a.colorBy==='deathHeat'?Math.min(1,Math.max(fossil,world.events[i]===2?1:0)*1.1):
+        a.trails?Math.min(0.92,trace):world.events[i]===2?0.38:0);
     const raw=[
       c0[0]+(c1[0]-c0[0])*mix,
       c0[1]+(c1[1]-c0[1])*mix,

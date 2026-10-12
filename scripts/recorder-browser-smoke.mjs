@@ -325,13 +325,61 @@ try{
   console.log('PASS: browser F5 true PNG 9:16 pixels, iPhone share panel, legacy migration, corrupt-file rejection');
 
 
+  // A1: ten new mathematically distinct visual signals. Test the actual
+  // Color Lab dropdown, signal-specific controls, recipe persistence and
+  // renderer output across mobile Chromium. The following GIF then encodes
+  // the generation-dependent interference signal through the real worker.
+  await page.locator('#skin').selectOption('pixels');
+  await page.locator('#print-master').uncheck();
+  const artA1=page.locator('canvas[aria-label^="Interactive cellular"]');
+  const signalFrames=[];
+  for(const id of ['entropy','boundaries','diversity','flow','birthFlash','deathHeat',
+    'generationWave','angular','diagonal','gradient']){
+    await page.locator('#source').selectOption(id);
+    assert(await page.locator('.color-signal-lab').isVisible(),id+' inspector available');
+    const png=await artA1.evaluate(c=>c.toDataURL('image/png'));
+    signalFrames.push(png);
+  }
+  assert.equal(new Set(signalFrames).size,10,'Every A1 signal produces its own real canvas image');
+  await page.locator('#source').selectOption('angular');
+  assert(await page.locator('#signal-center-x').isVisible(),'Angular center is adjustable');
+  await page.locator('#signal-center-x').fill('.22');
+  await page.locator('#signal-center-y').fill('.79');
+  await page.locator('#source').selectOption('birthFlash');
+  assert(await page.locator('#signal-history').isVisible(),'History threshold is adjustable');
+  await page.locator('#source').selectOption('generationWave');
+  assert(await page.locator('#signal-frequency').isVisible(),'Interference frequency is adjustable');
+  await page.locator('#signal-frequency').fill('7');
+  await page.locator('#signal-phase').fill('1.2');
+  await artA1.click({position:{x:45,y:45}});
+  assert((await page.locator('.color-signal-readout').innerText()).includes('SIGNAL'),
+    'Tap on live canvas exposes real numerical math signal');
+  const [signalRecipeDownload]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const signalRecipe=JSON.parse(await readFile(await signalRecipeDownload.path(),'utf8'));
+  assert.equal(signalRecipe.appearance.colorBy,'generationWave');
+  assert.equal(signalRecipe.appearance.signalFrequency,7);
+  await page.locator('#source').selectOption('state');
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'a1-color-signals.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(signalRecipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#source')?.value==='generationWave');
+  assert.equal(await page.locator('#signal-frequency').inputValue(),'7');
+  await page.locator('#print-master').check();
+  console.log('PASS: ten live Color Lab signals, signal sliders/inspector and A1 recipe roundtrip');
   await page.locator('#skin').selectOption('mercury');
   assert(await page.locator('#skin-threshold').isVisible(),'Liquid density control appears');
   assert(await page.locator('#chrome-strength').isVisible(),'Chrome reflection control appears');
   assert(await page.locator('#temporal-rgb').isVisible(),'RGB time ghost control appears');
   assert(await page.locator('#fossil-opacity').isVisible(),'Cell fossil control appears');
   await page.locator('#temporal-rgb').focus();
-  await page.locator('#temporal-rgb').press('End'); // capture visible time ghosts too
+  await page.locator('#temporal-rgb').press('End');
+  // Test GIF capture under the A1 interference source. Existing mercury
+  // controls were exercised above, but pixels make the signal visibly direct.
+  await page.locator('#skin').selectOption('pixels');
+  await page.locator('#source').selectOption('generationWave'); // capture visible time ghosts too
   await page.locator('#palette-cycle').focus();
   await page.locator('#palette-cycle').press('End'); // ensure GIF frames require NEW colors
   await page.locator('#duration-preset').selectOption('custom');
@@ -386,7 +434,7 @@ try{
   await page.locator('.stage-capture-success .dismiss-export').click();
   assert.equal(await page.locator('.stage-capture-success').count(),0,'X dismisses sticky export banner');
   assert.equal(await page.locator('.finished-export').count(),0,'X also removes finished preview from controls');
-  console.log('PASS: 10 modes, 3 lattice geometries, 7 skins, original palettes, hex GIF, and export dismissal');
+  console.log('PASS: 10 engines, 3 lattices, 7 skins, 10 NEW color signals, local GIF palettes and export dismissal');
 }finally{
   await browser?.close();
   server.kill('SIGTERM');

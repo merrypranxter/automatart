@@ -17,6 +17,8 @@ import {mutateAutomatart,requiresWorldRestart,INITIAL_MUTATION_LOCKS} from './en
 import type {MutationLocks,MutationStrength} from './engine/mutation-automatart';
 import SkinControls from './components/SkinControls';
 import PrintShopControls from './components/PrintShopControls';
+import ColorSignalControls from './components/ColorSignalControls';
+import {NEW_COLOR_SIGNALS,isNewColorSignal,signalOptions} from './engine/color-signals';
 import {validatePrintShop} from './engine/printshop';
 import StrangeControls, { SQUARE_ONLY_ENGINES } from './components/StrangeControls';
 import {
@@ -91,6 +93,7 @@ export default function App(){
   const hoveredCellRef=useRef<[number,number]|null>(null);
   const strokeLastCellRef=useRef<string|null>(null);
   const [paintSpecies,setPaintSpecies]=useState(1);
+  const [inspectedCell,setInspectedCell]=useState<[number,number]|null>(null);
   const [mutationStrength,setMutationStrength]=useState<MutationStrength>('weird');
   const [mutationLocks,setMutationLocks]=useState<MutationLocks>({...INITIAL_MUTATION_LOCKS});
   const [allowMutationRestart,setAllowMutationRestart]=useState(false);
@@ -444,6 +447,7 @@ export default function App(){
     if(!point)return;
     const [x,y]=point;
     if(strokeLastCellRef.current===x+','+y)return;
+    setInspectedCell([x,y]);
     strokeLastCellRef.current=x+','+y;
     cancelBatch();
     const seed=createStrokeSeed(x,y);
@@ -620,10 +624,14 @@ export default function App(){
       }
       const a:Appearance={...INITIAL_APPEARANCE,...data.appearance};
       if(!Array.isArray(a.palette)||a.palette.length<2||a.palette.length>32||a.palette.some(v=>typeof v!=='string'||!/^#[0-9a-f]{6}$/i.test(v)))throw new Error('Invalid palette');
-      if(!['state','age','neighbors','events','radius','x','activity'].includes(a.colorBy))throw new Error('Invalid color mapping');
+      if(!['state','age','neighbors','events','radius','x','activity',...NEW_COLOR_SIGNALS.map(v=>v.id)].includes(a.colorBy))throw new Error('Invalid color mapping');
       if(!['pixels','soft','glow','contours','mercury','relief','glass'].includes(a.skin))throw new Error('Invalid skin');
       a.paletteOffset=Math.min(31,Math.max(-31,Number(a.paletteOffset)||0));
       a.paletteCycle=Math.min(1,Math.max(-1,Number(a.paletteCycle)||0));
+      const controls=signalOptions(a);
+      a.signalFrequency=controls.frequency;a.signalPhase=controls.phase;
+      a.signalCenterX=controls.centerX;a.signalCenterY=controls.centerY;
+      a.signalHistory=controls.history;
       a.saturation=Math.min(3,Math.max(0,Number(a.saturation)??1));
       a.contrast=Math.min(3,Math.max(0.2,Number(a.contrast)||1));
       a.brightness=Math.min(2.5,Math.max(0.15,Number(a.brightness)||1));
@@ -821,7 +829,7 @@ export default function App(){
           </div>}
         </section>
         <section className="rack" aria-label="Simulation controls">
-          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>FUNHOUSE / F4 PRINT SHOP</span></div>
+          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>A1 / TEN NEW COLOR SIGNALS</span></div>
           <section className="module">
             <div className="module-heading"><span className="module-num">01</span><h2>WORLD MACHINE</h2><span className="module-symbol">◎</span></div>
             <label className="input-label" htmlFor="aspect">Canvas geometry</label>
@@ -915,7 +923,14 @@ export default function App(){
               <option value="radius">Distance from center → rainbow rings</option>
               <option value="x">Horizontal position → chromatic bands</option>
               <option value="activity">Age + neighbors + events → mixed signal</option>
+              <optgroup label="A1 · MATHEMATICAL COLOR SIGNALS">
+                {NEW_COLOR_SIGNALS.map(v=><option key={v.id} value={v.id}>{v.label}</option>)}
+              </optgroup>
             </select>
+            {isNewColorSignal(appearance.colorBy)&&
+              <ColorSignalControls appearance={appearance} setAppearance={setAppearance}
+                inspectedCell={inspectedCell} world={worldRef.current}/>}
+            
             <label className="input-label" htmlFor="palette">Load a color universe</label>
             <select id="palette" value={Object.keys(PALETTES).find(k=>PALETTES[k].length===appearance.palette.length&&PALETTES[k].every((c,i)=>c.toLowerCase()===appearance.palette[i]?.toLowerCase()))||'CUSTOM'}
               onChange={e=>{if(PALETTES[e.target.value])updateAppearance('palette',[...PALETTES[e.target.value]]);}}>
