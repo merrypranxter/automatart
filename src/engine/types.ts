@@ -1,6 +1,7 @@
 import paletteLibrary from '../palettes/astral-trash-palettes.json';
 import {INITIAL_PRINT_SHOP,structuredClonePrint} from './printshop';
 import type {PrintShop} from './printshop';
+import type {DualColor} from './dual-color';
 
 export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus';
 export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'maze' | 'mazectric' | 'replicator' | 'diamoeba' | 'coral' | 'amoeba' | 'custom';
@@ -52,6 +53,7 @@ export interface SimSettings {
 }
 export interface Appearance {
   print?: PrintShop;
+  dualColor?:DualColor;
   palette: string[];
   colorBy: ColorBy;
   // VISUAL-ONLY signal controls, deterministic by World.generation.
@@ -120,6 +122,9 @@ export const INITIAL_SETTINGS: SimSettings = {
 };
 export const INITIAL_APPEARANCE: Appearance = {
   print:structuredClonePrint(INITIAL_PRINT_SHOP),
+  // Dual patchbay is OFF until explicitly enabled.
+  dualColor:{enabled:false,sourceA:'state',sourceB:'entropy',blend:.5,
+    invertA:false,invertB:false,offsetA:0,offsetB:0,strengthA:1,strengthB:1},
   palette:[...PALETTES['RADIOACTIVE CANDY']],
   colorBy:'state',
   signalFrequency:3,signalPhase:0,signalCenterX:.5,

@@ -39,6 +39,8 @@ jobs:
         run: node scripts/skin-smoke.mjs
       - name: Verify ten real color signals and mathematical inspector
         run: node scripts/a1-color-signals-smoke.mjs
+      - name: Verify A2 dual-source mathematical color mixing and exports
+        run: node scripts/a2-dual-color-smoke.mjs
       - name: Verify Print Shop effects, compositing and recipe migration
         run: node scripts/printshop-smoke.mjs
       - name: Verify high-res PNG snapshots and legacy recipe safety

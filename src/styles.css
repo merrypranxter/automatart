@@ -363,3 +363,53 @@ body.art-viewer-open{overflow:hidden}
 .color-signal-readout strong{font-size:13px;color:#ffde57}
 .color-signal-lab .color-signal-hint{font-size:10px;color:#a4b9c9}
 @media(max-width:460px){.color-signal-lab{padding:10px 9px}.color-signal-head b{font-size:11px}}
+
+/* F5.5A2 — Dual Color Patchbay */
+.dual-color-lab{display:flex;flex-direction:column;gap:11px;border:1px solid #fa4ac9;
+  padding:13px;margin:14px 0;border-radius:12px;
+  background:linear-gradient(145deg,#3c1439,#122d47 61%,#142b32)}
+.dual-heading{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px;
+  padding-bottom:9px;border-bottom:1px solid #fa77cf55}
+.dual-heading b{font:800 13px 'Chakra Petch',monospace;color:#ff73d7}
+.dual-heading span{font:700 9px 'Chakra Petch',monospace;color:#46f8de}
+.dual-main-switch{display:flex;align-items:center;gap:9px;padding:10px 8px;
+  background:#091b2d;border:1px solid #ab65c1;border-radius:8px;
+  font:800 11px 'Chakra Petch',monospace;color:#d4fafa;cursor:pointer}
+.dual-main-switch input,.dual-toggle-small input{width:19px;height:19px;accent-color:#ff52ce;flex-shrink:0}
+.dual-help{font:500 10px/1.6 'Chakra Petch',monospace;color:#c5b1d7;margin:0}
+.dual-source-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.dual-source{display:flex;flex-direction:column;gap:9px;min-width:0;padding:10px 8px;
+  background:#101530;border:1px solid #a456ac;border-radius:9px}
+.dual-source-b{border-color:#36ced8;background:#0c2a37}
+.dual-source>label:first-child{font:800 10px 'Chakra Petch',monospace;color:#ff92d6}
+.dual-source-b>label:first-child{color:#67fff2}
+.dual-source select{width:100%;max-width:100%;min-width:0;
+  font:700 13px 'Chakra Petch',monospace}
+.dual-toggle-small{display:flex;align-items:center;gap:7px;font:700 10px 'Chakra Petch',monospace;color:#e6ceee}
+.dual-slider{display:flex;flex-direction:column;gap:5px;min-width:0}
+.dual-slider>span{display:flex;align-items:center;justify-content:space-between;gap:6px;
+  font:700 10px 'Chakra Petch',monospace;color:#e9dafa}
+.dual-slider em{font-style:normal;color:#fff06f}
+.dual-slider input{width:100%;accent-color:#e953bd;min-height:25px}
+.dual-blend-meter{display:flex;align-items:center;gap:6px;color:#d9cae6;
+  font:700 10px 'Chakra Petch',monospace}
+.dual-blend-track{flex:1;height:9px;border-radius:9px;background:#ff58cf;overflow:hidden}
+.dual-blend-track>div{height:100%;background:#43ebeb;margin-left:auto}
+.dual-button-row{display:flex;flex-wrap:wrap;gap:7px}
+.dual-button-row button{flex:1 1 110px;min-height:43px;padding:7px;
+  background:#462047;border:1px solid #f47dd4;border-radius:7px;color:#ffe1f1;
+  font:800 10px 'Chakra Petch',monospace}
+.dual-presets button{background:#113744;border-color:#3ccbcf;color:#bafff8}
+.dual-math-inspector{display:flex;flex-direction:column;gap:7px;padding:10px;
+  border-radius:8px;border:1px dashed #5ed9d6;background:#0b1328;
+  color:#dee5fc;font:600 10px/1.5 'Chakra Petch',monospace}
+.dual-math-inspector b{color:#73ffef}
+.dual-math-inspector strong{color:#ffdb69}
+.dual-swatches{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:7px;height:21px}
+.dual-swatches span{border-radius:4px;border:1px solid #fafafa88}
+@media(max-width:420px){
+ .dual-color-lab{padding:10px 7px}
+ .dual-source-grid{grid-template-columns:1fr}
+ .dual-source{padding:9px}
+ .dual-source select{font-size:16px}
+}

@@ -35,12 +35,14 @@ Automatart remains an instrument in **MATHEMAGICAL! — a Math Art Suite**. This
 **Current delivery:** Ten definitions implemented in `src/engine/color-signals.ts`; live Color Lab selector, source-specific sliders (frequency/phase/center/history), numeric cell inspector, World boundary-aware neighbor queries, recipe defaults/migration, renderer integration and Mutation Dice support. `scripts/a1-color-signals-smoke.mjs` checks normalized mathematical signals in all three lattices, visual differences, immutable states, and timing. Real browser GIF/video/export smoke extended to exercise live control selection and GIF interference/cycling. **Not merged; physical iPhone testing still needed.**
 
 
-### F5.5A2 — DUAL COLOR MAPPING / SIGNAL PATCHBAY (VISUAL)
+### F5.5A2 — DUAL COLOR MAPPING / SIGNAL PATCHBAY (IMPLEMENTED IN PR — CI / MERGE PENDING)
 - Source A and source B dropdowns drawn from the existing seven + new ten mappings; A/B blend, invert/swap, optional separate palette offsets and strengths. Begin with common current editable palette and preserve all 31 official presets.
 - Pair inspection shows the numerical A and B values for the tapped cell, blending rule, and resulting color. Clear labels and safe defaults.
 - Renderer implementation must stay identical in live canvas, all skins, Print Shop, still PNG, per-frame-palette GIF and video; generation-driven deterministic sampling.
 - Include recipes and mutation-parameter compatibility, no extra default GPU/mobile cost when off.
 **Done when:** pixel tests validate both sources and blend endpoints (0 = A, 1 = B); exported frames and recipes round-trip correctly.
+**Implementation:** A2 has a disabled-by-default optional `Appearance.dualColor`, two selectors spanning all 17 mapping modes, A/B RGB blend, signal inversion, channel palette offsets and strengths, Swap (including parameters and complementary blend), Reset, three combinations (Age × Entropy, Flow × Edges, Angle × Ghosts), and tapped-cell A/B numerical + RGB inspector. The same per-generation palette phase and existing frame renderer feeds live, all skins, PNG/GIF/video, and Print Shop. Legacy/invalid recipe fields get safe defaults. Endpoint color fidelity is checked across square/hex/triangle, plus mercury material; no CA transitions change.
+
 
 ### F5.5B1 — MORE REAL NEIGHBORHOODS (LOCAL RULES)
 - Square **radius-2 Moore** neighborhood (up to 24 cells), **radius-2 diamond/Von Neumann** (up to 12), and **directional** masked sampling. Where appropriate, allow adjustable radius up to a tested safe cap; document exact neighbor count and center exclusion.

@@ -1,6 +1,7 @@
 import type {Appearance,World} from './types';
 import { palettePhase } from './funhouse';
 import {computeColorSignal,signalIndex} from './color-signals';
+import {createDualSampler} from './dual-color';
 
 type RGB=[number,number,number];
 const clamp=(v:number,min=0,max=1)=>Math.max(min,Math.min(max,v));
@@ -43,7 +44,8 @@ function drawFieldSkin(
   const img=lctx.createImageData(w,h),pixels=img.data;
   const threshold=a.skinThreshold??0.42;
   const chrome=a.chromeStrength??0.8;
-  const coloredSignal=computeColorSignal(world,a);
+  const coloredSignal=a.dualColor?.enabled?null:computeColorSignal(world,a);
+  const dual=a.dualColor?.enabled?createDualSampler(world,a,palette):null;
   for(let y=0;y<h;y++)for(let x=0;x<w;x++){
     const i=y*w+x,k=i*4,height=field[i];
     const xL=field[x>0?i-1:i],xR=field[x<w-1?i+1:i];
@@ -58,7 +60,7 @@ function drawFieldSkin(
     const phase=((index*(a.paletteReverse?-1:1)+cycle)%palette.length+palette.length)%palette.length;
     const c0=color(palette,Math.floor(phase)),c1=color(palette,Math.floor(phase)+1);
     const part=a.smoothPalette?phase-Math.floor(phase):0;
-    const source:RGB=[
+    const source:RGB=dual?dual.color(i):[
       c0[0]+(c1[0]-c0[0])*part,
       c0[1]+(c1[1]-c0[1])*part,
       c0[2]+(c1[2]-c0[2])*part
