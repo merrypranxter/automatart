@@ -1,0 +1,211 @@
+import type {Appearance,EngineId,LifeRule,SimSettings} from './types';
+import {LIFE_RULES,PALETTES} from './types';
+import {randomColors,rotatedColors,shuffledColors} from './funhouse';
+import {createMutationRng,clampMutation,distinctMutation,jitterMutation} from './mutation-core';
+
+export type MutationStrength='gentle'|'weird'|'wtf';
+export interface MutationLocks {palette:boolean;rule:boolean;engine:boolean;seed:boolean}
+export interface MutationOptions {
+  strength:MutationStrength;
+  locks:MutationLocks;
+  allowRestart:boolean;
+}
+export interface MutationResult {
+  settings:SimSettings;
+  appearance:Appearance;
+  mutationSeed:number;
+  changes:string[];
+  willRestart:boolean;
+}
+export const INITIAL_MUTATION_LOCKS:MutationLocks={
+  palette:false,rule:false,engine:true,seed:true
+};
+const restartKeys=(s:SimSettings)=>[
+  s.engine,s.cellCount,s.aspect,s.seed,s.pattern,s.density,
+  s.cyclicStates,s.genStates,s.exciteStates,s.speciesCount,s.lattice
+];
+export function requiresWorldRestart(before:SimSettings,after:SimSettings):boolean{
+  const a=restartKeys(before),b=restartKeys(after);
+  return a.some((v,i)=>v!==b[i]);
+}
+const validEngines:EngineId[]=[
+  'life','brians','cyclic','wolfram','generations','excitable',
+  'larger','species','oriented','margolus'
+];
+const squareOnly:EngineId[]=['wolfram','larger','oriented','margolus'];
+
+export function mutateAutomatart(
+  sourceSettings:SimSettings,
+  sourceAppearance:Appearance,
+  opts:MutationOptions,
+  mutationSeed:number
+):MutationResult{
+  const rng=createMutationRng(mutationSeed);
+  const s:SimSettings={...sourceSettings,
+    customBirth:[...sourceSettings.customBirth],customSurvive:[...sourceSettings.customSurvive],
+    genBirth:[...sourceSettings.genBirth],genSurvive:[...sourceSettings.genSurvive]};
+  const a:Appearance={...sourceAppearance,palette:[...sourceAppearance.palette]};
+  const actions:{label:string;run:()=>void}[]=[];
+  const offer=(label:string,run:()=>void)=>actions.push({label,run});
+  const choose=<T>(value:T,options:readonly T[]):T=>distinctMutation(rng,options,value);
+  const intStep=(value:number,min:number,max:number,extent=2)=>
+    Math.max(min,Math.min(max,value+(rng.chance(.5)?-1:1)*rng.int(1,extent)));
+  const listMove=(values:number[])=>{
+    const current=new Set(values);
+    const index=rng.int(0,8);
+    if(current.has(index)&&current.size>1)current.delete(index);
+    else current.add(index);
+    return [...current].sort((x,y)=>x-y);
+  };
+  const floatStep=(value:number,range:number,min:number,max:number,precision=2)=>
+    jitterMutation(rng,value,range,min,max,precision);
+  // VISUAL parameters are always safe; these never recreate the universe.
+  offer('Color signal',()=>{a.colorBy=choose(a.colorBy,['state','age','neighbors','events','radius','x','activity'] as const)});
+  offer('Skin material',()=>{a.skin=choose(a.skin,['pixels','soft','glow','contours','mercury','relief','glass'] as const)});
+  offer('Chromatic drift',()=>{a.paletteCycle=floatStep(a.paletteCycle,.18,-1,1)});
+  offer('Palette offset',()=>{a.paletteOffset=floatStep(a.paletteOffset,3,-12,12)});
+  offer('Palette trajectory',()=>{a.paletteMotion=a.paletteMotion==='forward'?'pingpong':'forward'});
+  offer('Color direction',()=>{a.paletteReverse=!a.paletteReverse});
+  offer('Smooth color stops',()=>{a.smoothPalette=!a.smoothPalette});
+  offer('Saturation',()=>{a.saturation=floatStep(a.saturation,.5,0,3)});
+  offer('Contrast',()=>{a.contrast=floatStep(a.contrast,.38,.2,3)});
+  offer('Brightness',()=>{a.brightness=floatStep(a.brightness,.32,.15,2.5)});
+  offer('Fluorescent bloom',()=>{a.glowStrength=floatStep(a.glowStrength,.24,0,1)});
+  offer('Temporal RGB ghosts',()=>{a.temporalRGB=floatStep(a.temporalRGB,.3,0,1)});
+  offer('Death fossils',()=>{a.fossilOpacity=floatStep(a.fossilOpacity,.3,0,1)});
+  offer('Contour count',()=>{a.contourLines=intStep(a.contourLines,2,9,2)});
+  offer('Contour thickness',()=>{a.contourWidth=floatStep(a.contourWidth,.7,.5,6)});
+  offer('Material threshold',()=>{a.skinThreshold=floatStep(a.skinThreshold,.17,.05,.95)});
+  offer('Mercury reflections',()=>{a.chromeStrength=floatStep(a.chromeStrength,.4,0,1.5)});
+  offer('Stained-glass lead',()=>{a.glassLines=floatStep(a.glassLines,.3,0,1)});
+  offer('Cell afterimages',()=>{a.trails=!a.trails});
+  offer('Grid visibility',()=>{a.showGrid=!a.showGrid});
+  if(!opts.locks.palette){
+    offer('Load surprise preset',()=>{
+      const alternatives=Object.values(PALETTES).filter(c=>
+        c.length!==a.palette.length||c.some((color,i)=>color.toLowerCase()!==a.palette[i]?.toLowerCase()));
+      if(alternatives.length)a.palette=[...rng.pick(alternatives)];
+    });
+    offer('Invent RGB palette',()=>{a.palette=randomColors(a.palette.length,rng.float)});
+    offer('Scramble color stops',()=>{a.palette=shuffledColors(a.palette,rng.float)});
+    offer('Rotate color stops',()=>{a.palette=rotatedColors(a.palette,rng.int(1,a.palette.length-1))});
+    offer('Replace one color',()=>{
+      const index=rng.int(0,a.palette.length-1);
+      a.palette[index]=randomColors(2,rng.float)[0];
+    });
+  }
+  // A RULE lock protects the live mathematical rule, not merely the name
+  // in the Life-like dropdown. Every rule candidate is engine compatible.
+  if(!opts.locks.rule){
+    if(s.engine!=='margolus'&&s.engine!=='wolfram'&&s.engine!=='larger'&&s.engine!=='oriented'){
+      if(s.lattice==='square'){
+        offer('Neighborhood shape',()=>{s.neighborShape=s.neighborShape==='moore'?'vonNeumann':'moore'});
+      }
+    }
+    if(s.engine!=='margolus'){
+      offer('World edge behavior',()=>{s.wrap=!s.wrap});
+    }
+    switch(s.engine){
+      case 'life':
+        offer('Life rule roulette',()=>{s.lifeRule=choose(s.lifeRule,Object.keys(LIFE_RULES) as LifeRule[])});
+        offer('Personal birth rule',()=>{
+          s.customBirth=listMove(s.lifeRule==='custom'?s.customBirth:LIFE_RULES[s.lifeRule].birth);
+          s.customSurvive=[...(s.lifeRule==='custom'?s.customSurvive:LIFE_RULES[s.lifeRule].survive)];
+          s.lifeRule='custom';
+        });
+        offer('Personal survival rule',()=>{
+          s.customSurvive=listMove(s.lifeRule==='custom'?s.customSurvive:LIFE_RULES[s.lifeRule].survive);
+          s.customBirth=[...(s.lifeRule==='custom'?s.customBirth:LIFE_RULES[s.lifeRule].birth)];
+          s.lifeRule='custom';
+        });
+        break;
+      case 'cyclic':
+        offer('Chase threshold',()=>{s.cyclicThreshold=intStep(s.cyclicThreshold,1,s.lattice==='hex'?6:s.lattice==='triangle'?3:s.neighborShape==='vonNeumann'?4:8)});
+        break;
+      case 'wolfram':
+        offer('Wolfram rule',()=>{s.wolframRule=choose(s.wolframRule,[30,54,73,90,105,110,126,150,184,225,254])});
+        break;
+      case 'generations':
+        offer('Afterlife birth counts',()=>{s.genBirth=listMove(s.genBirth)});
+        offer('Afterlife survival counts',()=>{s.genSurvive=listMove(s.genSurvive)});
+        break;
+      case 'excitable':
+        offer('Excitation threshold',()=>{s.exciteThreshold=intStep(s.exciteThreshold,1,s.lattice==='hex'?6:s.lattice==='triangle'?3:s.neighborShape==='vonNeumann'?4:8)});
+        break;
+      case 'larger':{
+        const max=(2*s.largeRadius+1)**2-1;
+        offer('Wide-field birth window',()=>{
+          s.largeBirthMin=intStep(s.largeBirthMin,0,s.largeBirthMax,3);
+          s.largeBirthMax=intStep(s.largeBirthMax,s.largeBirthMin,max,3);
+        });
+        offer('Wide-field survival window',()=>{
+          s.largeSurviveMin=intStep(s.largeSurviveMin,0,s.largeSurviveMax,3);
+          s.largeSurviveMax=intStep(s.largeSurviveMax,s.largeSurviveMin,max,3);
+        });
+        offer('Neighborhood radius',()=>{
+          s.largeRadius=intStep(s.largeRadius,1,5,1);
+          const cap=(2*s.largeRadius+1)**2-1;
+          s.largeBirthMin=Math.min(s.largeBirthMin,cap);
+          s.largeBirthMax=Math.max(s.largeBirthMin,Math.min(s.largeBirthMax,cap));
+          s.largeSurviveMin=Math.min(s.largeSurviveMin,cap);
+          s.largeSurviveMax=Math.max(s.largeSurviveMin,Math.min(s.largeSurviveMax,cap));
+        });
+        break;
+      }
+      case 'species':
+        offer('Species invasion pressure',()=>{s.speciesBirth=intStep(s.speciesBirth,1,s.neighborShape==='vonNeumann'?4:8)});
+        offer('Species survival',()=>{s.speciesSurvive=intStep(s.speciesSurvive,0,8)});
+        offer('Species defenses',()=>{s.speciesAttackBias=intStep(s.speciesAttackBias,0,8)});
+        break;
+      case 'oriented':
+        offer('Directional birth stencil',()=>{s.orientedMask=Math.max(1,s.orientedMask^(1<<rng.int(0,7)))});
+        offer('Directional symmetry',()=>{s.orientedSymmetry=choose(s.orientedSymmetry,['fixed','rotations','dihedral'] as const)});
+        offer('Birth stencil matching',()=>{s.orientedMatch=s.orientedMatch==='exact'?'contains':'exact'});
+        offer('Directional survival range',()=>{
+          s.orientedSurviveMin=intStep(s.orientedSurviveMin,0,s.orientedSurviveMax);
+          s.orientedSurviveMax=intStep(s.orientedSurviveMax,s.orientedSurviveMin,8);
+        });
+        break;
+    }
+    if(s.engine!=='cyclic'){
+      offer('Afterimage persistence',()=>{s.trailDecay=floatStep(s.trailDecay,.07,.65,.99)});
+    }
+  }
+  if(opts.allowRestart){
+    if(!opts.locks.engine&&!opts.locks.rule){
+      offer('Change automaton engine',()=>{
+        s.engine=choose(s.engine,validEngines);
+        if(squareOnly.includes(s.engine))s.lattice='square';
+        if(s.engine==='margolus')s.wrap=true;
+      });
+    }
+    if(!opts.locks.seed){
+      offer('Change universe seed',()=>{s.seed=(s.seed+rng.int(1,0x7fffffff))>>>0});
+      offer('Mutate starting pattern',()=>{s.pattern=choose(s.pattern,['noise','center','rings','stripes','checker','spiral','web'] as const)});
+      offer('Starting cell density',()=>{s.density=floatStep(s.density,.17,0.02,.95)});
+    }
+    if(!opts.locks.rule){
+      if(s.engine==='cyclic')offer('Cyclic species count',()=>{s.cyclicStates=intStep(s.cyclicStates,3,24,3)});
+      if(s.engine==='generations')offer('Afterlife decay states',()=>{s.genStates=intStep(s.genStates,3,24,3)});
+      if(s.engine==='excitable')offer('Refractory states',()=>{s.exciteStates=intStep(s.exciteStates,3,24,3)});
+      if(s.engine==='species')offer('Competing species count',()=>{s.speciesCount=intStep(s.speciesCount,2,8)});
+    }
+  }
+  const count=opts.strength==='gentle'?2:opts.strength==='weird'?5:9;
+  const changes:string[]=[];
+  const originalS=JSON.stringify(s),originalA=JSON.stringify(a);
+  while(actions.length&&changes.length<count){
+    const index=rng.int(0,actions.length-1);
+    const [candidate]=actions.splice(index,1);
+    const before=JSON.stringify(s)+JSON.stringify(a);
+    candidate.run();
+    if(JSON.stringify(s)+JSON.stringify(a)!==before)changes.push(candidate.label);
+  }
+  // Unless user explicitly allows structural resets, the entire running CA
+  // state remains intact (even across visual and local-rule mutations).
+  const willRestart=requiresWorldRestart(sourceSettings,s);
+  if(willRestart&&!opts.allowRestart)throw Error('Mutation attempted an unapproved world reset');
+  if(!changes.length&&(originalS===JSON.stringify(s)&&originalA===JSON.stringify(a)))
+    throw Error('No compatible parameters are available for mutation');
+  return {settings:s,appearance:a,mutationSeed:mutationSeed>>>0,changes,willRestart};
+}

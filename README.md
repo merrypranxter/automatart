@@ -113,3 +113,12 @@ See [Funhouse Roadmap](docs/FUNHOUSE_ROADMAP.md) for the rest of the finishing p
 - New frame pacing drops overdue *schedule debt* instead of producing a rapid burst of simulated frames after a UI stall. This may take longer than requested wall-clock duration when a browser is CPU-overloaded; as with every MediaRecorder capture the actual file is real-time, not a guaranteed offline fixed-framerate encoding.
 - GIFs remain in the separate frame-by-frame worker path and retain their per-frame palettes. The recorder progress/preview/cancel/save UX is unchanged.
 - Real browser test decodes several moments of an exported video, verifies temporal diversity and playable duration, and asserts MediaRecorder starts without a 1000ms timeslice. Real iPhone Safari needs another user check.
+
+## FUNHOUSE F2 — Mutation Dice
+- A high-contrast **FUCK IT UP** button in Rule Reactor, with Gentle (2), Weird (5), and What the Fuck (9) distinct safe mutations per roll.
+- Checkable locks protect palette colors, math/rules, engine, and seed. Defaults protect **engine and seed**; all basic mutations change compatible live rules or visual parameters **without restarting the universe**. Palette lock protects RGB stops, while visual palette cycling remains adjustable.
+- **ALLOW UNIVERSE RESTARTS** is separate, off by default. To allow engine or seed changes, both explicitly permit restarts and unlock that parameter. Structural changes correctly regenerate the new initial world.
+- **UNDO** restores the actual previous cell arrays, generation, paint strokes and historical visual data, plus exact old settings and palette. Structural undo uses a one-shot restoration after the React world-initialization effect. Undo is one level, not an unlimited timeline.
+- Each roll is created from an explicit 32-bit RNG seed. The last roll's seed, changes, locks, strength and allowance are included as optional `funhouse` metadata in ordinary `automatart-recipe-v1` JSON; complete resulting settings/appearance are also saved for exact reproduction of a starting recipe. Pre-existing recipes remain valid.
+- A portable mutation RNG core lives in `src/engine/mutation-core.ts`; the instrument-specific adapter lives in `src/engine/mutation-automatart.ts`. This is architected for future apps but **only Automatart is updated**; Moiré and Reaction Diffusion need their own mathematically valid adapters later.
+- Regression tests cover deterministic mutation runs for every existing engine, math/palette/seed/engine locks, opt-in resets, and real-browser UI undo/recording.

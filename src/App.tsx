@@ -6,6 +6,9 @@ import { lookupCell } from './engine/topology';
 import { renderWorld } from './engine/render';
 import { randomColors, rotatedColors, shuffledColors } from './engine/funhouse';
 import MutantControls from './components/MutantControls';
+import MutationControls from './components/MutationControls';
+import {mutateAutomatart,requiresWorldRestart,INITIAL_MUTATION_LOCKS} from './engine/mutation-automatart';
+import type {MutationLocks,MutationStrength} from './engine/mutation-automatart';
 import SkinControls from './components/SkinControls';
 import StrangeControls, { SQUARE_ONLY_ENGINES } from './components/StrangeControls';
 import {
@@ -54,6 +57,13 @@ function download(name:string, content:Blob | string):void{
   document.body.appendChild(a);a.click();a.remove();
   if(typeof content!=='string')window.setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
+function cloneWorld(world:World):World{
+  return {...world,
+    cells:world.cells.slice(),ages:world.ages.slice(),
+    neighbors:world.neighbors.slice(),events:world.events.slice(),
+    traces:world.traces.slice(),previousCells:world.previousCells?.slice(),
+    olderCells:world.olderCells?.slice(),fossils:world.fossils?.slice()};
+}
 function stat(world:World):number{
   let living=0;for(let i=0;i<world.cells.length;i++)if(world.cells[i]!==0)living++;
   return living;
@@ -69,6 +79,11 @@ export default function App(){
   const [brush,setBrush]=useState(2);
   const [erase,setErase]=useState(false);
   const [paintSpecies,setPaintSpecies]=useState(1);
+  const [mutationStrength,setMutationStrength]=useState<MutationStrength>('weird');
+  const [mutationLocks,setMutationLocks]=useState<MutationLocks>({...INITIAL_MUTATION_LOCKS});
+  const [allowMutationRestart,setAllowMutationRestart]=useState(false);
+  const [lastMutation,setLastMutation]=useState<{seed:number;changes:string[];willRestart:boolean}|null>(null);
+  const [hasMutationUndo,setHasMutationUndo]=useState(false);
   const [generation,setGeneration]=useState(0);
   const [population,setPopulation]=useState(0);
   const [resetNumber,setResetNumber]=useState(0);
@@ -100,6 +115,11 @@ export default function App(){
   const recordingRef=useRef(false);
   useEffect(()=>()=>{if(lastExport)URL.revokeObjectURL(lastExport.url);},[lastExport]);
   const worldRef=useRef<World>(createWorld(INITIAL_SETTINGS));
+  const undoMutationRef=useRef<{
+    settings:SimSettings;appearance:Appearance;world:World;
+    last:{seed:number;changes:string[];willRestart:boolean}|null
+  }|null>(null);
+  const pendingWorldRestoreRef=useRef<World|null>(null);
   const canvasRef=useRef<HTMLCanvasElement>(null);
   const loadRef=useRef<HTMLInputElement>(null);
   const paletteImportRef=useRef<HTMLInputElement>(null);
@@ -135,6 +155,58 @@ export default function App(){
     batchTokenRef.current++;
     setBatchProgress(null);
   };
+  function mutateNow(){
+    if(recordingRef.current||batchProgress!==null)return;
+    const bytes=new Uint32Array(1);
+    if(typeof crypto!=='undefined'&&crypto.getRandomValues)crypto.getRandomValues(bytes);
+    else bytes[0]=(Math.random()*0xffffffff)>>>0;
+    try{
+      const result=mutateAutomatart(settings,appearance,{
+        strength:mutationStrength,locks:mutationLocks,allowRestart:allowMutationRestart
+      },bytes[0]);
+      cancelBatch();
+      undoMutationRef.current={
+        settings:{...settings,customBirth:[...settings.customBirth],
+          customSurvive:[...settings.customSurvive],
+          genBirth:[...settings.genBirth],genSurvive:[...settings.genSurvive]},
+        appearance:{...appearance,palette:[...appearance.palette]},
+        world:cloneWorld(worldRef.current),last:lastMutation
+      };
+      setHasMutationUndo(true);
+      const metadata={seed:result.mutationSeed,changes:result.changes,willRestart:result.willRestart};
+      setLastMutation(metadata);
+      if(result.willRestart)setPlaying(false);
+      setSettings(result.settings);
+      setAppearance(result.appearance);
+      setMessage('Mutation '+result.mutationSeed+': '+result.changes.join(' · ')+
+        (result.willRestart?' — NEW UNIVERSE GENERATED':' — LIVE WORLD KEPT'));
+    }catch(error){
+      setMessage('Mutation blocked: '+(error instanceof Error?error.message:String(error)));
+    }
+  }
+  function undoMutation(){
+    const undo=undoMutationRef.current;
+    if(!undo||recordingRef.current||batchProgress!==null)return;
+    cancelBatch();
+    setPlaying(false);
+    const restored=cloneWorld(undo.world);
+    if(requiresWorldRestart(settings,undo.settings)){
+      // The structural settings effect owns world initialization; restore
+      // the real previous generations and painted cells there, *after*
+      // React applies the previous seed/engine. No misleading pseudo-undo.
+      pendingWorldRestoreRef.current=restored;
+    }else{
+      worldRef.current=restored;
+      setGeneration(restored.generation);
+      setPopulation(stat(restored));
+    }
+    setSettings(undo.settings);
+    setAppearance(undo.appearance);
+    setLastMutation(undo.last);
+    undoMutationRef.current=null;
+    setHasMutationUndo(false);
+    setMessage('Previous rule, colors, seed and exact living cell state restored.');
+  }
   const draw=useCallback(()=>{
     if(canvasRef.current)renderWorld(canvasRef.current,worldRef.current,appearance,900);
   },[appearance]);
@@ -145,8 +217,9 @@ export default function App(){
   // Recreate only when initial-world geometry/seed changes.
   // Rule, color and trail adjustments now affect the running simulation.
   useEffect(()=>{
-    worldRef.current=createWorld(settings);
-    setGeneration(0);
+    worldRef.current=pendingWorldRestoreRef.current??createWorld(settings);
+    pendingWorldRestoreRef.current=null;
+    setGeneration(worldRef.current.generation);
     setPopulation(stat(worldRef.current));
   },[settings.engine,settings.cellCount,settings.aspect,settings.seed,
       settings.pattern,settings.density,settings.cyclicStates,
@@ -285,7 +358,10 @@ export default function App(){
     }
   }
   function saveRecipe(){
-    const recipe={kind:'automatart-recipe-v1',settings,appearance};
+    const recipe={kind:'automatart-recipe-v1',settings,appearance,
+      funhouse:lastMutation?{mutationSeed:lastMutation.seed,
+        changes:lastMutation.changes,strength:mutationStrength,
+        locks:mutationLocks,allowRestart:allowMutationRestart}:undefined};
     download('automatart-recipe-'+settings.seed+'.json',
       new Blob([JSON.stringify(recipe,null,2)],{type:'application/json'}));
     setMessage('Saved this setup as a JSON recipe. Paint strokes and elapsed generations are not part of recipes yet.');
@@ -368,6 +444,10 @@ export default function App(){
       if(!['forward','pingpong'].includes(a.paletteMotion))a.paletteMotion='forward';
       a.paletteReverse=!!a.paletteReverse;
       a.smoothPalette=!!a.smoothPalette;
+      undoMutationRef.current=null;
+      pendingWorldRestoreRef.current=null;
+      setHasMutationUndo(false);
+      setLastMutation(null);
       setSettings(s);setAppearance(a);setResetNumber(n=>n+1);
       setMessage('Recipe loaded. Exact seed restored.');
     }catch(err){
@@ -515,7 +595,7 @@ export default function App(){
           </div>}
         </section>
         <section className="rack" aria-label="Simulation controls">
-          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>STRANGE LATTICES / Z3</span></div>
+          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>FUNHOUSE / F2 MUTATION DICE</span></div>
           <section className="module">
             <div className="module-heading"><span className="module-num">01</span><h2>WORLD MACHINE</h2><span className="module-symbol">◎</span></div>
             <label className="input-label" htmlFor="aspect">Canvas geometry</label>
@@ -585,6 +665,12 @@ export default function App(){
               <input id="rule" type="number" min="0" max="255" value={settings.wolframRule} onChange={e=>updateSetting('wolframRule',Math.max(0,Math.min(255,Number(e.target.value)||0)))}/>
               <div className="chip-row">{[30,90,110,184].map(n=><button className="chip" key={n} onClick={()=>updateSetting('wolframRule',n)}>R{n}</button>)}</div>
             </>}
+            <MutationControls strength={mutationStrength} setStrength={setMutationStrength}
+              locks={mutationLocks} setLocks={setMutationLocks}
+              allowRestart={allowMutationRestart} setAllowRestart={setAllowMutationRestart}
+              mutate={mutateNow} undo={undoMutation}
+              canUndo={hasMutationUndo} disabled={capturing||batchProgress!==null}
+              lastMutation={lastMutation}/>
             <label className="input-label" htmlFor="speed">Evolution speed <em>{speed} gen/sec</em></label>
             <input id="speed" type="range" min="1" max="40" value={speed} onChange={e=>setSpeed(Number(e.target.value))}/>
             <div className="paint-tools">

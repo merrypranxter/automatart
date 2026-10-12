@@ -34,6 +34,35 @@ try{
   // Funhouse F1 regression: precise stepping, authentic B/S roulette, and two
   // unmistakably different random color buttons.
   await page.locator('.transport .primary').click(); // pause first
+  await page.waitForTimeout(100);
+  // F2: Mutation Dice must operate on the live world without restarting it,
+  // preserve protectable palette/rules, and exactly undo the prior pixels.
+  const mutateStart=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  const pixelBefore=await page.locator('.canvas-wrap canvas').evaluate(c=>c.toDataURL());
+  const engineBefore=await page.locator('#engine').inputValue();
+  await page.locator('#mutation-strength').selectOption('wtf');
+  await page.locator('#mutation-throw').click();
+  assert(await page.locator('.mutation-result').isVisible(),'Mutation result includes actual changed knobs');
+  assert.equal(await page.locator('#engine').inputValue(),engineBefore,'Engine locked by default');
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),mutateStart,
+    'Default mutation does not reset or advance current world');
+  assert(await page.locator('#mutation-undo').isEnabled(),'Undo becomes available after mutation');
+  await page.locator('#mutation-undo').click();
+  await page.waitForTimeout(100);
+  const pixelRestored=await page.locator('.canvas-wrap canvas').evaluate(c=>c.toDataURL());
+  assert.equal(pixelRestored,pixelBefore,'Undo restores exact previous rendered universe');
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),mutateStart);
+  const originalSwatches=await page.locator('.color-wells input[type=color]').evaluateAll(els=>els.map(e=>e.value));
+  await page.getByRole('checkbox',{name:'Lock COLOR PALETTE'}).check();
+  await page.getByRole('checkbox',{name:'Lock MATH / RULES'}).check();
+  await page.locator('#mutation-throw').click();
+  assert.deepEqual(await page.locator('.color-wells input[type=color]').evaluateAll(els=>els.map(e=>e.value)),
+    originalSwatches,'Lock palette protects every RGB swatch');
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),mutateStart);
+  await page.locator('#mutation-undo').click();
+  await page.getByRole('checkbox',{name:'Lock COLOR PALETTE'}).uncheck();
+  await page.getByRole('checkbox',{name:'Lock MATH / RULES'}).uncheck();
+  assert(await page.getByRole('checkbox',{name:'Allow mutations to restart the universe'}).isVisible());
   const startGen=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
   await page.locator('.funhouse-time-controls button').nth(0).click(); // STEP +10
   await page.waitForFunction(start=>Number(document.querySelector('.readouts b')?.textContent?.replaceAll(',',''))===start+10,startGen);

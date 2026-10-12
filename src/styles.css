@@ -146,3 +146,37 @@ input[type=range]{width:100%;margin:4px 0 7px;accent-color:#f62eb8;cursor:pointe
 .palette-order-tools button{min-height:39px;background:#201d40;border:1px solid #7a62b9;border-radius:7px;color:#debcff;font:700 10px 'Chakra Petch',monospace;padding:6px}
 .palette-order-tools button:hover{border-color:#f5e83e;color:#f5e83e}
 @media(max-width:450px){.palette-chaos-buttons{gap:5px}.palette-order-tools button{font-size:9px;padding:5px 2px}}
+
+/* Funhouse F2 — high-contrast, touch-friendly mutation drawer */
+.mutation-lab{margin:15px 0;padding:14px;border-radius:12px;border:1px solid #f642bb;
+  background:linear-gradient(145deg,#331035,#14123c 65%,#072939);display:flex;flex-direction:column;gap:10px}
+.mutation-header{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;
+  font:700 15px 'Chakra Petch',monospace;color:#ff40c8;letter-spacing:1px}
+.mutation-header span:last-child{color:#25f0df;font-size:9px;letter-spacing:.5px}
+.mutation-lab p{font:500 11px/1.5 'Chakra Petch',monospace;color:#dfc6ec;margin:0}
+.mutation-lab strong{color:#fff16c}
+.mutation-lock-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.mutation-lock{display:flex;gap:6px;align-items:center;padding:9px 7px;
+  min-height:40px;background:#150d24;border:1px solid #5e486c;border-radius:8px;
+  font:700 10px 'Chakra Petch',monospace;color:#dbccf2}
+.mutation-lock input{accent-color:#ec32b7;width:17px;height:17px;flex-shrink:0}
+.mutation-lock span:nth-of-type(1){font-size:14px}
+.mutation-restart{display:flex;align-items:center;gap:9px;min-height:40px;
+  padding:10px;border-radius:8px;border:1px solid #b27736;background:#3b231b;
+  font:700 11px 'Chakra Petch',monospace;color:#ffeaa0}
+.mutation-restart input{accent-color:#f4c830;width:18px;height:18px}
+.mutation-explain{color:#a4e7e2!important}
+.mutation-buttons{display:grid;grid-template-columns:2fr 1fr;gap:8px}
+.mutation-buttons button{min-height:51px;border-radius:9px;border:1px solid #e1b5e7;
+  font:800 12px 'Chakra Petch',monospace}
+#mutation-throw{background:#f23ba9;color:#190922;border-color:#ff84d6;
+  box-shadow:0 0 20px #ff1db244}
+#mutation-undo{background:#201838;color:#e7f5ff;border-color:#36c9c1}
+.mutation-buttons button:disabled{opacity:.46;cursor:not-allowed;box-shadow:none!important}
+.mutation-result{display:flex;flex-direction:column;gap:5px;background:#0f192a;
+  padding:11px;border:1px solid #21d8bd;border-radius:8px;
+  font:500 11px/1.45 'Chakra Petch',monospace;color:#c9eef2}
+.mutation-result strong{color:#69fae1}
+.mutation-result small{font-size:10px;color:#b8a9cb}
+@media(max-width:450px){.mutation-lab{padding:10px 9px}.mutation-lock{padding:8px 5px;font-size:9px}
+.mutation-buttons button{font-size:11px}}

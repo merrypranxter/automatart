@@ -18,12 +18,12 @@ The goal is more PLAY without destabilizing the mathematical engines, palette va
 - [x] Palette Surprise: shuffle stops, reverse and rotate on the CURRENT palette, no mutation of originals.
 - [x] Tests: exact B/S mappings, bounce ends/direction, random whole RGB palettes with editable swatches, and real-browser recorder smoke (including GIF color-cycling protection).
 
-## F2 — MUTATION DICE
-- [ ] `FUCK IT UP` mutation control with strength levels Gentle / Weird / What the Fuck.
-- [ ] Locks for palette, rule, engine and seed. Always retain changes only to compatible parameters, and clearly identify which settings change the current world vs reseed it.
-- [ ] Seeded mutation **recipe**, optionally an undo (last mutation) action; a mutation itself may be stochastic, but the resulting exported recipe must reproduce its parameters exactly.
-- [ ] Button feedback and sensible bounds across engine-specific controls; avoid re-seeding unless user explicitly permits it.
-- [ ] Regression against recorder.
+## F2 — MUTATION DICE (IMPLEMENTED — CI PENDING)
+- [x] `FUCK IT UP` mutation control with strength levels Gentle / Weird / What the Fuck.
+- [x] Locks for palette, rule, engine and seed. Always retain changes only to compatible parameters, and clearly identify which settings change the current world vs reseed it.
+- [x] Seeded mutation **recipe**, optionally an undo (last mutation) action; a mutation itself may be stochastic, but the resulting exported recipe must reproduce its parameters exactly.
+- [x] Button feedback and sensible bounds across engine-specific controls; avoid re-seeding unless user explicitly permits it.
+- [x] Regression against recorder.
 
 ## F3 — SYMMETRY AND ALIEN SEED STAMPS
 - [ ] Symmetry-aware brush: single/mirror/4-way/8-way; distinguish actual state stamping from rendering-only symmetry.
@@ -46,3 +46,6 @@ The goal is more PLAY without destabilizing the mathematical engines, palette va
 
 ## Beyond Funhouse
 Z4–Z9 (sandpile / Wireworld / lattice gases, coupled automata, mutation farm/time machine, continuous life, 3D, shared app integrations) remain possible research work after a rest. This Finishing Pass does **not** claim those large milestones are shipped.
+
+### Shared-suite strategy
+F2 was first implemented inside Automatart. The portable `src/engine/mutation-core.ts` holds seeded random mutation primitives with **no automata assumptions**. `src/engine/mutation-automatart.ts` applies strict Automatart engine-specific allowed ranges and safe live-world behavior. This code is **not yet installed** in It's a Moiré or Reaction Diffusion Artist. A later Math Art Suite integration can extract the core into a tested shared package and add separate adapters for each app rather than copying controls or mismatching mathematical parameters.
