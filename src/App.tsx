@@ -364,8 +364,11 @@ export default function App(){
     // but visual entropy/flow inspectors must use the CURRENT rule graph.
     worldRef.current.neighborShape=settings.neighborShape;
     worldRef.current.neighborMask=settings.neighborMask;
+    worldRef.current.customStencilMask=settings.customStencilMask;
+    worldRef.current.customStencilSize=settings.customStencilSize;
     worldRef.current.wrap=settings.wrap;
-  },[settings.neighborShape,settings.neighborMask,settings.wrap]);
+  },[settings.neighborShape,settings.neighborMask,settings.customStencilMask,
+    settings.customStencilSize,settings.wrap]);
   useEffect(()=>{draw();},[draw,settings,resetNumber]);
 
   useEffect(()=>{
@@ -595,9 +598,11 @@ export default function App(){
       if(!['square','hex','triangle'].includes(s.lattice))s.lattice='square';
       if(SQUARE_ONLY_ENGINES.includes(s.engine))s.lattice='square';
       if(s.engine==='margolus')s.wrap=true;
-      if(!['moore','vonNeumann','square2','diamond2','directional'].includes(s.neighborShape))
+      if(!['moore','vonNeumann','square2','diamond2','directional','custom'].includes(s.neighborShape))
         throw new Error('Invalid neighborhood rule');
       s.neighborMask=Number.isInteger(s.neighborMask)?s.neighborMask:255;
+      // Older specimens did not include B2 stencils; the initial default
+      // supplies a valid 8-neighbor custom preset without changing their active rule.
       if(!validNeighborhoodSettings(s))throw new Error('Neighborhood and engine/lattice are incompatible');
       // Validate all saved rules against the largest compatible local graph;
       // constrain only the active engine after all presets are loaded.
@@ -889,7 +894,7 @@ export default function App(){
             {supportsNeighborhood(settings.engine,settings.lattice)&&
               <NeighborhoodControls settings={settings} setSettings={setSettings}/>}
             {!supportsNeighborhood(settings.engine,settings.lattice)&&
-              <p className="module-note">This lattice or engine has its own specified neighborhood. The B1 square-neighborhood options are disabled here to protect the mathematical rules.</p>}
+              <p className="module-note">This lattice or engine has its own specified neighborhood. The B1/B2 square-neighborhood options are disabled here to protect the mathematical rules.</p>}
             {settings.engine==='life'&&<>
               <label className="input-label" htmlFor="life">Birth / survival</label>
               <select id="life" value={settings.lifeRule} onChange={e=>updateSetting('lifeRule',e.target.value as LifeRule)}>

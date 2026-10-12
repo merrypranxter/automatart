@@ -1,6 +1,7 @@
 import type {Appearance,EngineId,LifeRule,SimSettings} from './types';
 import {LIFE_RULES,PALETTES} from './types';
 import {maxNeighborCount,supportsNeighborhood,normalizeActiveVotes} from './neighborhood';
+import {rotateStencil,mirrorStencil,seededStencil,toggleStencil,allowedStencilMask,resizeStencil} from './stencil';
 import {randomColors,rotatedColors,shuffledColors} from './funhouse';
 import {createMutationRng,clampMutation,distinctMutation,jitterMutation} from './mutation-core';
 
@@ -101,7 +102,26 @@ export function mutateAutomatart(
     if(s.engine!=='margolus'&&s.engine!=='wolfram'&&s.engine!=='larger'&&s.engine!=='oriented'){
       if(s.lattice==='square'){
         offer('Neighborhood shape',()=>{
-          s.neighborShape=choose(s.neighborShape,['moore','vonNeumann','square2','diamond2','directional'] as const);
+          s.neighborShape=choose(s.neighborShape,['moore','vonNeumann','square2','diamond2','directional','custom'] as const);
+        });
+        offer('Hand-painted stencil: flip, rotate or surprise',()=>{
+          s.neighborShape='custom';
+          const action=rng.int(0,3);
+          if(action===0)s.customStencilMask=rotateStencil(s.customStencilMask,s.customStencilSize);
+          if(action===1)s.customStencilMask=mirrorStencil(s.customStencilMask,s.customStencilSize);
+          if(action===2){
+            const allowed=allowedStencilMask(s.customStencilSize);
+            const bits=Array.from({length:25},(_,i)=>i).filter(i=>(allowed&(1<<i))!==0);
+            const bit=rng.pick(bits);
+            s.customStencilMask=toggleStencil(s.customStencilMask,s.customStencilSize,bit,
+               !(s.customStencilMask&(1<<bit)));
+          }
+          if(action===3)s.customStencilMask=seededStencil(rng.int(1,0x7fffffff),s.customStencilSize);
+        });
+        offer('Stencil size 3×3 ↔ 5×5',()=>{
+          s.customStencilSize=s.customStencilSize===3?5:3;
+          s.customStencilMask=resizeStencil(s.customStencilMask,s.customStencilSize);
+          s.neighborShape='custom';
         });
         offer('Directional compass neighbors',()=>{
           if(s.neighborShape!=='directional')s.neighborShape='directional';
