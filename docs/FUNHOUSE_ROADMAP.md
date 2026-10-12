@@ -25,7 +25,7 @@ The goal is more PLAY without destabilizing the mathematical engines, palette va
 - [x] Button feedback and sensible bounds across engine-specific controls; avoid re-seeding unless user explicitly permits it.
 - [x] Regression against recorder.
 
-## F3 — SYMMETRY AND ALIEN SEED STAMPS (IMPLEMENTED — TESTING)
+## F3 — SYMMETRY AND ALIEN SEED STAMPS (SHIPPED — CI GREEN)
 - [x] Symmetry-aware brush: single/mirror/4-way/8-way; distinguish actual state stamping from rendering-only symmetry.
 - [x] Alien seed stamps: spirals, rings, gliders (on compatible lattices), checker bursts, clusters, spores.
 - [x] Geometry-correct taps on square, hex and triangle lattices. Respect boundaries, species painting, erasing, and maintain state-history metadata.
