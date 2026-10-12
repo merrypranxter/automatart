@@ -27,6 +27,8 @@ jobs:
         run: npm install --no-save --no-audit --no-fund @napi-rs/canvas gifuct-js
       - name: Encode and decode a truly animated GIF
         run: node scripts/recording-smoke.mjs
+      - name: Regression test GIF color cycling versus live render
+        run: node scripts/gif-color-cycle-smoke.mjs
       - name: Verify mathematical skins and history overlays
         run: node scripts/skin-smoke.mjs
 

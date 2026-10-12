@@ -1,4 +1,5 @@
-import { GIFEncoder, quantize } from 'gifenc';
+import { GIFEncoder } from 'gifenc';
+import { indexGifFrame } from './gif-palette';
 import { createWorld, stepWorld } from './sim';
 import { renderWorld } from './render';
 import { worldDimensions } from './types';
@@ -94,33 +95,6 @@ export function createCaptureCursor(source:World,s:SimSettings,fps:number,stepsP
     }
   };
   return cursor;
-}
-
-// A steady GIF palette keeps colors coherent across frames and avoids doing
-// an expensive 256-color quantization for *every* animation frame on mobile.
-function makePaletteIndex(palette:number[][]){
-  const lut=new Uint16Array(65536);
-  lut.fill(0xffff);
-  const colors=palette.map(p=>[p[0],p[1],p[2]]);
-  return (rgba:Uint8ClampedArray):Uint8Array=>{
-    const out=new Uint8Array(rgba.length/4);
-    for(let p=0,j=0;p<rgba.length;p+=4,j++){
-      const r=rgba[p],g=rgba[p+1],b=rgba[p+2];
-      const key=((r>>3)<<11)|((g>>2)<<5)|(b>>3);
-      let best=lut[key];
-      if(best===0xffff){
-        let dist=Infinity,bestIndex=0;
-        for(let k=0;k<colors.length;k++){
-          const c=colors[k],dr=r-c[0],dg=g-c[1],db=b-c[2];
-          const d=dr*dr*0.9+dg*dg*1.4+db*db*0.9;
-          if(d<dist){dist=d;bestIndex=k;}
-        }
-        best=bestIndex;lut[key]=best;
-      }
-      out[j]=best;
-    }
-    return out;
-  };
 }
 
 // Parse GIF records, not arbitrary 0x2C compressed-data bytes, to verify
@@ -219,7 +193,6 @@ export async function captureAnimation(
       const useWorker=typeof Worker!=='undefined'&&typeof window!=='undefined';
       const worker=useWorker ? new Worker(new URL('./gif.worker.ts',import.meta.url),{type:'module'}) : null;
       const gif=worker?null:GIFEncoder();
-      let map:(pixels:Uint8ClampedArray)=>Uint8Array=()=>new Uint8Array();
       try{
         if(worker){
           update('Starting GIF encoder…',0);
@@ -234,13 +207,13 @@ export async function captureAnimation(
             const response=await roundTrip(worker,{type:'frame',rgba:pixels.buffer},[pixels.buffer as ArrayBuffer],signal);
             reachedSizeLimit=!!response.sizeLimitHit;
           }else if(gif){
-            if(i===0){
-              const colors=quantize(pixels,256,{format:'rgb565'});
-              map=makePaletteIndex(colors);
-              gif.writeFrame(map(pixels),width,height,{
-                palette:colors,delay:Math.round(1000/opt.fps),repeat:opt.mode==='settled'?-1:0
-              });
-            }else gif.writeFrame(map(pixels),width,height,{delay:Math.round(1000/opt.fps)});
+            // Match Worker behavior: later frames get LOCAL GIF palettes so
+            // cycling colors can actually exist in the resulting file.
+            const {indices,palette}=indexGifFrame(pixels,width,height);
+            gif.writeFrame(indices,width,height,{
+              palette,delay:Math.round(1000/opt.fps),
+              ...(i===0?{repeat:opt.mode==='settled'?-1:0}:{})
+            });
             if(i%6===5)reachedSizeLimit=gif.bytes().byteLength>=maxGifBytes;
           }
           frames++;

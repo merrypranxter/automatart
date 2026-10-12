@@ -118,6 +118,8 @@ try{
   assert(await page.locator('#fossil-opacity').isVisible(),'Cell fossil control appears');
   await page.locator('#temporal-rgb').focus();
   await page.locator('#temporal-rgb').press('End'); // capture visible time ghosts too
+  await page.locator('#palette-cycle').focus();
+  await page.locator('#palette-cycle').press('End'); // ensure GIF frames require NEW colors
   await page.locator('#duration-preset').selectOption('custom');
   await page.locator('#custom-seconds').fill('1');
   await page.locator('#export-fps').selectOption('10'); // exercise compressed-byte sampling at frame 6
@@ -133,7 +135,8 @@ try{
     const response=await fetch(img.src);
     const bytes=new Uint8Array(await response.arrayBuffer());
     const header=new TextDecoder().decode(bytes.subarray(0,6));
-    let cursor=13, count=0;
+    let cursor=13, count=0, localTables=0;
+    const localPalettes=[];
     const flags=bytes[10];
     if(flags&0x80)cursor+=3*(1<<((flags&7)+1));
     const skip=()=>{while(cursor<bytes.length){const length=bytes[cursor++];if(!length)break;cursor+=length;}};
@@ -143,20 +146,29 @@ try{
       if(marker===0x21){cursor++;skip();continue;}
       if(marker===0x2c){
         const packed=bytes[cursor+8];cursor+=9;
-        if(packed&0x80)cursor+=3*(1<<((packed&7)+1));
+        if(packed&0x80){
+          const length=3*(1<<((packed&7)+1));
+          localTables++;
+          localPalettes.push(Array.from(bytes.subarray(cursor,cursor+length)).join(','));
+          cursor+=length;
+        }
         cursor++;skip();count++;continue;
       }
       break;
     }
-    return {workers:window.__gifWorkersCreated,header,frames:count,size:bytes.length,exportStatus,frameDetail};
+    return {workers:window.__gifWorkersCreated,header,frames:count,size:bytes.length,
+      localTables,uniquePalettes:new Set(localPalettes).size,exportStatus,frameDetail};
   });
   assert(!result.error,result.error||'');
   assert(result.workers>=2,'Cancelled long export and finished short export must each create a real Web Worker');
   assert.equal(result.header,'GIF89a','Should produce GIF content');
   assert.equal(result.frames,10,'Should encode ten frames and exercise real byte-size monitoring');
+  assert.equal(result.localTables,9,'Every later frame must have its own local palette');
+  assert(result.uniquePalettes>=2,'Color cycling MUST produce distinct per-frame GIF palettes');
   assert(result.frameDetail.includes('changing steps'),'UI should explain whether cells changed');
   assert(result.size>1000,'GIF must be nonempty');
-  console.log('PASS: REAL BROWSER GIF worker='+result.workers+' frames='+result.frames+' bytes='+result.size);
+  console.log('PASS: REAL BROWSER GIF worker='+result.workers+' frames='+result.frames+' bytes='+result.size+
+    ' changing GIF palettes='+result.uniquePalettes);
   await page.locator('.stage-capture-success .dismiss-export').click();
   assert.equal(await page.locator('.stage-capture-success').count(),0,'X dismisses sticky export banner');
   assert.equal(await page.locator('.finished-export').count(),0,'X also removes finished preview from controls');

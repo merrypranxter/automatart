@@ -89,3 +89,11 @@ Original art/code project by merrypranxter.
 - Every persistent UI notice has a labeled **✕**: sticky export errors, inline export errors, large GIF advice, unavailable video support, static-animation warning, finished exports, and transient status messages. Shared recorder errors dismiss together; status toasts auto-dismiss after seven seconds.
 - Recording restores live play/pause state after finishing, cancellation, or failure.
 - Browser smoke test checks 720p/30s actually starts encoding, verifies the large-GIF advisory and both failure alerts dismiss, then encodes/decodes an actual short GIF.
+
+## Color cycling in GIF export — frame-local palettes (2026-10-11)
+**Regression fixed:** The previous GIF worker and fallback quantized only the opening animation frame and mapped all subsequent pixel colors to that first global palette. Color changes from animated palette rotation could not be faithfully represented in the output even though video looked correct.
+- GIF89a supports a local color table per frame. The exporter now calculates a fresh <=256-color palette for **every** frame and writes it to the image descriptor. This preserves genuinely evolving palette cycling and changes of hue over the full animation.
+- On high-resolution mobile recordings, quantization uses a bounded, spatially spread RGBA sample (max ~24,576 colors sampled) while every pixel is still indexed using a cached nearest-color lookup. Backpressure continues to transfer only one frame at a time to the worker.
+- Both the browser Worker and non-Worker fallback share the same palette/index algorithm, so their color behavior is consistent.
+- This retains normal GIF constraints: 256 colors **per frame**, so soft gradients and bloom will still be approximated compared with full-color video, but the animation is not trapped by colors in frame one.
+- Automated regression verifies four dramatically different hues survive GIF encode/decode and compares every decoded frame of a real palette-cycling automaton with its full-color renderer. The Chromium UI smoke test verifies the Worker writes local palettes that actually change.
