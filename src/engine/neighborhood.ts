@@ -1,5 +1,6 @@
 import type {EngineId,LatticeId,NeighborShape,SimSettings} from './types';
-export const EXTENDED_NEIGHBORHOODS=['square2','diamond2','directional'] as const;
+import {countStencil,validStencil} from './stencil';
+export const EXTENDED_NEIGHBORHOODS=['square2','diamond2','directional','custom'] as const;
 export const NEIGHBORHOOD_ENGINES:readonly EngineId[]=[
  'life','brians','cyclic','generations','excitable','species'];
 export const DIRECTIONS=[
@@ -12,7 +13,7 @@ export const DIRECTIONS=[
 export function supportsNeighborhood(engine:EngineId,lattice:LatticeId){
  return lattice==='square'&&NEIGHBORHOOD_ENGINES.includes(engine);
 }
-export function maxNeighborCount(s:Pick<SimSettings,'engine'|'lattice'|'neighborShape'|'neighborMask'|'largeRadius'>):number{
+export function maxNeighborCount(s:Pick<SimSettings,'engine'|'lattice'|'neighborShape'|'neighborMask'|'customStencilMask'|'customStencilSize'|'largeRadius'>):number{
  if(s.engine==='wolfram')return 2;
  if(s.engine==='larger')return (2*s.largeRadius+1)**2-1;
  if(s.engine==='margolus')return 3;
@@ -24,6 +25,7 @@ export function maxNeighborCount(s:Pick<SimSettings,'engine'|'lattice'|'neighbor
   case 'square2':return 24;
   case 'diamond2':return 12;
   case 'directional':return bitCount(s.neighborMask??255);
+  case 'custom':return countStencil(s.customStencilMask,s.customStencilSize);
   default:return 8;
  }
 }
@@ -42,10 +44,11 @@ export function bitCount(mask:number):number{
  while(v){v&=v-1;count++;}
  return count;
 }
-export function validNeighborhoodSettings(s:Pick<SimSettings,'engine'|'lattice'|'neighborShape'|'neighborMask'>):boolean{
- const legal=['moore','vonNeumann','square2','diamond2','directional'];
+export function validNeighborhoodSettings(s:Pick<SimSettings,'engine'|'lattice'|'neighborShape'|'neighborMask'|'customStencilSize'|'customStencilMask'>):boolean{
+ const legal=['moore','vonNeumann','square2','diamond2','directional','custom'];
  if(!legal.includes(s.neighborShape))return false;
  if(!Number.isInteger(s.neighborMask)||s.neighborMask<1||s.neighborMask>255)return false;
+ if(!validStencil(s.customStencilMask,s.customStencilSize))return false;
  return !EXTENDED_NEIGHBORHOODS.includes(s.neighborShape as typeof EXTENDED_NEIGHBORHOODS[number])||
    supportsNeighborhood(s.engine,s.lattice);
 }
@@ -55,5 +58,6 @@ export function neighborhoodLabel(s:SimSettings):string{
  s.neighborShape==='square2'?'RADIUS-2 MOORE / 24':
  s.neighborShape==='diamond2'?'RADIUS-2 DIAMOND / 12':
  s.neighborShape==='directional'?'DIRECTIONAL / '+bitCount(s.neighborMask)+' SELECTED':
+ s.neighborShape==='custom'?'HAND-PAINTED '+s.customStencilSize+'×'+s.customStencilSize+' / '+countStencil(s.customStencilMask,s.customStencilSize):
  s.neighborShape==='vonNeumann'?'VON NEUMANN / 4':'MOORE / 8';
 }

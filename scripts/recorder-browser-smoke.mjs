@@ -216,6 +216,63 @@ try{
   assert((await page.locator('.neighborhood-count').innerText()).includes('7'));
   await page.locator('#neighbor-shape').selectOption('moore');
   console.log('PASS: B1 real browser 24/12 directional modes, B10 editor, no restart, and exact recipe mask round-trip');
+  // B2: actual touch-editable 3x3/5x5 bitsets, transformations, legacy recipes.
+  await page.locator('#neighbor-shape').selectOption('custom');
+  const painter=page.locator('.stencil-grid');
+  assert.equal(await painter.locator('button').count(),25,'B2 5x5 offers 25 visible positions');
+  assert(await painter.getByRole('button',{name:'Center cell excluded'}).isDisabled());
+  const stencilBefore=await page.locator('.neighborhood-count b').innerText();
+  await painter.locator('[data-stencil-bit="2"]').click();
+  assert.equal(Number(await page.locator('.neighborhood-count b').innerText()),
+   Number(stencilBefore)+1,'Tapping actual radius-2 neighbor increases voter count');
+  await page.getByRole('button',{name:'↻ ROTATE 90°'}).click();
+  assert.equal(Number(await page.locator('.neighborhood-count b').innerText()),
+   Number(stencilBefore)+1,'Rotation preserves exact voter count');
+  await page.getByRole('button',{name:'3×3',exact:true}).click();
+  assert.equal(await painter.locator('button').count(),9,'3x3 editor shrinks live graph');
+  assert.equal(Number(await page.locator('.neighborhood-count b').innerText()),8,
+   'Only eight neighboring cells remain in full 3x3 stencil');
+  await page.getByRole('button',{name:'HOOK',exact:true}).click();
+  const hookCount=Number(await page.locator('.neighborhood-count b').innerText());
+  assert(hookCount>0&&hookCount<8,'Presets produce real nonempty irregular graphs');
+  await page.getByRole('button',{name:'⇄ MIRROR'}).click();
+  await page.getByRole('button',{name:'⚄ SEEDED SURPRISE'}).click();
+  const stencilGen=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  const [b2Download]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const b2Json=JSON.parse(await readFile(await b2Download.path(),'utf8'));
+  assert.equal(b2Json.settings.neighborShape,'custom');
+  assert.equal(b2Json.settings.customStencilSize,3);
+  assert(Number.isInteger(b2Json.settings.customStencilMask),'25-bit mask saved in recipe');
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),stencilGen,
+   'Stencil painting preserves current generation');
+  await page.locator('#neighbor-shape').selectOption('moore');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'b2-custom.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(b2Json))
+  });
+  await page.waitForFunction(()=>document.querySelector('#neighbor-shape')?.value==='custom');
+  assert.equal(await painter.locator('button').count(),9);
+  const [b2Roundtrip]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const b2Reload=JSON.parse(await readFile(await b2Roundtrip.path(),'utf8'));
+  assert.equal(b2Reload.settings.customStencilMask,b2Json.settings.customStencilMask,
+   'B2 saved stencil mask roundtrips exactly');
+  const invalidB2=structuredClone(b2Json);
+  invalidB2.settings.customStencilMask=1<<12; // center may never vote
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'bad-center.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(invalidB2))
+  });
+  await page.waitForFunction(()=>(document.querySelector('.status-msg')?.textContent||'').includes('Could not load recipe'));
+  assert.equal(await page.locator('#neighbor-shape').inputValue(),'custom',
+   'Invalid center-including mask must not clobber current universe');
+  await page.locator('#lattice').selectOption('hex');
+  assert.equal(await page.locator('.stencil-grid').count(),0,
+   'Custom square neighborhood cannot silently run on hex graph');
+  await page.locator('#lattice').selectOption('square');
+  await page.locator('#neighbor-shape').selectOption('moore');
+  console.log('PASS: B2 interactive 5x5/3x3 painting, transforms, save/load, invalid center and graph gating');
   // Exercise custom birth/survival rule editor, then return to cyclic for GIF.
   await page.locator('#engine').selectOption('life');
   await page.locator('#life').selectOption('custom');

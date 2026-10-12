@@ -435,3 +435,38 @@ body.art-viewer-open{overflow:hidden}
 .neighborhood-directions button{min-height:43px;min-width:0}
 @media(max-width:420px){.neighborhood-lab{padding:10px 8px}.neighborhood-preview{width:130px}
 .neighborhood-count b{font-size:30px}}
+
+
+/* B2: touch-first real 3×3/5×5 rule painting */
+.stencil-studio{display:flex;flex-direction:column;gap:10px;padding:12px;
+ border:1px solid #ff50b8;border-radius:11px;background:linear-gradient(140deg,#321436,#132333 85%)}
+.stencil-heading{display:flex;justify-content:space-between;align-items:center;gap:7px;flex-wrap:wrap;
+ font:800 11px 'Chakra Petch',monospace;color:#ffe667}
+.stencil-heading span{color:#7bfff2}
+.stencil-size-pick{display:flex;gap:7px}
+.stencil-size-pick button{flex:1;min-height:42px;border:1px solid #7c587f;border-radius:7px;
+ background:#211629;color:#d7c2e7;font:800 12px 'Chakra Petch',monospace}
+.stencil-size-pick button.selected{background:#1cdad3;border-color:#a8fffa;color:#112534}
+.stencil-grid{width:min(100%,315px);aspect-ratio:1;display:grid;gap:5px;padding:7px;
+ border:1px solid #945a9c;border-radius:12px;background:#0f1228;
+ touch-action:none;user-select:none;-webkit-user-select:none;overscroll-behavior:contain}
+.stencil-grid[data-size="5"]{grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(5,minmax(0,1fr))}
+.stencil-grid[data-size="3"]{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));max-width:255px}
+.stencil-grid button{display:grid;place-items:center;min-width:0;min-height:0;padding:0;
+ background:#29223f;border:1px solid #65537b;border-radius:7px;color:#847998;
+ font:900 20px 'Chakra Petch',monospace;touch-action:none}
+.stencil-grid button.selected{background:#ff43b0;color:#1e0922;border-color:#ffbee8;
+ box-shadow:inset 0 0 10px #ffceefa8,0 0 7px #ff48b255}
+.stencil-grid button.center,.stencil-grid button:disabled{opacity:1;background:#e9ef58;color:#231c33;border-color:#fff3b0}
+.stencil-grid button:focus-visible{outline:3px solid #3cfff0;outline-offset:2px}
+.stencil-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.stencil-tools button{min-height:41px;padding:6px 5px;border:1px solid #a359b7;
+ border-radius:7px;background:#341a44;color:#ffe7fb;
+ font:800 10px 'Chakra Petch',monospace}
+.stencil-tools button:last-child{grid-column:1/-1;background:#5f1e58;border-color:#ff5bac;color:#ffe976}
+.stencil-tools button:hover,.stencil-tools button:focus-visible{border-color:#33ffe9;background:#322450}
+.stencil-presets{display:flex;flex-direction:column;gap:8px;padding-top:7px;
+ border-top:1px solid #ffffff24;font:800 10px 'Chakra Petch',monospace;color:#75fff0}
+.stencil-presets .chip{min-height:40px}
+@media(max-width:420px){.stencil-studio{padding:10px 8px}.stencil-grid{width:min(100%,290px);
+ gap:4px;padding:6px}.stencil-grid button{font-size:17px}.stencil-tools{gap:5px}}
