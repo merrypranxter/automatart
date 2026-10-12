@@ -1,5 +1,6 @@
 import type {Dispatch,SetStateAction} from 'react';
 import type {LatticeId,OrientedMatch,OrientedSymmetry,SimSettings} from '../engine/types';
+import {normalizeActiveVotes} from '../engine/neighborhood';
 
 type Props={
   settings:SimSettings;
@@ -22,7 +23,7 @@ export default function StrangeControls({settings:s,setSettings,onRewind,generat
       <label className="input-label" htmlFor="lattice">Mathematical lattice</label>
       <select id="lattice" value={squareOnly?'square':s.lattice}
         disabled={squareOnly}
-        onChange={e=>setSettings(prev=>({...prev,lattice:e.target.value as LatticeId,
+        onChange={e=>setSettings(prev=>normalizeActiveVotes({...prev,lattice:e.target.value as LatticeId,
            neighborShape:e.target.value==='square'?prev.neighborShape:'moore'}))}>
         <option value="square">SQUARE · 4 / 8 / 12 / 24 OR DIRECTIONAL</option>
         <option value="hex">HEXAGON · 6 GENUINE NEIGHBORS</option>

@@ -363,8 +363,9 @@ export default function App(){
     // Rule-only neighborhood changes preserve living cells and generation,
     // but visual entropy/flow inspectors must use the CURRENT rule graph.
     worldRef.current.neighborShape=settings.neighborShape;
+    worldRef.current.neighborMask=settings.neighborMask;
     worldRef.current.wrap=settings.wrap;
-  },[settings.neighborShape,settings.wrap]);
+  },[settings.neighborShape,settings.neighborMask,settings.wrap]);
   useEffect(()=>{draw();},[draw,settings,resetNumber]);
 
   useEffect(()=>{
@@ -599,6 +600,8 @@ export default function App(){
       s.neighborMask=Number.isInteger(s.neighborMask)?s.neighborMask:255;
       if(!validNeighborhoodSettings(s))throw new Error('Neighborhood and engine/lattice are incompatible');
       const maxVotes=maxNeighborCount(s);
+      // Inactive saved Life/Generations rules may require 24-cell counts.
+      const savedRuleCap=24;
       s.orientedMask=Math.max(1,Math.min(255,Math.floor(Number(s.orientedMask)||34)));
       if(!['fixed','rotations','dihedral'].includes(s.orientedSymmetry))s.orientedSymmetry='rotations';
       if(!['exact','contains'].includes(s.orientedMatch))s.orientedMatch='exact';
@@ -613,7 +616,7 @@ export default function App(){
 
       for(const k of ['customBirth','customSurvive'] as const){
         if(!Array.isArray(s[k]))s[k]=k==='customBirth'?[3]:[2,3];
-        s[k]=[...new Set(s[k].filter((n:unknown)=>Number.isInteger(n)&&Number(n)>=0&&Number(n)<=maxVotes))].sort((a,b)=>a-b);
+        s[k]=[...new Set(s[k].filter((n:unknown)=>Number.isInteger(n)&&Number(n)>=0&&Number(n)<=savedRuleCap))].sort((a,b)=>a-b);
       }
       s.trailDecay=Math.min(0.99,Math.max(0.65,Number(s.trailDecay)||0.89));
       const bounded=(v:unknown,min:number,max:number,fallback:number)=>{
@@ -635,7 +638,7 @@ export default function App(){
       s.speciesAttackBias=bounded(s.speciesAttackBias,0,maxVotes,1);
       for(const key of ['genBirth','genSurvive'] as const){
         if(!Array.isArray(s[key]))s[key]=key==='genBirth'?[3]:[2,3];
-        s[key]=[...new Set(s[key].filter((v:unknown)=>Number.isInteger(v)&&Number(v)>=0&&Number(v)<=maxVotes))].sort((a,b)=>a-b);
+        s[key]=[...new Set(s[key].filter((v:unknown)=>Number.isInteger(v)&&Number(v)>=0&&Number(v)<=savedRuleCap))].sort((a,b)=>a-b);
       }
       const a:Appearance={...INITIAL_APPEARANCE,...data.appearance};
       if(!Array.isArray(a.palette)||a.palette.length<2||a.palette.length>32||a.palette.some(v=>typeof v!=='string'||!/^#[0-9a-f]{6}$/i.test(v)))throw new Error('Invalid palette');
@@ -893,9 +896,9 @@ export default function App(){
                 <p>Choose how many neighbors cause birth or survival. Changes apply live.</p>
                 {(['customBirth','customSurvive'] as const).map(kind=><div key={kind}>
                   <b>{kind==='customBirth'?'BIRTH · B':'SURVIVE · S'}{settings[kind].join(',')}</b>
-                  <div className="rule-bits">{Array.from({length:neighborMax+1},(_,i)=><button type="button" key={i}
+                  <div className="rule-bits">{Array.from({length:Math.max(neighborMax,...settings[kind])+1},(_,i)=><button type="button" key={i}
                     aria-pressed={settings[kind].includes(i)} className={settings[kind].includes(i)?'active':''}
-                    onClick={()=>toggleCustomRule(kind,i)}>{i}</button>)}</div>
+                    title={i>neighborMax?'Inactive here; tap to remove':'Toggle B/S count'} onClick={()=>toggleCustomRule(kind,i)}>{i}</button>)}</div>
                 </div>)}
                 <span>B/S rules use the neighborhood geometry selected above.</span>
               </div>}

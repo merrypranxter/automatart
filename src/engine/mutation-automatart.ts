@@ -1,6 +1,6 @@
 import type {Appearance,EngineId,LifeRule,SimSettings} from './types';
 import {LIFE_RULES,PALETTES} from './types';
-import {maxNeighborCount,supportsNeighborhood} from './neighborhood';
+import {maxNeighborCount,supportsNeighborhood,normalizeActiveVotes} from './neighborhood';
 import {randomColors,rotatedColors,shuffledColors} from './funhouse';
 import {createMutationRng,clampMutation,distinctMutation,jitterMutation} from './mutation-core';
 
@@ -162,7 +162,7 @@ export function mutateAutomatart(
         break;
       }
       case 'species':
-        offer('Species invasion pressure',()=>{s.speciesBirth=intStep(s.speciesBirth,1,s.neighborShape==='vonNeumann'?4:8)});
+        offer('Species invasion pressure',()=>{s.speciesBirth=intStep(s.speciesBirth,1,maxNeighborCount(s))});
         offer('Species survival',()=>{s.speciesSurvive=intStep(s.speciesSurvive,0,maxNeighborCount(s))});
         offer('Species defenses',()=>{s.speciesAttackBias=intStep(s.speciesAttackBias,0,maxNeighborCount(s))});
         break;
@@ -217,12 +217,8 @@ export function mutateAutomatart(
     s.neighborShape='moore';
     changes.push('Restore engine-compatible Moore neighborhood');
   }
-  const voteCap=maxNeighborCount(s);
-  s.cyclicThreshold=Math.min(s.cyclicThreshold,voteCap);
-  s.exciteThreshold=Math.min(s.exciteThreshold,voteCap);
-  s.speciesBirth=Math.min(s.speciesBirth,voteCap);
-  s.speciesSurvive=Math.min(s.speciesSurvive,voteCap);
-  s.speciesAttackBias=Math.min(s.speciesAttackBias,voteCap);
+  // Rule locks protect inactive engine settings during visual mutation.
+  if(!opts.locks.rule)Object.assign(s,normalizeActiveVotes(s));
   const willRestart=requiresWorldRestart(sourceSettings,s);
   if(willRestart&&!opts.allowRestart)throw Error('Mutation attempted an unapproved world reset');
   if(!changes.length&&(originalS===JSON.stringify(s)&&originalA===JSON.stringify(a)))

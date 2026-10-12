@@ -28,8 +28,9 @@ export default function MutantControls({settings:s,setSettings,paintSpecies,setP
       onChange={n=>setNumber('genStates',n)}/>
     {(['genBirth','genSurvive'] as const).map(key=><div className="custom-rule-editor" key={key}>
       <b>{key==='genBirth'?'BIRTH B':'SURVIVAL S'}{s[key].join(',')}</b>
-      <div className="rule-bits">{Array.from({length:votes+1},(_,i)=><button type="button" key={i}
+      <div className="rule-bits">{Array.from({length:Math.max(votes,...s[key])+1},(_,i)=><button type="button" key={i}
         aria-pressed={s[key].includes(i)} className={s[key].includes(i)?'active':''}
+        title={i>votes?'Inactive here; tap to remove':'Toggle birth/survival count'}
         onClick={()=>toggle(key,i)}>{i}</button>)}</div>
     </div>)}
   </div>;
@@ -67,13 +68,13 @@ export default function MutantControls({settings:s,setSettings,paintSpecies,setP
   }
   if(s.engine==='species')return <div className="mutant-controls">
     <p className="module-note">PURE LOCAL CA · SPECIES WAR — Automatart's own deterministic competition rule. Empty cells adopt the largest qualifying nearby species; occupied cells hold if defended or get taken by locally stronger invaders. Equal counts favor lower species ID.</p>
-    <Range id="species-count" label="COMPETING SPECIES" value={s.speciesCount} min={2} max={votes}
+    <Range id="species-count" label="COMPETING SPECIES" value={s.speciesCount} min={2} max={8}
       onChange={n=>{setNumber('speciesCount',n);setPaintSpecies(x=>Math.min(n,x));}}/>
     <Range id="species-birth" label="INVASION / BIRTH THRESHOLD" value={s.speciesBirth} min={1}
-      max={s.neighborShape==='vonNeumann'?4:8} onChange={n=>setNumber('speciesBirth',n)}/>
-    <Range id="species-survive" label="ALLIES TO SURVIVE" value={s.speciesSurvive} min={0} max={8}
+      max={votes} onChange={n=>setNumber('speciesBirth',n)}/>
+    <Range id="species-survive" label="ALLIES TO SURVIVE" value={s.speciesSurvive} min={0} max={votes}
       onChange={n=>setNumber('speciesSurvive',n)}/>
-    <Range id="species-bias" label="DEFENSIVE ADVANTAGE" value={s.speciesAttackBias} min={0} max={8}
+    <Range id="species-bias" label="DEFENSIVE ADVANTAGE" value={s.speciesAttackBias} min={0} max={votes}
       onChange={n=>setNumber('speciesAttackBias',n)}/>
     <label className="input-label" htmlFor="species-brush">PAINT YOUR CHOSEN SPECIES</label>
     <select id="species-brush" value={Math.min(paintSpecies,s.speciesCount)}

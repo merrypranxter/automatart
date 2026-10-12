@@ -8,7 +8,8 @@ const files=[
  ['src/engine/topology.ts','scripts/.b1-topology.mjs'],
  ['src/engine/types.ts','scripts/.b1-types.mjs'],
  ['src/engine/sim.ts','scripts/.b1-sim.mjs'],
- ['src/engine/mutation-automatart.ts','scripts/.b1-mutation.mjs']
+ ['src/engine/mutation-automatart.ts','scripts/.b1-mutation.mjs'],
+ ['src/engine/color-signals.ts','scripts/.b1-signals.mjs']
 ];
 try{
  await Promise.all(files.map(([entry,outfile])=>build({
@@ -20,6 +21,7 @@ try{
  const {INITIAL_SETTINGS}=await mod(2);
  const {createWorld,stepWorld}=await mod(3);
  const {mutateAutomatart}=await mod(4);
+ const {computeColorSignal}=await mod(5);
  const shapeList=[['moore',8],['vonNeumann',4],['square2',24],['diamond2',12]];
  for(const [shape,count] of shapeList){
   const offsets=neighborOffsets('square',10,10,shape,255);
@@ -89,6 +91,25 @@ try{
   assert.equal(result.settings.engine,base.engine);
   assert.equal(result.willRestart,false);
  }
+ const single={...base,neighborShape:'directional',neighborMask:2};
+ const visual=createWorld(single);visual.cells.fill(0);
+ visual.cells[y*32+x+1]=1;
+ const sampled={palette:['#000000','#ffffff'],colorBy:'boundaries'};
+ assert.equal(computeColorSignal(visual,sampled,'boundaries')[idx],0,
+  'Directional color must ignore deselected E neighbor');
+ visual.neighborMask=10;
+ assert.equal(computeColorSignal(visual,sampled,'boundaries')[idx],.5,
+  'Color signal follows selected N/E voters');
+ const {normalizeActiveVotes}=await mod(0);
+ const narrow=normalizeActiveVotes({...INITIAL_SETTINGS,engine:'species',
+  neighborShape:'directional',neighborMask:2,speciesBirth:20,speciesSurvive:17,
+  speciesAttackBias:14,cyclicThreshold:22});
+ assert.equal(narrow.speciesBirth,1);
+ assert.equal(narrow.cyclicThreshold,22,'Inactive rules preserved');
+ const locked=mutateAutomatart({...INITIAL_SETTINGS,engine:'wolfram',
+  speciesBirth:20,speciesSurvive:19,speciesAttackBias:18},initialAppearance,
+  {...opts,locks:{...opts.locks,rule:true}},19);
+ assert.equal(locked.settings.speciesBirth,20,'Rule lock protects inactive thresholds');
  console.log('PASS: B1 Moore/diamond 24/12 neighbor counts, directional masks, B10 actual births, toroidal edges');
  console.log('PASS: square/hex compatibility, six compatible engines, deterministic mutation safety');
 }finally{

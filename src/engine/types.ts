@@ -92,6 +92,7 @@ export interface World {
   lattice?: LatticeId;
   wrap?:boolean;
   neighborShape?:NeighborShape;
+  neighborMask?:number;
   cells: Uint8Array;
   ages: Uint16Array;
   neighbors: Uint8Array;
