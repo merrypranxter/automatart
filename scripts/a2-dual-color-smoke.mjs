@@ -75,6 +75,25 @@ try{
    assert.notDeepEqual(middle,b,lattice+' mix differs from B');
   }
  }
+ // On binary Life, unlike cyclic CA, dead cells are normally invisible.
+ // The inactive B or A source must never add ghost/death pixels to an exact
+ // 0%/100% blend endpoint.
+ const lifeConfig={...s,engine:'life',lifeRule:'conway',density:.32};
+ let life=createWorld(lifeConfig);
+ for(let i=0;i<3;i++)life=stepWorld(life,lifeConfig);
+ for(const [sourceA,sourceB,blend] of [
+  ['age','deathHeat',0],
+  ['birthFlash','age',1],
+  ['deathHeat','birthFlash',0],
+  ['deathHeat','birthFlash',1]
+ ]){
+  const single=blend===0?sourceA:sourceB;
+  const settings={...INITIAL_DUAL_COLOR,enabled:true,sourceA,sourceB,blend};
+  assert.deepEqual(
+   pixels(life,{...appearance,colorBy:single,dualColor:settings}),
+   pixels(life,{...appearance,colorBy:single,dualColor:undefined}),
+   'Life exact blend endpoint ignores hidden '+(blend===0?'B':'A')+' event visibility');
+ }
  const normal=validateDualColor({...INITIAL_DUAL_COLOR,enabled:true,sourceA:'age',sourceB:'entropy'});
  const base={...appearance,dualColor:normal};
  const c1=pixels(w,base);

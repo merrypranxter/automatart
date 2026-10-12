@@ -109,6 +109,12 @@ export function createDualSampler(world:World,a:Appearance,palette:RGB[]):DualSa
   return {color:i=>sample(i).result,sample};
 }
 export function hasEventColor(a:Appearance,id:'events'|'birthFlash'|'deathHeat'):boolean{
-  if(a.dualColor?.enabled)return a.dualColor.sourceA===id||a.dualColor.sourceB===id;
+  if(a.dualColor?.enabled){
+    // A blend endpoint must be EXACTLY its standalone source, including
+    // whether empty cells with birth/death history are drawn at all.
+    const settings=validateDualColor(a.dualColor);
+    return (settings.blend<1&&settings.sourceA===id)||
+      (settings.blend>0&&settings.sourceB===id);
+  }
   return a.colorBy===id;
 }
