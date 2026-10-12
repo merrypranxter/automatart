@@ -98,7 +98,8 @@ try{
  const mercuryB=pixels(w,{...mercury,dualColor:{...mercury.dualColor,blend:1}});
  assert.notDeepEqual(mercuryA,mercuryB,'Dual sources must affect mercury material');
  // Print Shop pipeline still acts on the combined color for exports.
- const print={enabled:true,mix:1,effects:[{id:'posterize',enabled:true,amount:1}]};
+ const print={...appearance.print,enabled:true,mix:1,
+   effects:[{id:'posterize',enabled:true,amount:1}]};
  const basePrint=pixels(w,{...base,print});
  assert.notDeepEqual(basePrint,c1,'Print Shop runs after A2 compositing');
  const later=pixels({...w,generation:generation+13},base);
