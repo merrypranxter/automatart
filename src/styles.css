@@ -180,3 +180,31 @@ input[type=range]{width:100%;margin:4px 0 7px;accent-color:#f62eb8;cursor:pointe
 .mutation-result small{font-size:10px;color:#b8a9cb}
 @media(max-width:450px){.mutation-lab{padding:10px 9px}.mutation-lock{padding:8px 5px;font-size:9px}
 .mutation-buttons button{font-size:11px}}
+
+/* Shared suite convention: fullscreen art, controls outside the viewer.
+   A fixed overlay also works on iPhone Safari without requestFullscreen. */
+.stage-header > .stage-view-actions{display:flex;flex-direction:row;align-items:center;gap:7px}
+.stage-view-actions button{border:1px solid #d9ff4c;background:#221b31;color:#e5ff83;border-radius:7px;min-height:34px;padding:6px 9px;font:700 10px 'Chakra Petch',monospace;white-space:nowrap;cursor:pointer}
+.stage-view-actions .viewer-pause{border-color:#e44eae;color:#ffbded}
+body.art-viewer-open{overflow:hidden}
+.stage.viewer-fullscreen,.stage:fullscreen{
+  position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;
+  margin:0!important;max-width:none!important;max-height:none!important;z-index:99999!important;
+  border-radius:0!important;padding:clamp(7px,1vw,16px)!important;
+  display:flex!important;flex-direction:column!important;overflow:hidden!important;background:#080514!important;
+}
+.stage.viewer-fullscreen > :not(.stage-header):not(.canvas-wrap),
+.stage:fullscreen > :not(.stage-header):not(.canvas-wrap){display:none!important}
+.stage.viewer-fullscreen .stage-header,.stage:fullscreen .stage-header{flex:0 0 auto}
+.stage.viewer-fullscreen .canvas-wrap,.stage:fullscreen .canvas-wrap{
+  flex:1 1 auto;min-height:0!important;max-height:none!important;height:auto!important;
+  width:100%;overflow:hidden;
+}
+.stage.viewer-fullscreen .canvas-wrap canvas,.stage:fullscreen .canvas-wrap canvas{
+  display:block;width:auto!important;height:auto!important;max-width:100%!important;
+  max-height:100%!important;object-fit:contain;
+}
+@media(max-width:460px){
+  .stage-view-actions .live-label{display:none}
+  .stage-view-actions button{min-height:32px;font-size:9px;padding:5px}
+}

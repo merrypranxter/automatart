@@ -121,6 +121,42 @@ export default function App(){
   }|null>(null);
   const pendingWorldRestoreRef=useRef<World|null>(null);
   const canvasRef=useRef<HTMLCanvasElement>(null);
+  const stageRef=useRef<HTMLElement>(null);
+  const [viewerFullscreen,setViewerFullscreen]=useState(false);
+  useEffect(()=>{
+    document.body.classList.toggle('art-viewer-open',viewerFullscreen);
+    return ()=>document.body.classList.remove('art-viewer-open');
+  },[viewerFullscreen]);
+  useEffect(()=>{
+    function onFullscreenChange(){
+      if(!document.fullscreenElement)setViewerFullscreen(false);
+    }
+    function onEscape(event:KeyboardEvent){
+      if(event.key==='Escape')setViewerFullscreen(false);
+    }
+    document.addEventListener('fullscreenchange',onFullscreenChange);
+    document.addEventListener('keydown',onEscape);
+    return ()=>{
+      document.removeEventListener('fullscreenchange',onFullscreenChange);
+      document.removeEventListener('keydown',onEscape);
+    };
+  },[]);
+  async function toggleViewerFullscreen(){
+    const stage=stageRef.current;
+    if(!stage)return;
+    if(viewerFullscreen){
+      if(document.fullscreenElement===stage){
+        try{await document.exitFullscreen();}catch{/* CSS fallback still closes */}
+      }
+      setViewerFullscreen(false);
+    }else{
+      // The overlay is also the fallback on iPhone browsers without element fullscreen.
+      setViewerFullscreen(true);
+      if(typeof stage.requestFullscreen==='function'){
+        try{await stage.requestFullscreen();}catch{/* Fixed overlay remains active */}
+      }
+    }
+  }
   const loadRef=useRef<HTMLInputElement>(null);
   const paletteImportRef=useRef<HTMLInputElement>(null);
   const recorderRef=useRef<HTMLDivElement>(null);
@@ -537,10 +573,14 @@ export default function App(){
         <p>Mathematical mutation studio. Make the cells misbehave.</p>
       </header>
       <main className="studio">
-        <section className="stage" aria-label="Live automaton preview">
+        <section ref={stageRef} className={"stage"+(viewerFullscreen?" viewer-fullscreen":"")} aria-label="Live automaton preview">
           <div className="stage-header">
             <div><b className="eyebrow">LIVE UNIVERSE</b><span className="stage-engine">{activeEngine?.name}</span></div>
-            <span className={'live-label '+(playing?'':'is-paused')}>{capturing?'● EXPORTING':playing?'● LIVE':'Ⅱ PAUSED'}</span>
+            <div className="stage-view-actions">
+              <span className={'live-label '+(playing?'':'is-paused')}>{capturing?'● EXPORTING':playing?'● LIVE':'Ⅱ PAUSED'}</span>
+              {viewerFullscreen&&<button type="button" className="viewer-pause" onClick={()=>setPlaying(v=>!v)}>{playing?'Ⅱ PAUSE':'▶ PLAY'}</button>}
+              <button type="button" className="viewer-toggle" aria-pressed={viewerFullscreen} onClick={()=>void toggleViewerFullscreen()} title="Fullscreen artwork viewer (Esc to exit)">{viewerFullscreen?'✕ EXIT':'⛶ FULLSCREEN'}</button>
+            </div>
           </div>
           <div className="canvas-wrap">
             <canvas ref={canvasRef} aria-label="Interactive cellular automata canvas. Drag to paint cells." onPointerDown={onPointerDown} onPointerMove={onPointerMove} />
