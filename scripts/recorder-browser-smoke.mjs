@@ -478,6 +478,15 @@ try{
   // controls were exercised above, but pixels make the signal visibly direct.
   await page.locator('#skin').selectOption('pixels');
   await page.locator('#source').selectOption('generationWave');
+  // B1's preceding live rule/recipe tests may leave a sparse or quiescent
+  // specimen. Use a reproducibly colorful CYCLIC simulation for the
+  // export-specific palette regression; keep Dual A/B mapping enabled.
+  await page.locator('#engine').selectOption('cyclic');
+  await page.locator('#seed-pattern').selectOption('noise');
+  await page.locator('#density').fill('72');
+  await page.locator('#threshold').fill('1');
+  await page.locator('#palette').selectOption('OPAL PRISM');
+  await page.locator('#print-master').uncheck();
   // Record with A2 still on: each GIF frame must contain the same two-source
   // mathematical composite as the live preview, plus cycling palettes.
   await page.locator('#palette-cycle').focus();
