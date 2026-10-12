@@ -4,7 +4,8 @@
 import assert from 'node:assert/strict';
 import { build } from 'esbuild';
 import { createCanvas } from '@napi-rs/canvas';
-import { GIFEncoder } from 'gifenc';
+import gifenc from 'gifenc';
+const { GIFEncoder } = gifenc;
 import gifuct from 'gifuct-js';
 import { unlink } from 'node:fs/promises';
 import { resolve } from 'node:path';
