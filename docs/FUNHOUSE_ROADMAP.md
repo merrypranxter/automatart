@@ -18,7 +18,7 @@ The goal is more PLAY without destabilizing the mathematical engines, palette va
 - [x] Palette Surprise: shuffle stops, reverse and rotate on the CURRENT palette, no mutation of originals.
 - [x] Tests: exact B/S mappings, bounce ends/direction, random whole RGB palettes with editable swatches, and real-browser recorder smoke (including GIF color-cycling protection).
 
-## F2 — MUTATION DICE (IMPLEMENTED — CI PENDING)
+## F2 — MUTATION DICE (SHIPPED — CI GREEN)
 - [x] `FUCK IT UP` mutation control with strength levels Gentle / Weird / What the Fuck.
 - [x] Locks for palette, rule, engine and seed. Always retain changes only to compatible parameters, and clearly identify which settings change the current world vs reseed it.
 - [x] Seeded mutation **recipe**, optionally an undo (last mutation) action; a mutation itself may be stochastic, but the resulting exported recipe must reproduce its parameters exactly.
