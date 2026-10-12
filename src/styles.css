@@ -201,8 +201,14 @@ body.art-viewer-open{overflow:hidden}
   width:100%;overflow:hidden;
 }
 .stage.viewer-fullscreen .canvas-wrap canvas,.stage:fullscreen .canvas-wrap canvas{
-  display:block;width:auto!important;height:auto!important;max-width:100%!important;
-  max-height:100%!important;object-fit:contain;
+  /* Real fitted CSS dimensions are calculated from the viewport and canvas
+     aspect ratio. Unlike width:auto, these DO enlarge a 900px backing canvas. */
+  display:block;
+  width:var(--fullscreen-preview-width,100%)!important;
+  height:var(--fullscreen-preview-height,100%)!important;
+  max-width:100%!important;max-height:100%!important;
+  object-fit:contain;
+  flex-shrink:0;
 }
 @media(max-width:460px){
   .stage-view-actions .live-label{display:none}
