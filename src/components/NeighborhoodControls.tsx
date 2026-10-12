@@ -32,6 +32,15 @@ export default function NeighborhoodControls({settings:s,setSettings}:Props){
    speciesBirth:Math.min(v.speciesBirth,cap),speciesSurvive:Math.min(v.speciesSurvive,cap),
    speciesAttackBias:Math.min(v.speciesAttackBias,cap)};
  });
+ const setMask=(mask:number)=>setSettings(v=>{
+   const updated={...v,neighborMask:mask};
+   const cap=maxNeighborCount(updated);
+   return {...updated,cyclicThreshold:Math.min(v.cyclicThreshold,cap),
+     exciteThreshold:Math.min(v.exciteThreshold,cap),
+     speciesBirth:Math.min(v.speciesBirth,cap),
+     speciesSurvive:Math.min(v.speciesSurvive,cap),
+     speciesAttackBias:Math.min(v.speciesAttackBias,cap)};
+ });
  const offsets=new Set(neighborOffsets('square',2,2,s.neighborShape,s.neighborMask).map(([dx,dy])=>dx+','+dy));
  return <div className="neighborhood-lab" aria-label="B1 mathematical neighborhood controls">
   <div className="neighborhood-head"><strong>B1 · NEIGHBORHOOD ANARCHY</strong><span>REAL CA RULE</span></div>
@@ -61,10 +70,10 @@ export default function NeighborhoodControls({settings:s,setSettings}:Props){
         onClick={()=>setDirection(dir.bit)}>{dir.label}</button>)}
     </div>
     <div className="chip-row">
-      <button type="button" className="chip" onClick={()=>setSettings(v=>({...v,neighborMask:255}))}>ALL 8</button>
-      <button type="button" className="chip" onClick={()=>setSettings(v=>({...v,neighborMask:170}))}>CARDINAL 4</button>
-      <button type="button" className="chip" onClick={()=>setSettings(v=>({...v,neighborMask:14}))}>NE CORNER</button>
-      <button type="button" className="chip" onClick={()=>setSettings(v=>({...v,neighborMask:224}))}>SW CORNER</button>
+      <button type="button" className="chip" onClick={()=>setMask(255)}>ALL 8</button>
+      <button type="button" className="chip" onClick={()=>setMask(170)}>CARDINAL 4</button>
+      <button type="button" className="chip" onClick={()=>setMask(14)}>NE CORNER</button>
+      <button type="button" className="chip" onClick={()=>setMask(224)}>SW CORNER</button>
     </div>
   </>}
   <p className="neighborhood-note">The rule stays synchronous. Standard Life B/S preset numbers remain literal counts; use CUSTOM B/S for birth or survival counts beyond eight. B2 will add a freehand 5×5 stencil editor.</p>
