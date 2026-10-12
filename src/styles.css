@@ -214,3 +214,35 @@ body.art-viewer-open{overflow:hidden}
   .stage-view-actions .live-label{display:none}
   .stage-view-actions button{min-height:32px;font-size:9px;padding:5px}
 }
+
+/* Funhouse F3 — Alien Paintbrush, geometry-matched ghost previews */
+.art-canvas-layer{position:relative;display:block;flex:0 1 auto;min-width:0;max-width:100%}
+.art-canvas-layer canvas.alien-brush-preview{
+  position:absolute!important;inset:0;z-index:3;display:block;
+  width:100%!important;height:100%!important;max-width:100%!important;
+  max-height:100%!important;pointer-events:none!important;
+  image-rendering:auto;opacity:.76;touch-action:none
+}
+.stage.viewer-fullscreen .art-canvas-layer,.stage:fullscreen .art-canvas-layer{
+  flex:0 0 auto;width:var(--fullscreen-preview-width,100%)!important;
+  height:var(--fullscreen-preview-height,100%)!important;
+}
+.alien-paint-lab{display:flex;flex-direction:column;gap:9px;padding:14px;margin:14px 0;
+  border:1px solid #e33bd0;border-radius:11px;
+  background:linear-gradient(147deg,#290d3b 0%,#10192c 55%,#08363a 100%)}
+.alien-paint-header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:7px;
+  border-bottom:1px solid #e33bd044;padding-bottom:9px;font:700 14px 'Chakra Petch',monospace;color:#fb64c9}
+.alien-paint-header span{font:700 10px 'Chakra Petch',monospace;color:#28ffda}
+.alien-button-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:6px}
+.alien-button-row button,.alien-surprise{min-height:40px;padding:9px 6px;border-radius:7px;
+  border:1px solid #4ecccf;background:#112f43;color:#cdfdfc;
+  font:700 10px 'Chakra Petch',monospace}
+.alien-surprise{background:#43204c;color:#ffb1e2;border-color:#f562cd}
+.alien-button-row button.selected,.alien-button-row button[aria-pressed=true]{
+  background:#ff34a3;color:#1c1021;border-color:#ff92d7}
+.alien-paint-lab input[type=range]{width:100%}
+@media(max-width:450px){
+  .alien-paint-lab{padding:10px 9px}
+  .alien-paint-header{font-size:12px}
+  .alien-button-row button{font-size:9px}
+}

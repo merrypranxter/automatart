@@ -25,12 +25,15 @@ The goal is more PLAY without destabilizing the mathematical engines, palette va
 - [x] Button feedback and sensible bounds across engine-specific controls; avoid re-seeding unless user explicitly permits it.
 - [x] Regression against recorder.
 
-## F3 — SYMMETRY AND ALIEN SEED STAMPS
-- [ ] Symmetry-aware brush: single/mirror/4-way/8-way; distinguish actual state stamping from rendering-only symmetry.
-- [ ] Alien seed stamps: spirals, rings, gliders (on compatible lattices), checker bursts, clusters, spores.
-- [ ] Geometry-correct taps on square, hex and triangle lattices. Respect boundaries, species painting, erasing, and maintain state-history metadata.
-- [ ] Keep stamps deterministic for exact replay and do not mutate the selected CA's transition function.
-- [ ] Browser touch/paint tests.
+## F3 — SYMMETRY AND ALIEN SEED STAMPS (IMPLEMENTED — TESTING)
+- [x] Symmetry-aware brush: single/mirror/4-way/8-way; distinguish actual state stamping from rendering-only symmetry.
+- [x] Alien seed stamps: spirals, rings, gliders (on compatible lattices), checker bursts, clusters, spores.
+- [x] Geometry-correct taps on square, hex and triangle lattices. Respect boundaries, species painting, erasing, and maintain state-history metadata.
+- [x] Keep stamps deterministic for exact replay and do not mutate the selected CA's transition function.
+- [x] Browser touch/paint tests.
+
+- [x] Save the full current cell universe, paint strokes, generation, and visual history in the JSON recipe; restore identical stamped specimens, preserving legacy recipe support.
+- [x] Visible ghost preview with actual mirrored/stamped cells before planting; extra random stamp and symmetry buttons, scatter/density/invert controls.
 
 ## F4 — PSYCHEDELIC PRINT SHOP
 - [ ] VISUAL ONLY posterization, solarization, duotone, stipple/halftone, NEON X-RAY.
@@ -49,3 +52,6 @@ Z4–Z9 (sandpile / Wireworld / lattice gases, coupled automata, mutation farm/t
 
 ### Shared-suite strategy
 F2 was first implemented inside Automatart. The portable `src/engine/mutation-core.ts` holds seeded random mutation primitives with **no automata assumptions**. `src/engine/mutation-automatart.ts` applies strict Automatart engine-specific allowed ranges and safe live-world behavior. This code is **not yet installed** in It's a Moiré or Reaction Diffusion Artist. A later Math Art Suite integration can extract the core into a tested shared package and add separate adapters for each app rather than copying controls or mismatching mathematical parameters.
+
+## Future visual-skin expansion — requested, deliberately DEFERRED
+After the Funhouse feature phases and stability work, design **several genuinely new rendering skins** that look substantially unlike the current seven. Both Merry and Barry especially enjoy the skins. Prioritize fundamentally different visual constructions (e.g. interference etching, cellular embroidery, chromatophore segmentation, diffraction foil, silk screen topology), not renamed brightness/glow filters. Keep skins VISUAL ONLY, expose meaningful controls and preserve GIF/video color fidelity. **Do not implement these during F3.** This is a backlog item so it will not be forgotten; use an F6 skin-research phase after F5.

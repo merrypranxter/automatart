@@ -25,6 +25,8 @@ jobs:
         run: node scripts/funhouse-smoke.mjs
       - name: Verify deterministic mutation dice and locks
         run: node scripts/mutation-smoke.mjs
+      - name: Verify Alien Paintbrush geometry and saved specimens
+        run: node scripts/alien-paint-smoke.mjs
       - name: Verify portable palette JSON exchange
         run: node --experimental-strip-types scripts/palette-exchange-smoke.mjs
       - name: Install headless canvas and GIF decoder for export smoke test

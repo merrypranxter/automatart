@@ -122,3 +122,13 @@ See [Funhouse Roadmap](docs/FUNHOUSE_ROADMAP.md) for the rest of the finishing p
 - Each roll is created from an explicit 32-bit RNG seed. The last roll's seed, changes, locks, strength and allowance are included as optional `funhouse` metadata in ordinary `automatart-recipe-v1` JSON; complete resulting settings/appearance are also saved for exact reproduction of a starting recipe. Pre-existing recipes remain valid.
 - A portable mutation RNG core lives in `src/engine/mutation-core.ts`; the instrument-specific adapter lives in `src/engine/mutation-automatart.ts`. This is architected for future apps but **only Automatart is updated**; Moiré and Reaction Diffusion need their own mathematically valid adapters later.
 - Regression tests cover deterministic mutation runs for every existing engine, math/palette/seed/engine locks, opt-in resets, and real-browser UI undo/recording.
+
+## FUNHOUSE F3 — Alien Paintbrush (2026-10-12)
+- Brushing plants **real cell states**: single, left/right mirror, quad horizontal+vertical reflection, or eightfold 45° rotation in normalized artwork coordinates, then resolves the resulting coordinates to real square/hex/triangle cells.
+- Ten seed types: freehand, alien spore, ring, checker burst, cluster, spiral, cross, standard Conway glider (restricted to standard square Moore Conway Life), bars and diamond. Rotate stamps 45°; adjust radius/density and place up to eight seeded scatter families.
+- Paint, erase and invert work across existing engines; Species War uses the currently chosen species brush color/state. Random Stamp and Random Symmetry provide immediate novelty.
+- A temporary translucent **ghost preview** on the interactive canvas shows exactly which cells a tap will plant; the preview itself is never exported or fed into transition rules.
+- Each stamp derives a deterministic per-stroke RNG seed; scattered and sparse positions can be precisely repeated. **Saving a JSON recipe now saves the actual generation and complete cell/history arrays**, in addition to the Alien brush configuration and recent stroke seeds; loading restores the exact specimen, not just its starting random seed. Older recipes without a world snapshot still load as starting-seed recipes.
+- On hexagonal/triangular and rectangular grids, mirrored/radial symmetry is defined in rendered normalized artwork coordinates, **not claimed to be an exact automorphism of that lattice**. Each transformed position maps to a genuine polygon cell.
+- The mutation dice, palette color cycling, GIF, and video export engine are preserved.
+- Rendering skins beyond the current seven are deferred to an F6 backlog stage after F5; no skin changes were made in F3.

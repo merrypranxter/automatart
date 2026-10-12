@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { paletteFromColors, automatartColorsFromPortable } from './palettes/portable';
 import type { ChangeEvent, PointerEvent } from 'react';
-import { createWorld, paintWorld, stepWorld, rewindWorld } from './engine/sim';
-import { lookupCell } from './engine/topology';
+import { createWorld, stepWorld, rewindWorld } from './engine/sim';
+import { lookupCell,polygonForCell,geometryExtent } from './engine/topology';
+import {applyAlienStamp,alienFootprint,INITIAL_ALIEN_BRUSH,STAMPS,isGliderCompatible,validateAlienBrush} from './engine/alien-paint';
+import type {AlienBrush,BrushSymmetry,StampId} from './engine/alien-paint';
+import {snapshotWorld,restoreWorldSnapshot} from './engine/world-snapshot';
+import AlienPaintControls from './components/AlienPaintControls';
 import { renderWorld } from './engine/render';
 import { randomColors, rotatedColors, shuffledColors } from './engine/funhouse';
 import MutantControls from './components/MutantControls';
@@ -76,8 +80,12 @@ export default function App(){
   const [batchProgress,setBatchProgress]=useState<{done:number;total:number}|null>(null);
   const batchTokenRef=useRef(0);
   const [speed,setSpeed]=useState(18);
-  const [brush,setBrush]=useState(2);
-  const [erase,setErase]=useState(false);
+  const [alienBrush,setAlienBrush]=useState<AlienBrush>({...INITIAL_ALIEN_BRUSH});
+  const strokeCounterRef=useRef(0);
+  const strokeLogRef=useRef<{x:number;y:number;seed:number;brush:AlienBrush}[]>([]);
+  const previewRef=useRef<HTMLCanvasElement>(null);
+  const hoveredCellRef=useRef<[number,number]|null>(null);
+  const strokeLastCellRef=useRef<string|null>(null);
   const [paintSpecies,setPaintSpecies]=useState(1);
   const [mutationStrength,setMutationStrength]=useState<MutationStrength>('weird');
   const [mutationLocks,setMutationLocks]=useState<MutationLocks>({...INITIAL_MUTATION_LOCKS});
@@ -277,6 +285,44 @@ export default function App(){
     setHasMutationUndo(false);
     setMessage('Previous rule, colors, seed and exact living cell state restored.');
   }
+  function createStrokeSeed(x:number,y:number):number{
+    strokeCounterRef.current++;
+    return (settings.seed ^ Math.imul(worldRef.current.generation+1,0x9e3779b1) ^
+      Math.imul(strokeCounterRef.current,0x85ebca6b) ^ (x<<16) ^ y)>>>0;
+  }
+  function drawStampPreview(anchor:[number,number]|null){
+    hoveredCellRef.current=anchor;
+    const overlay=previewRef.current;
+    const main=canvasRef.current;
+    if(!overlay||!main)return;
+    overlay.width=main.width;overlay.height=main.height;
+    const ctx=overlay.getContext('2d');
+    if(!ctx||!anchor)return;
+    const world=worldRef.current;
+    const seed= (settings.seed ^ Math.imul(world.generation+1,0x9e3779b1) ^
+      Math.imul(strokeCounterRef.current+1,0x85ebca6b) ^ (anchor[0]<<16)^anchor[1])>>>0;
+    const affected=alienFootprint(world,anchor,alienBrush,seed);
+    const shape=world.lattice??'square';
+    const [ex,ey]=geometryExtent(shape,world.width,world.height);
+    const sx=overlay.width/ex,sy=overlay.height/ey;
+    // Limit preview complexity; planting itself still affects all cells.
+    ctx.strokeStyle='#ffff7a';ctx.lineWidth=1.8;ctx.fillStyle='rgba(255,20,192,.23)';
+    for(const index of affected.slice(0,2200)){
+      const x=index%world.width,y=Math.floor(index/world.width);
+      const polygon=polygonForCell(shape,x,y);
+      ctx.beginPath();
+      for(let i=0;i<polygon.length;i++){
+        const [px,py]=polygon[i];
+        if(i===0)ctx.moveTo(px*sx,py*sy);else ctx.lineTo(px*sx,py*sy);
+      }
+      ctx.closePath();ctx.fill();ctx.stroke();
+    }
+  }
+  useEffect(()=>{drawStampPreview(hoveredCellRef.current);},
+    [alienBrush,settings.lattice,settings.cellCount,settings.aspect,settings.engine,viewerFullscreen]);
+  useEffect(()=>{
+    setAlienBrush(prev=>validateAlienBrush(prev,settings));
+  },[settings.engine,settings.lattice,settings.lifeRule,settings.neighborShape,settings.speciesCount]);
   const draw=useCallback(()=>{
     if(canvasRef.current)renderWorld(canvasRef.current,worldRef.current,appearance,900);
   },[appearance]);
@@ -375,25 +421,58 @@ export default function App(){
     updateSetting('seed',Math.floor(Math.random()*4294967295));
     setMessage('New seeded universe generated. Keep the seed if you like it.');
   }
-  function paint(e:PointerEvent<HTMLCanvasElement>){
+  function locatePointer(e:PointerEvent<HTMLCanvasElement>):[number,number]|null{
+    const canvas=canvasRef.current;if(!canvas)return null;
+    const rect=canvas.getBoundingClientRect();
+    return lookupCell(worldRef.current.lattice??'square',worldRef.current.width,
+      worldRef.current.height,(e.clientX-rect.left)/rect.width,(e.clientY-rect.top)/rect.height);
+  }
+  function plantAt(e:PointerEvent<HTMLCanvasElement>){
+    if(recordingRef.current)return;
+    const point=locatePointer(e);
+    if(!point)return;
+    const [x,y]=point;
+    if(strokeLastCellRef.current===x+','+y)return;
+    strokeLastCellRef.current=x+','+y;
     cancelBatch();
-    const canvas=canvasRef.current;if(!canvas)return;
-    const r=canvas.getBoundingClientRect();
-    const world=worldRef.current;
-    const selected=lookupCell(world.lattice??'square',world.width,world.height,
-      (e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);
-    if(!selected)return;
-    const [x,y]=selected;
-    paintWorld(world,settings,x,y,brush,erase,paintSpecies);
-    setPopulation(stat(world));
+    const seed=createStrokeSeed(x,y);
+    const brush={...alienBrush,species:paintSpecies};
+    applyAlienStamp(worldRef.current,settings,[x,y],brush,seed);
+    strokeLogRef.current.push({x,y,seed,brush:{...brush}});
+    if(strokeLogRef.current.length>1500)strokeLogRef.current.shift();
+    setPopulation(stat(worldRef.current));
     draw();
+    drawStampPreview(point);
   }
   function onPointerDown(e:PointerEvent<HTMLCanvasElement>){
+    if(recordingRef.current)return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    paint(e);
+    strokeLastCellRef.current=null;
+    plantAt(e);
   }
   function onPointerMove(e:PointerEvent<HTMLCanvasElement>){
-    if(e.buttons!==0)paint(e);
+    const point=locatePointer(e);
+    if(!point){drawStampPreview(null);return;}
+    if((e.buttons!==0||e.pointerType==='touch')&&alienBrush.stamp==='brush'){
+      plantAt(e);
+    }else drawStampPreview(point);
+  }
+  function onPointerUp(){
+    strokeLastCellRef.current=null;
+    drawStampPreview(null);
+  }
+  function randomAlienStamp(){
+    const all=Object.keys(STAMPS).filter(key=>key!=='brush'&&
+      (key!=='glider'||isGliderCompatible(settings))) as StampId[];
+    const options=all.filter(id=>id!==alienBrush.stamp);
+    const next=options[Math.floor(Math.random()*options.length)]??'spore';
+    setAlienBrush(b=>({...b,stamp:next}));
+  }
+  function randomAlienSymmetry(){
+    const options=(['single','mirror','quad','radial8'] as BrushSymmetry[])
+      .filter(x=>x!==alienBrush.symmetry);
+    const next=options[Math.floor(Math.random()*options.length)]??'mirror';
+    setAlienBrush(b=>({...b,symmetry:next}));
   }
   function savePng(){
     const c=document.createElement('canvas');
@@ -429,17 +508,21 @@ export default function App(){
   }
   function saveRecipe(){
     const recipe={kind:'automatart-recipe-v1',settings,appearance,
+      world:snapshotWorld(worldRef.current),
+      alien:{brush:alienBrush,strokeCount:strokeCounterRef.current,
+        recentStrokes:strokeLogRef.current},
       funhouse:lastMutation?{mutationSeed:lastMutation.seed,
         changes:lastMutation.changes,strength:mutationStrength,
         locks:mutationLocks,allowRestart:allowMutationRestart}:undefined};
     download('automatart-recipe-'+settings.seed+'.json',
       new Blob([JSON.stringify(recipe,null,2)],{type:'application/json'}));
-    setMessage('Saved this setup as a JSON recipe. Paint strokes and elapsed generations are not part of recipes yet.');
+    setMessage('Saved recipe including real cell states, generations, your Alien Paintbrush and recent stamp seeds.');
   }
   async function loadRecipe(e:ChangeEvent<HTMLInputElement>){
     const file=e.target.files?.[0];e.target.value='';
     if(!file)return;
     try{
+      if(file.size>8*1024*1024)throw new Error('Recipe exceeds 8 MB size limit');
       const data=JSON.parse(await file.text());
       if(data.kind!=='automatart-recipe-v1'||!data.settings||!data.appearance)throw new Error('Not an Automatart recipe');
       const s:SimSettings={...INITIAL_SETTINGS,...data.settings};
@@ -514,12 +597,28 @@ export default function App(){
       if(!['forward','pingpong'].includes(a.paletteMotion))a.paletteMotion='forward';
       a.paletteReverse=!!a.paletteReverse;
       a.smoothPalette=!!a.smoothPalette;
+      const restored=data.world?restoreWorldSnapshot(data.world,s):null;
+      const brushLoaded=validateAlienBrush(data.alien?.brush,s);
+      const recent=Array.isArray(data.alien?.recentStrokes)?
+        data.alien.recentStrokes.filter((entry:unknown)=>{
+          if(!entry||typeof entry!=='object')return false;
+          const v=entry as {x?:unknown;y?:unknown;seed?:unknown};
+          return Number.isInteger(v.x)&&Number.isInteger(v.y)&&
+            typeof v.seed==='number'&&Number.isInteger(v.seed);
+        }).slice(-1500):[];
+      strokeCounterRef.current=Number.isInteger(data.alien?.strokeCount)&&
+        data.alien.strokeCount>=0?Math.min(data.alien.strokeCount,1e9):0;
+      strokeLogRef.current=recent;
+      hoveredCellRef.current=null;
+      setAlienBrush(brushLoaded);
       undoMutationRef.current=null;
-      pendingWorldRestoreRef.current=null;
+      pendingWorldRestoreRef.current=restored;
       setHasMutationUndo(false);
       setLastMutation(null);
+      setPlaying(false);
       setSettings(s);setAppearance(a);setResetNumber(n=>n+1);
-      setMessage('Recipe loaded. Exact seed restored.');
+      setMessage(restored?'Full painted universe and generation restored from JSON recipe.':
+        'Legacy recipe loaded: seed and rules restored. (Old recipes did not contain painted cells.)');
     }catch(err){
       setMessage('Could not load recipe: '+(err instanceof Error?err.message:'Unknown error'));
     }
@@ -617,10 +716,15 @@ export default function App(){
             </div>
           </div>
           <div className="canvas-wrap" ref={viewerWrapRef}>
-            <canvas ref={canvasRef} aria-label="Interactive cellular automata canvas. Drag to paint cells." onPointerDown={onPointerDown} onPointerMove={onPointerMove} />
+            <div className="art-canvas-layer">
+              <canvas ref={canvasRef} aria-label="Interactive cellular automata canvas. Drag to paint cells." onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
+              onPointerLeave={()=>drawStampPreview(null)} />
+              <canvas ref={previewRef} className="alien-brush-preview" aria-hidden="true"/>
+            </div>
             <span className="canvas-corner tl">A / {String(generation).padStart(6,'0')}</span>
             <span className="canvas-corner tr">{settings.cellCount} GRID</span>
-            <span className="canvas-corner bl">{erase?'ERASE':'PAINT'} MODE</span>
+            <span className="canvas-corner bl">{alienBrush.mode.toUpperCase()} · {alienBrush.stamp.toUpperCase()}</span>
           </div>
           <div className="transport">
             <button className="primary" onClick={()=>{cancelBatch();setPlaying(v=>!v);}} aria-label={playing?'Pause simulation':'Play simulation'}>{playing?'Ⅱ PAUSE':'▶ PLAY'}</button>
@@ -669,7 +773,7 @@ export default function App(){
           </div>}
         </section>
         <section className="rack" aria-label="Simulation controls">
-          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>FUNHOUSE / F2 MUTATION DICE</span></div>
+          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>FUNHOUSE / F3 ALIEN PAINTBRUSH</span></div>
           <section className="module">
             <div className="module-heading"><span className="module-num">01</span><h2>WORLD MACHINE</h2><span className="module-symbol">◎</span></div>
             <label className="input-label" htmlFor="aspect">Canvas geometry</label>
@@ -747,15 +851,9 @@ export default function App(){
               lastMutation={lastMutation}/>
             <label className="input-label" htmlFor="speed">Evolution speed <em>{speed} gen/sec</em></label>
             <input id="speed" type="range" min="1" max="40" value={speed} onChange={e=>setSpeed(Number(e.target.value))}/>
-            <div className="paint-tools">
-              <span className="input-label">Touch / mouse tools</span>
-              <div className="chip-row">
-                <button className={'chip '+(!erase?'selected':'')} onClick={()=>setErase(false)}>✎ PAINT</button>
-                <button className={'chip '+(erase?'selected':'')} onClick={()=>setErase(true)}>⌫ ERASE</button>
-              </div>
-              <label className="input-label" htmlFor="brush">Brush radius <em>{brush}</em></label>
-              <input id="brush" type="range" min="0" max="8" value={brush} onChange={e=>setBrush(Number(e.target.value))}/>
-            </div>
+            <AlienPaintControls brush={alienBrush} onChange={setAlienBrush}
+              settings={settings} randomize={randomAlienStamp}
+              randomSymmetry={randomAlienSymmetry}/>
           </section>
           <section className="module">
             <div className="module-heading"><span className="module-num">03</span><h2>CHROMA PATCHBAY</h2><span className="module-symbol">✺</span></div>

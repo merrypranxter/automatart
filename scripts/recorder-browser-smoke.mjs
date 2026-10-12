@@ -2,6 +2,7 @@
 // This catches regressions that the Node GIF encoder smoke test cannot see.
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
+import {readFile} from 'node:fs/promises';
 import {chromium} from 'playwright';
 
 const url='http://127.0.0.1:4178';
@@ -38,7 +39,7 @@ try{
   // F2: Mutation Dice must operate on the live world without restarting it,
   // preserve protectable palette/rules, and exactly undo the prior pixels.
   const mutateStart=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
-  const pixelBefore=await page.locator('.canvas-wrap canvas').evaluate(c=>c.toDataURL());
+  const pixelBefore=await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL());
   const engineBefore=await page.locator('#engine').inputValue();
   await page.locator('#mutation-strength').selectOption('wtf');
   await page.locator('#mutation-throw').click();
@@ -49,7 +50,7 @@ try{
   assert(await page.locator('#mutation-undo').isEnabled(),'Undo becomes available after mutation');
   await page.locator('#mutation-undo').click();
   await page.waitForTimeout(100);
-  const pixelRestored=await page.locator('.canvas-wrap canvas').evaluate(c=>c.toDataURL());
+  const pixelRestored=await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL());
   assert.equal(pixelRestored,pixelBefore,'Undo restores exact previous rendered universe');
   assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),mutateStart);
   const originalSwatches=await page.locator('.color-wells input[type=color]').evaluateAll(els=>els.map(e=>e.value));
@@ -74,6 +75,51 @@ try{
     await page.locator('#life').selectOption(name);
     assert.equal(await page.locator('#life').inputValue(),name,'Named rule '+name+' selectable');
   }
+  // F3 integration: genuine square-grid mirror stamps, preview ghost,
+  // exact active-cell state recipe snapshot, and backward-compatible loading.
+  await page.locator('#life').selectOption('conway');
+  await page.locator('#seed-pattern').selectOption('center');
+  await page.locator('#density').fill('1');
+  await page.locator('#alien-symmetry').selectOption('mirror');
+  await page.locator('#alien-stamp').selectOption('glider');
+  assert.equal(await page.locator('#alien-stamp').inputValue(),'glider','Conway glider is available for compatible rules');
+  await page.locator('#alien-density').fill('100');
+  const art=page.locator('canvas[aria-label^="Interactive cellular"]');
+  const rect=await art.boundingBox();
+  assert(rect&&rect.width>0&&rect.height>0,'Interactive art canvas is visible');
+  const position={x:rect.width*.27,y:rect.height*.37};
+  await art.hover({position});
+  const previewPixels=await page.locator('canvas.alien-brush-preview').evaluate(c=>{
+    const p=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
+    let visible=0;for(let i=3;i<p.length;i+=4)if(p[i]>0)visible++;
+    return visible;
+  });
+  assert(previewPixels>0,'The actual stamped/mirrored cells get a hover preview');
+  const beforeStamp=await art.evaluate(c=>c.toDataURL());
+  await art.click({position});
+  const afterStamp=await art.evaluate(c=>c.toDataURL());
+  assert.notEqual(afterStamp,beforeStamp,'Stamp changes real mathematical cell pixels');
+  const stampGen=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  const [savedRecipe]=await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const json=await readFile(await savedRecipe.path(),'utf8');
+  const recipe=JSON.parse(json);
+  assert.equal(recipe.world.kind,'automatart-world-v1','Recipe includes exact cell snapshot');
+  assert.equal(recipe.alien.brush.stamp,'glider','Recipe remembers stamp');
+  assert(recipe.alien.recentStrokes.length>=1,'Recipe saves seeded stroke history');
+  assert.equal(recipe.world.generation,stampGen);
+  await page.locator('.transport .surprise').click();
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'restored-alien-recipe.json',mimeType:'application/json',buffer:Buffer.from(json)
+  });
+  await page.waitForFunction(target=>
+    document.querySelector('.readouts b')?.textContent?.replaceAll(',','')===String(target),stampGen);
+  assert.equal(await page.locator('#alien-stamp').inputValue(),'glider','Alien stamp settings restored');
+  assert.equal(await art.evaluate(c=>c.toDataURL()),afterStamp,'Loaded recipe reproduces the exact painted universe');
+  // Resume normal live state for all existing capture and skin tests below.
+  await page.locator('.transport .primary').click();
   await page.locator('#palette').selectOption('OPAL PRISM');
   assert.equal(await page.locator('.color-wells input[type=color]').count(),12);
   await page.locator('#random-preset').click();
@@ -162,7 +208,7 @@ try{
   for(const shape of ['square','hex','triangle']){
     await page.locator('#lattice').selectOption(shape);
     await page.waitForTimeout(180);
-    lattices.push(await page.locator('.canvas-wrap canvas').evaluate(c=>c.toDataURL('image/png')));
+    lattices.push(await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL('image/png')));
   }
   assert.equal(new Set(lattices).size,3,'Actual lattice display geometries must differ');
   await page.locator('#lattice').selectOption('hex'); // GIF must retain actual hex geometry
@@ -170,7 +216,7 @@ try{
   for(const skin of ['pixels','soft','glow','contours','mercury','relief','glass']){
     await page.locator('#skin').selectOption(skin);
     await page.waitForTimeout(60);
-    skinImages.push(await page.locator('.canvas-wrap canvas').evaluate(c=>c.toDataURL('image/png')));
+    skinImages.push(await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL('image/png')));
   }
   assert.equal(new Set(skinImages).size,7,'Every visual skin must look different in the actual canvas');
   await page.locator('#skin').selectOption('mercury');
