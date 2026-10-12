@@ -90,7 +90,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
           if(value>0){orientedBits|=1<<d;count++;}
         }
       }else{
-        const offsets=s.engine==='larger'?null:neighborOffsets(s.lattice,x,y,s.neighborShape);
+        const offsets=s.engine==='larger'?null:neighborOffsets(s.lattice,x,y,s.neighborShape,s.neighborMask);
         if(offsets){
           for(const [ox,oy] of offsets){
             const value=valueAt(cells,w,h,x+ox,y+oy,s.wrap);

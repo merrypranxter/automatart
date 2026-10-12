@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { SimSettings } from '../engine/types';
+import {maxNeighborCount} from '../engine/neighborhood';
 
 interface Props {
   settings: SimSettings;
@@ -20,13 +21,14 @@ export default function MutantControls({settings:s,setSettings,paintSpecies,setP
   const toggle=(key:'genBirth'|'genSurvive',n:number)=>
     setSettings(prev=>({...prev,[key]:prev[key].includes(n)?
       prev[key].filter(v=>v!==n):[...prev[key],n].sort((a,b)=>a-b)}));
+  const votes=maxNeighborCount(s);
   if(s.engine==='generations')return <div className="mutant-controls">
     <p className="module-note">PURE CA · AFTERLIFE B/S/C — State 1 is alive. Death becomes a visible refractory sequence (2…C−1), then returns to empty. Only living neighbors count toward birth and survival.</p>
     <Range id="gen-states" label="TOTAL STATES / REFRACTORY STAGES" value={s.genStates} min={3} max={24}
       onChange={n=>setNumber('genStates',n)}/>
     {(['genBirth','genSurvive'] as const).map(key=><div className="custom-rule-editor" key={key}>
-      <b>{key==='genBirth'?'BIRTH B':'SURVIVAL S'}{s[key].join('')}</b>
-      <div className="rule-bits">{Array.from({length:9},(_,i)=><button type="button" key={i}
+      <b>{key==='genBirth'?'BIRTH B':'SURVIVAL S'}{s[key].join(',')}</b>
+      <div className="rule-bits">{Array.from({length:votes+1},(_,i)=><button type="button" key={i}
         aria-pressed={s[key].includes(i)} className={s[key].includes(i)?'active':''}
         onClick={()=>toggle(key,i)}>{i}</button>)}</div>
     </div>)}
@@ -35,7 +37,7 @@ export default function MutantControls({settings:s,setSettings,paintSpecies,setP
     <p className="module-note">PURE CA · EXCITABLE FLESH — Resting cells become excited when enough neighbors are firing. Excited cells march through refractory stages; only state 1 can trigger new excitation.</p>
     <Range id="excite-states" label="EXCITATION + RECOVERY STATES" value={s.exciteStates} min={3} max={24}
       onChange={n=>setNumber('exciteStates',n)}/>
-    <Range id="excite-threshold" label="EXCITATION THRESHOLD" value={s.exciteThreshold} min={1} max={s.neighborShape==='vonNeumann'?4:8}
+    <Range id="excite-threshold" label="EXCITATION THRESHOLD" value={s.exciteThreshold} min={1} max={votes}
       onChange={n=>setNumber('exciteThreshold',n)}/>
   </div>;
   if(s.engine==='larger'){
@@ -65,7 +67,7 @@ export default function MutantControls({settings:s,setSettings,paintSpecies,setP
   }
   if(s.engine==='species')return <div className="mutant-controls">
     <p className="module-note">PURE LOCAL CA · SPECIES WAR — Automatart's own deterministic competition rule. Empty cells adopt the largest qualifying nearby species; occupied cells hold if defended or get taken by locally stronger invaders. Equal counts favor lower species ID.</p>
-    <Range id="species-count" label="COMPETING SPECIES" value={s.speciesCount} min={2} max={8}
+    <Range id="species-count" label="COMPETING SPECIES" value={s.speciesCount} min={2} max={votes}
       onChange={n=>{setNumber('speciesCount',n);setPaintSpecies(x=>Math.min(n,x));}}/>
     <Range id="species-birth" label="INVASION / BIRTH THRESHOLD" value={s.speciesBirth} min={1}
       max={s.neighborShape==='vonNeumann'?4:8} onChange={n=>setNumber('speciesBirth',n)}/>

@@ -181,6 +181,41 @@ try{
     'Original Moire palettes must display all twelve editable stops');
   await page.locator('#source').selectOption('radius');
   await page.locator('#neighbor-shape').selectOption('vonNeumann');
+  // B1: real neighborhood count / stencils, not cosmetic overlays.
+  await page.locator('#neighbor-shape').selectOption('square2');
+  assert((await page.locator('.neighborhood-count').innerText()).includes('24'),
+    'Radius-2 square has exactly 24 adjacent cells');
+  await page.locator('#engine').selectOption('life');
+  await page.locator('#life').selectOption('custom');
+  assert.equal(await page.locator('.custom-rule-editor .rule-bits').first().locator('button').count(),25,
+    'Birth/survival editor grows to B0..B24, not just B0..B8');
+  await page.locator('.custom-rule-editor .rule-bits').first().locator('button').nth(10).click();
+  assert.equal(await page.locator('.custom-rule-editor .rule-bits').first().locator('button').nth(10)
+    .getAttribute('aria-pressed'),'true','B10 genuinely selectable');
+  const b1Gen=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  await page.locator('#neighbor-shape').selectOption('diamond2');
+  assert((await page.locator('.neighborhood-count').innerText()).includes('12'));
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),b1Gen,
+    'Changing a local neighborhood rule preserves the current universe');
+  await page.locator('#neighbor-shape').selectOption('directional');
+  await page.locator('.neighborhood-directions').getByRole('button',{name:'Neighborhood NW'}).click();
+  assert((await page.locator('.neighborhood-count').innerText()).includes('7'),
+    'Compass selection removes actual neighborhood contribution');
+  const [b1File]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const b1Json=JSON.parse(await readFile(await b1File.path(),'utf8'));
+  assert.equal(b1Json.settings.neighborShape,'directional');
+  assert.equal(b1Json.settings.neighborMask,254);
+  assert(b1Json.settings.customBirth.includes(10),'B10 survives into saved JSON');
+  await page.locator('#neighbor-shape').selectOption('moore');
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'b1-directional.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(b1Json))
+  });
+  await page.waitForFunction(()=>document.querySelector('#neighbor-shape')?.value==='directional');
+  assert((await page.locator('.neighborhood-count').innerText()).includes('7'));
+  await page.locator('#neighbor-shape').selectOption('moore');
+  console.log('PASS: B1 real browser 24/12 directional modes, B10 editor, no restart, and exact recipe mask round-trip');
   // Exercise custom birth/survival rule editor, then return to cyclic for GIF.
   await page.locator('#engine').selectOption('life');
   await page.locator('#life').selectOption('custom');
