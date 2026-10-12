@@ -27,6 +27,16 @@ export function maxNeighborCount(s:Pick<SimSettings,'engine'|'lattice'|'neighbor
   default:return 8;
  }
 }
+/** Constrain only the ACTIVE rule. Preserve other engines' saved options. */
+export function normalizeActiveVotes(s:SimSettings):SimSettings{
+ const cap=Math.max(1,maxNeighborCount(s));
+ if(s.engine==='cyclic')return {...s,cyclicThreshold:Math.min(s.cyclicThreshold,cap)};
+ if(s.engine==='excitable')return {...s,exciteThreshold:Math.min(s.exciteThreshold,cap)};
+ if(s.engine==='species')return {...s,speciesBirth:Math.min(s.speciesBirth,cap),
+  speciesSurvive:Math.min(s.speciesSurvive,cap),
+  speciesAttackBias:Math.min(s.speciesAttackBias,cap)};
+ return s;
+}
 export function bitCount(mask:number):number{
  let v=mask&255,count=0;
  while(v){v&=v-1;count++;}

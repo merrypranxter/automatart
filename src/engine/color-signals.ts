@@ -42,7 +42,7 @@ function active(world:World,index:number):number{
   return world.cells[index]!==0?1:0;
 }
 function neighbors(world:World,x:number,y:number):number[]{
-  const offsets=neighborOffsets(world.lattice??'square',x,y,world.neighborShape??'moore');
+  const offsets=neighborOffsets(world.lattice??'square',x,y,world.neighborShape??'moore',world.neighborMask??255);
   const out:number[]=[];
   for(const [dx,dy] of offsets){
     const index=at(world,x+dx,y+dy);
@@ -101,7 +101,7 @@ export function computeColorSignal(world:World,a:Appearance,id:ColorBy=a.colorBy
       }
       case 'flow':{
         let vx=0,vy=0,energy=0;
-        const offsets=neighborOffsets(world.lattice??'square',x,y,world.neighborShape??'moore');
+        const offsets=neighborOffsets(world.lattice??'square',x,y,world.neighborShape??'moore',world.neighborMask??255);
         for(const [dx,dy] of offsets){
           const p=at(world,x+dx,y+dy);
           if(p<0)continue;

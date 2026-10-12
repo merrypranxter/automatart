@@ -42,7 +42,7 @@ export function createWorld(s:SimSettings):World{
     }else cells[p]=rand()<chance?1:0;
     if(cells[p]>0||s.engine==='cyclic'){ages[p]=1;traces[p]=1;}
   }
-  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.neighborShape,width,height,generation:0,cells,ages,
+  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.neighborShape,neighborMask:s.neighborMask,width,height,generation:0,cells,ages,
     neighbors:new Uint8Array(n),events:new Uint8Array(n),traces,
     previousCells:cells.slice(),olderCells:cells.slice(),fossils:new Float32Array(n)};
 }
@@ -173,7 +173,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
       :(old!==0&&now===0?1:old!==now?0.12:0);
     nextFossils[i]=Math.max(deposit,(prev.fossils?.[i]??0)*0.986);
   }
-  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.neighborShape,width:w,height:h,generation:prev.generation+1,
+  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.neighborShape,neighborMask:s.neighborMask,width:w,height:h,generation:prev.generation+1,
     cells:next,ages:nextAges,neighbors,events,traces:nextTraces,
     previousCells:cells.slice(),
     olderCells:prev.previousCells?.slice()??cells.slice(),
@@ -196,7 +196,7 @@ export function rewindWorld(prev:World,s:SimSettings):World{
     else if(cells[i]&&!earlier[i])events[i]=2;
     else if(cells[i]!==earlier[i])events[i]=3;
   }
-  return {engine:'margolus',lattice:'square',wrap:s.wrap,neighborShape:s.neighborShape,width:w,height:h,
+  return {engine:'margolus',lattice:'square',wrap:s.wrap,neighborShape:s.neighborShape,neighborMask:s.neighborMask,width:w,height:h,
     generation:prev.generation-1,cells:earlier,ages,traces,events,
     neighbors:new Uint8Array(n),previousCells:earlier.slice(),
     olderCells:earlier.slice(),fossils:new Float32Array(n)};

@@ -13,7 +13,7 @@ import type {SnapshotAspect,SnapshotSize} from './engine/snapshot';
 import { randomColors, rotatedColors, shuffledColors } from './engine/funhouse';
 import MutantControls from './components/MutantControls';
 import NeighborhoodControls from './components/NeighborhoodControls';
-import {maxNeighborCount,supportsNeighborhood,validNeighborhoodSettings} from './engine/neighborhood';
+import {maxNeighborCount,supportsNeighborhood,validNeighborhoodSettings,normalizeActiveVotes} from './engine/neighborhood';
 import MutationControls from './components/MutationControls';
 import {mutateAutomatart,requiresWorldRestart,INITIAL_MUTATION_LOCKS} from './engine/mutation-automatart';
 import type {MutationLocks,MutationStrength} from './engine/mutation-automatart';
@@ -363,8 +363,9 @@ export default function App(){
     // Rule-only neighborhood changes preserve living cells and generation,
     // but visual entropy/flow inspectors must use the CURRENT rule graph.
     worldRef.current.neighborShape=settings.neighborShape;
+    worldRef.current.neighborMask=settings.neighborMask;
     worldRef.current.wrap=settings.wrap;
-  },[settings.neighborShape,settings.wrap]);
+  },[settings.neighborShape,settings.neighborMask,settings.wrap]);
   useEffect(()=>{draw();},[draw,settings,resetNumber]);
 
   useEffect(()=>{
@@ -598,7 +599,9 @@ export default function App(){
         throw new Error('Invalid neighborhood rule');
       s.neighborMask=Number.isInteger(s.neighborMask)?s.neighborMask:255;
       if(!validNeighborhoodSettings(s))throw new Error('Neighborhood and engine/lattice are incompatible');
-      const maxVotes=maxNeighborCount(s);
+      // Validate all saved rules against the largest compatible local graph;
+      // constrain only the active engine after all presets are loaded.
+      const savedRuleCap=24;
       s.orientedMask=Math.max(1,Math.min(255,Math.floor(Number(s.orientedMask)||34)));
       if(!['fixed','rotations','dihedral'].includes(s.orientedSymmetry))s.orientedSymmetry='rotations';
       if(!['exact','contains'].includes(s.orientedMatch))s.orientedMatch='exact';
@@ -608,12 +611,12 @@ export default function App(){
       if(!Number.isFinite(s.density)||s.density<0||s.density>1)throw new Error('Invalid density');
       if(!Number.isFinite(s.seed))throw new Error('Invalid seed');
       s.seed=s.seed>>>0;s.cyclicStates=Math.max(3,Math.min(24,Math.floor(s.cyclicStates)||12));
-      s.cyclicThreshold=Math.max(1,Math.min(maxVotes,Math.floor(s.cyclicThreshold)||2));
+      s.cyclicThreshold=Math.max(1,Math.min(savedRuleCap,Math.floor(s.cyclicThreshold)||2));
       s.wolframRule=Math.max(0,Math.min(255,Math.floor(s.wolframRule)||30));
 
       for(const k of ['customBirth','customSurvive'] as const){
         if(!Array.isArray(s[k]))s[k]=k==='customBirth'?[3]:[2,3];
-        s[k]=[...new Set(s[k].filter((n:unknown)=>Number.isInteger(n)&&Number(n)>=0&&Number(n)<=maxVotes))].sort((a,b)=>a-b);
+        s[k]=[...new Set(s[k].filter((n:unknown)=>Number.isInteger(n)&&Number(n)>=0&&Number(n)<=savedRuleCap))].sort((a,b)=>a-b);
       }
       s.trailDecay=Math.min(0.99,Math.max(0.65,Number(s.trailDecay)||0.89));
       const bounded=(v:unknown,min:number,max:number,fallback:number)=>{
@@ -622,7 +625,7 @@ export default function App(){
       };
       s.genStates=bounded(s.genStates,3,24,8);
       s.exciteStates=bounded(s.exciteStates,3,24,8);
-      s.exciteThreshold=bounded(s.exciteThreshold,1,maxVotes,2);
+      s.exciteThreshold=bounded(s.exciteThreshold,1,savedRuleCap,2);
       s.largeRadius=bounded(s.largeRadius,1,5,2);
       const maxNear=(2*s.largeRadius+1)**2-1;
       s.largeBirthMin=bounded(s.largeBirthMin,0,maxNear,6);
@@ -630,13 +633,14 @@ export default function App(){
       s.largeSurviveMin=bounded(s.largeSurviveMin,0,maxNear,5);
       s.largeSurviveMax=bounded(s.largeSurviveMax,s.largeSurviveMin,maxNear,12);
       s.speciesCount=bounded(s.speciesCount,2,8,3);
-      s.speciesBirth=bounded(s.speciesBirth,1,maxVotes,2);
-      s.speciesSurvive=bounded(s.speciesSurvive,0,maxVotes,1);
-      s.speciesAttackBias=bounded(s.speciesAttackBias,0,maxVotes,1);
+      s.speciesBirth=bounded(s.speciesBirth,1,savedRuleCap,2);
+      s.speciesSurvive=bounded(s.speciesSurvive,0,savedRuleCap,1);
+      s.speciesAttackBias=bounded(s.speciesAttackBias,0,savedRuleCap,1);
       for(const key of ['genBirth','genSurvive'] as const){
         if(!Array.isArray(s[key]))s[key]=key==='genBirth'?[3]:[2,3];
-        s[key]=[...new Set(s[key].filter((v:unknown)=>Number.isInteger(v)&&Number(v)>=0&&Number(v)<=maxVotes))].sort((a,b)=>a-b);
+        s[key]=[...new Set(s[key].filter((v:unknown)=>Number.isInteger(v)&&Number(v)>=0&&Number(v)<=savedRuleCap))].sort((a,b)=>a-b);
       }
+      Object.assign(s,normalizeActiveVotes(s));
       const a:Appearance={...INITIAL_APPEARANCE,...data.appearance};
       if(!Array.isArray(a.palette)||a.palette.length<2||a.palette.length>32||a.palette.some(v=>typeof v!=='string'||!/^#[0-9a-f]{6}$/i.test(v)))throw new Error('Invalid palette');
       if(!['state','age','neighbors','events','radius','x','activity',...NEW_COLOR_SIGNALS.map(v=>v.id)].includes(a.colorBy))throw new Error('Invalid color mapping');
@@ -873,10 +877,12 @@ export default function App(){
             <label className="input-label" htmlFor="engine">Automaton species</label>
             <select id="engine" value={settings.engine} onChange={e=>{
               const engine=e.target.value as EngineId;
-              setSettings(s=>({...s,engine,
-                lattice:SQUARE_ONLY_ENGINES.includes(engine)?'square':s.lattice,
-                neighborShape:supportsNeighborhood(engine,s.lattice)?s.neighborShape:'moore',
-                 wrap:engine==='margolus'?true:s.wrap}));
+              setSettings(s=>{
+                const lattice=SQUARE_ONLY_ENGINES.includes(engine)?'square':s.lattice;
+                return normalizeActiveVotes({...s,engine,lattice,
+                  neighborShape:supportsNeighborhood(engine,lattice)?s.neighborShape:'moore',
+                  wrap:engine==='margolus'?true:s.wrap});
+              });
             }}>
               {ENGINES.map(x=><option key={x.id} value={x.id}>{x.name} — {x.hint}</option>)}
             </select>
@@ -893,9 +899,9 @@ export default function App(){
                 <p>Choose how many neighbors cause birth or survival. Changes apply live.</p>
                 {(['customBirth','customSurvive'] as const).map(kind=><div key={kind}>
                   <b>{kind==='customBirth'?'BIRTH · B':'SURVIVE · S'}{settings[kind].join(',')}</b>
-                  <div className="rule-bits">{Array.from({length:neighborMax+1},(_,i)=><button type="button" key={i}
+                  <div className="rule-bits">{Array.from({length:Math.max(neighborMax,...settings[kind])+1},(_,i)=><button type="button" key={i}
                     aria-pressed={settings[kind].includes(i)} className={settings[kind].includes(i)?'active':''}
-                    onClick={()=>toggleCustomRule(kind,i)}>{i}</button>)}</div>
+                    title={i>neighborMax?'Inactive here; tap to remove':'Toggle B/S count'} onClick={()=>toggleCustomRule(kind,i)}>{i}</button>)}</div>
                 </div>)}
                 <span>B/S rules use the neighborhood geometry selected above.</span>
               </div>}

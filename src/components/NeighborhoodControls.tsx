@@ -1,7 +1,7 @@
 import type {Dispatch,SetStateAction} from 'react';
 import type {SimSettings,NeighborShape} from '../engine/types';
 import {neighborOffsets} from '../engine/topology';
-import {DIRECTIONS,maxNeighborCount,neighborhoodLabel} from '../engine/neighborhood';
+import {DIRECTIONS,maxNeighborCount,neighborhoodLabel,normalizeActiveVotes} from '../engine/neighborhood';
 interface Props {settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSettings>>}
 const SAMPLES:readonly {id:NeighborShape;label:string;help:string}[]=[
  {id:'moore',label:'MOORE · 8 CELLS',help:'The eight nearest surrounding cells; classic Moore neighborhood.'},
@@ -13,34 +13,14 @@ const SAMPLES:readonly {id:NeighborShape;label:string;help:string}[]=[
 export default function NeighborhoodControls({settings:s,setSettings}:Props){
  const entry=SAMPLES.find(x=>x.id===s.neighborShape)??SAMPLES[0];
  const cap=maxNeighborCount(s);
- const setShape=(shape:NeighborShape)=>setSettings(v=>{
-  const next={...v,neighborShape:shape};
-  const limit=maxNeighborCount(next);
-  return {...next,cyclicThreshold:Math.min(v.cyclicThreshold,Math.max(1,limit)),
-    exciteThreshold:Math.min(v.exciteThreshold,Math.max(1,limit)),
-    speciesBirth:Math.min(v.speciesBirth,Math.max(1,limit)),
-    speciesSurvive:Math.min(v.speciesSurvive,limit),
-    speciesAttackBias:Math.min(v.speciesAttackBias,limit)};
- });
+ const setShape=(shape:NeighborShape)=>setSettings(v=>
+  normalizeActiveVotes({...v,neighborShape:shape}));
  const setDirection=(bit:number)=>setSettings(v=>{
-  const next=v.neighborMask^(1<<bit);
-  if(next===0)return v; // a selected direction is required
-  const updated={...v,neighborMask:next};
-  const cap=maxNeighborCount(updated);
-  return {...updated,cyclicThreshold:Math.min(v.cyclicThreshold,cap),
-   exciteThreshold:Math.min(v.exciteThreshold,cap),
-   speciesBirth:Math.min(v.speciesBirth,cap),speciesSurvive:Math.min(v.speciesSurvive,cap),
-   speciesAttackBias:Math.min(v.speciesAttackBias,cap)};
+  const mask=v.neighborMask^(1<<bit);
+  return mask===0?v:normalizeActiveVotes({...v,neighborMask:mask});
  });
- const setMask=(mask:number)=>setSettings(v=>{
-   const updated={...v,neighborMask:mask};
-   const cap=maxNeighborCount(updated);
-   return {...updated,cyclicThreshold:Math.min(v.cyclicThreshold,cap),
-     exciteThreshold:Math.min(v.exciteThreshold,cap),
-     speciesBirth:Math.min(v.speciesBirth,cap),
-     speciesSurvive:Math.min(v.speciesSurvive,cap),
-     speciesAttackBias:Math.min(v.speciesAttackBias,cap)};
- });
+ const setMask=(mask:number)=>setSettings(v=>
+  normalizeActiveVotes({...v,neighborMask:mask}));
  const offsets=new Set(neighborOffsets('square',2,2,s.neighborShape,s.neighborMask).map(([dx,dy])=>dx+','+dy));
  return <div className="neighborhood-lab" aria-label="B1 mathematical neighborhood controls">
   <div className="neighborhood-head"><strong>B1 · NEIGHBORHOOD ANARCHY</strong><span>REAL CA RULE</span></div>
