@@ -31,6 +31,39 @@ try{
     };
   });
   await page.goto(url,{waitUntil:'networkidle'});
+  // Funhouse F1 regression: precise stepping, authentic B/S roulette, and two
+  // unmistakably different random color buttons.
+  await page.locator('.transport .primary').click(); // pause first
+  const startGen=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  await page.locator('.funhouse-time-controls button').nth(0).click(); // STEP +10
+  await page.waitForFunction(start=>Number(document.querySelector('.readouts b')?.textContent?.replaceAll(',',''))===start+10,startGen);
+  await page.locator('.funhouse-time-controls button').nth(1).click(); // STEP +100
+  await page.waitForFunction(start=>Number(document.querySelector('.readouts b')?.textContent?.replaceAll(',',''))===start+110,startGen);
+  assert.equal(await page.locator('.funhouse-time-controls span').count(),0,'Fast forward finishes and clears progress');
+  await page.locator('#engine').selectOption('life');
+  for(const name of ['maze','mazectric','replicator','diamoeba','coral','amoeba']){
+    await page.locator('#life').selectOption(name);
+    assert.equal(await page.locator('#life').inputValue(),name,'Named rule '+name+' selectable');
+  }
+  await page.locator('#palette').selectOption('OPAL PRISM');
+  assert.equal(await page.locator('.color-wells input[type=color]').count(),12);
+  await page.locator('#random-preset').click();
+  assert.notEqual(await page.locator('#palette').inputValue(),'CUSTOM','Random Palette picks a named preset');
+  await page.locator('#palette').selectOption('OPAL PRISM');
+  const beforeColors=await page.locator('.color-wells input[type=color]').evaluateAll(els=>els.map(e=>e.value));
+  await page.locator('#random-colors').click();
+  const newColors=await page.locator('.color-wells input[type=color]').evaluateAll(els=>els.map(e=>e.value));
+  assert.equal(newColors.length,12,'New RGB palette keeps twelve editable swatches');
+  assert(newColors.every(c=>/^#[0-9a-f]{6}$/i.test(c)));
+  assert.notDeepEqual(newColors,beforeColors,'Random Colors creates a genuinely new palette');
+  assert.equal(await page.locator('#palette').inputValue(),'CUSTOM','New colors are not a named preset');
+  await page.locator('.color-wells input[type=color]').first().fill('#12fabc');
+  assert.equal(await page.locator('.color-wells input[type=color]').first().inputValue(),'#12fabc','Every invented swatch remains editable');
+  await page.getByRole('button',{name:'ROTATE STOPS'}).click();
+  await page.getByRole('button',{name:'REVERSE STOPS'}).click();
+  await page.getByRole('button',{name:'SHUFFLE STOPS'}).click();
+  await page.locator('#palette-motion').selectOption('pingpong');
+  assert.equal(await page.locator('#palette-motion').inputValue(),'pingpong');
   await page.locator('.transport .surprise').click();
   await page.locator('.status-msg').waitFor({state:'visible'});
   await page.getByRole('button',{name:'Dismiss status message'}).click();

@@ -1,7 +1,7 @@
 import paletteLibrary from '../palettes/astral-trash-palettes.json';
 
 export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus';
-export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'custom';
+export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'maze' | 'mazectric' | 'replicator' | 'diamoeba' | 'coral' | 'amoeba' | 'custom';
 export type PatternId = 'noise' | 'center' | 'rings' | 'stripes' | 'checker' | 'spiral' | 'web';
 export type AspectId = 'square' | 'portrait' | 'landscape';
 export type ColorBy = 'state' | 'age' | 'neighbors' | 'events' | 'radius' | 'x' | 'activity';
@@ -56,6 +56,7 @@ export interface Appearance {
   trails: boolean;
   paletteOffset: number;
   paletteCycle: number;
+  paletteMotion: 'forward' | 'pingpong';
   paletteReverse: boolean;
   smoothPalette: boolean;
   saturation: number;
@@ -109,7 +110,7 @@ export const INITIAL_SETTINGS: SimSettings = {
 export const INITIAL_APPEARANCE: Appearance = {
   palette:[...PALETTES['RADIOACTIVE CANDY']],
   colorBy:'state',skin:'glow',showGrid:false,trails:true,
-  paletteOffset:0,paletteCycle:0,paletteReverse:false,smoothPalette:false,
+  paletteOffset:0,paletteCycle:0,paletteMotion:'forward',paletteReverse:false,smoothPalette:false,
   saturation:1,contrast:1,brightness:1,glowStrength:0.8,
   skinThreshold:0.42,contourLines:5,contourWidth:1.5,
   chromeStrength:0.8,glassLines:0.7,temporalRGB:0,fossilOpacity:0
@@ -119,6 +120,12 @@ export const LIFE_RULES: Record<LifeRule,{birth:number[];survive:number[];label:
   highlife:{birth:[3,6],survive:[2,3],label:'HighLife · B36/S23'},
   seeds:{birth:[2],survive:[],label:'Seeds · B2/S'},
   daynight:{birth:[3,6,7,8],survive:[3,4,6,7,8],label:'Day & Night · B3678/S34678'},
+  maze:{birth:[3],survive:[1,2,3,4,5],label:'Maze · B3/S12345'},
+  mazectric:{birth:[3],survive:[1,2,3,4],label:'Mazectric · B3/S1234'},
+  replicator:{birth:[1,3,5,7],survive:[1,3,5,7],label:'Replicator · B1357/S1357'},
+  diamoeba:{birth:[3,5,6,7,8],survive:[5,6,7,8],label:'Diamoeba · B35678/S5678'},
+  coral:{birth:[3],survive:[4,5,6,7,8],label:'Coral · B3/S45678'},
+  amoeba:{birth:[3,5,7],survive:[1,3,5,8],label:'Amoeba · B357/S1358'},
   custom:{birth:[],survive:[],label:'MY OWN B/S RULE'}
 };
 export function worldDimensions(s:SimSettings):[number,number] {

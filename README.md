@@ -97,3 +97,11 @@ Original art/code project by merrypranxter.
 - Both the browser Worker and non-Worker fallback share the same palette/index algorithm, so their color behavior is consistent.
 - This retains normal GIF constraints: 256 colors **per frame**, so soft gradients and bloom will still be approximated compared with full-color video, but the animation is not trapped by colors in frame one.
 - Automated regression verifies four dramatically different hues survive GIF encode/decode and compares every decoded frame of a real palette-cycling automaton with its full-color renderer. The Chromium UI smoke test verifies the Worker writes local palettes that actually change.
+
+## FUNHOUSE F1 — Rule Roulette + Color Dice + Precision Stepping
+See [Funhouse Roadmap](docs/FUNHOUSE_ROADMAP.md) for the rest of the finishing phases (F2–F5 are NOT yet shipped).
+- Six additional genuine Life-like totalistic rules: Maze B3/S12345, Mazectric B3/S1234, Replicator B1357/S1357, Diamoeba B35678/S5678, Coral B3/S45678, Amoeba B357/S1358.
+- STEP +10 and STEP +100: intentional asynchronous 3-generation chunks yielding to animation frames. Keeps the UI responsive, tracks exact generations, and cancels pending work on resets, painting, rule changes, or recording.
+- **Two different random buttons.** RANDOM PALETTE chooses from the 31 named presets without changing rule/seed/color modifiers. RANDOM COLORS invents entirely unrestricted RGB colors for every existing editable swatch, retains stop count, and is saved via ordinary palette/recipe export. No special print or style constraints.
+- SHUFFLE STOPS, REVERSE STOPS, ROTATE STOPS reorder only the current palette copy; source presets remain unchanged.
+- Palette Ping-Pong uses a symmetric triangular wave driven by generation number, with deterministic live/GIF/video appearance. The existing continuous mode remains available; recipe loading defaults to continuous for older saved recipes.

@@ -4,6 +4,7 @@ import type { ChangeEvent, PointerEvent } from 'react';
 import { createWorld, paintWorld, stepWorld, rewindWorld } from './engine/sim';
 import { lookupCell } from './engine/topology';
 import { renderWorld } from './engine/render';
+import { randomColors, rotatedColors, shuffledColors } from './engine/funhouse';
 import MutantControls from './components/MutantControls';
 import SkinControls from './components/SkinControls';
 import StrangeControls, { SQUARE_ONLY_ENGINES } from './components/StrangeControls';
@@ -62,6 +63,8 @@ export default function App(){
   const [settings,setSettings]=useState<SimSettings>(INITIAL_SETTINGS);
   const [appearance,setAppearance]=useState<Appearance>(INITIAL_APPEARANCE);
   const [playing,setPlaying]=useState(true);
+  const [batchProgress,setBatchProgress]=useState<{done:number;total:number}|null>(null);
+  const batchTokenRef=useRef(0);
   const [speed,setSpeed]=useState(18);
   const [brush,setBrush]=useState(2);
   const [erase,setErase]=useState(false);
@@ -110,16 +113,34 @@ export default function App(){
     setSettings(s=>({...s,lifeRule:'custom',
       [kind]:s[kind].includes(number)?s[kind].filter(v=>v!==number):[...s[kind],number].sort((a,b)=>a-b)}));
   };
-  const mutateColors=()=>{
-    const names=Object.keys(PALETTES);
-    const pick=PALETTES[names[Math.floor(Math.random()*names.length)]];
-    setAppearance(a=>({...a,palette:[...pick],paletteOffset:Math.floor(Math.random()*pick.length),
-      paletteCycle:Math.random()<0.6?0:(Math.random()*0.35+0.03),
-      paletteReverse:Math.random()<0.5}));
+  // Selecting an existing named palette and inventing a completely new RGB
+  // palette are different actions. Neither touches math, skins, or print modes.
+  const randomPreset=()=>{
+    const options=Object.values(PALETTES).filter(colors=>
+      colors.length!==appearance.palette.length||
+      colors.some((c,i)=>c.toLowerCase()!==appearance.palette[i]?.toLowerCase()));
+    if(!options.length)return;
+    const colors=options[Math.floor(Math.random()*options.length)];
+    setAppearance(a=>({...a,palette:[...colors]}));
+    setMessage('Loaded a different existing color palette. All swatches remain editable.');
+  };
+  const inventPalette=()=>{
+    setAppearance(a=>({...a,palette:randomColors(a.palette.length)}));
+    setMessage('Invented a completely new random RGB palette. Edit any swatch you like.');
+  };
+  const shuffleStops=()=>setAppearance(a=>({...a,palette:shuffledColors(a.palette)}));
+  const flipStops=()=>setAppearance(a=>({...a,palette:[...a.palette].reverse()}));
+  const rotateStops=()=>setAppearance(a=>({...a,palette:rotatedColors(a.palette)}));
+  const cancelBatch=()=>{
+    batchTokenRef.current++;
+    setBatchProgress(null);
   };
   const draw=useCallback(()=>{
     if(canvasRef.current)renderWorld(canvasRef.current,worldRef.current,appearance,900);
   },[appearance]);
+
+  // Any rule-setting edit cancels a pending batch before new math is applied.
+  useEffect(()=>{batchTokenRef.current++;setBatchProgress(null);},[settings]);
 
   // Recreate only when initial-world geometry/seed changes.
   // Rule, color and trail adjustments now affect the running simulation.
@@ -158,13 +179,42 @@ export default function App(){
   },[playing,speed,settings,draw]);
 
   function oneStep(){
+    cancelBatch();
     setPlaying(false);
     worldRef.current=stepWorld(worldRef.current,settings);
     setGeneration(worldRef.current.generation);
     setPopulation(stat(worldRef.current));
     draw();
   }
+  async function advanceBatch(total:10|100){
+    if(recordingRef.current||batchProgress!==null)return;
+    batchTokenRef.current++;
+    const token=batchTokenRef.current;
+    setPlaying(false);
+    setBatchProgress({done:0,total});
+    let done=0;
+    // Max three generations per animation frame keeps iOS paint/cancel responsive.
+    while(done<total&&batchTokenRef.current===token&&!recordingRef.current){
+      const chunk=Math.min(3,total-done);
+      for(let i=0;i<chunk;i++){
+        worldRef.current=stepWorld(worldRef.current,settings);
+        done++;
+      }
+      setGeneration(worldRef.current.generation);
+      setPopulation(stat(worldRef.current));
+      draw();
+      setBatchProgress({done,total});
+      if(done<total){
+        await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
+      }
+    }
+    if(batchTokenRef.current===token){
+      setBatchProgress(null);
+      setMessage('Advanced precisely '+done+' generations without changing the universe seed.');
+    }
+  }
   function rewindStep(){
+    cancelBatch();
     if(settings.engine!=='margolus'||worldRef.current.generation===0)return;
     setPlaying(false);
     worldRef.current=rewindWorld(worldRef.current,settings);
@@ -173,14 +223,17 @@ export default function App(){
     draw();
   }
   function restart(){
+    cancelBatch();
     setResetNumber(n=>n+1);
     setMessage('Universe restarted from its exact seed.');
   }
   function randomize(){
+    cancelBatch();
     updateSetting('seed',Math.floor(Math.random()*4294967295));
     setMessage('New seeded universe generated. Keep the seed if you like it.');
   }
   function paint(e:PointerEvent<HTMLCanvasElement>){
+    cancelBatch();
     const canvas=canvasRef.current;if(!canvas)return;
     const r=canvas.getBoundingClientRect();
     const world=worldRef.current;
@@ -312,6 +365,7 @@ export default function App(){
       a.glassLines=numeric(a.glassLines,0,1,0.7);
       a.temporalRGB=numeric(a.temporalRGB,0,1,0);
       a.fossilOpacity=numeric(a.fossilOpacity,0,1,0);
+      if(!['forward','pingpong'].includes(a.paletteMotion))a.paletteMotion='forward';
       a.paletteReverse=!!a.paletteReverse;
       a.smoothPalette=!!a.smoothPalette;
       setSettings(s);setAppearance(a);setResetNumber(n=>n+1);
@@ -340,6 +394,7 @@ export default function App(){
   }
   async function startCapture(){
     if(recordingRef.current)return;
+    cancelBatch();
     const resumeAfter=playing;
     setLastExport(null);
     setCaptureError(null);
@@ -414,10 +469,18 @@ export default function App(){
             <span className="canvas-corner bl">{erase?'ERASE':'PAINT'} MODE</span>
           </div>
           <div className="transport">
-            <button className="primary" onClick={()=>setPlaying(v=>!v)} aria-label={playing?'Pause simulation':'Play simulation'}>{playing?'Ⅱ PAUSE':'▶ PLAY'}</button>
-            <button onClick={oneStep} title="Advance one generation">STEP +1</button>
+            <button className="primary" onClick={()=>{cancelBatch();setPlaying(v=>!v);}} aria-label={playing?'Pause simulation':'Play simulation'}>{playing?'Ⅱ PAUSE':'▶ PLAY'}</button>
+            <button onClick={oneStep} disabled={batchProgress!==null||capturing} title="Advance one generation">STEP +1</button>
             <button onClick={restart} title="Restart from same seed">↺ RESET</button>
             <button className="surprise" onClick={randomize}>✳ NEW SEED</button>
+          </div>
+          <div className="funhouse-time-controls">
+            <button type="button" disabled={batchProgress!==null||capturing} onClick={()=>void advanceBatch(10)}>⏭ STEP +10</button>
+            <button type="button" disabled={batchProgress!==null||capturing} onClick={()=>void advanceBatch(100)}>⏭ STEP +100</button>
+            {batchProgress&&<>
+              <span role="status">FAST FORWARD {batchProgress.done}/{batchProgress.total}</span>
+              <button type="button" onClick={cancelBatch} aria-label="Cancel fast forward">✕ STOP</button>
+            </>}
           </div>
           <div className="readouts">
             <span><b>{generation.toLocaleString()}</b> GEN</span>
@@ -559,8 +622,16 @@ export default function App(){
               <option value="CUSTOM">CUSTOM MIX</option>
             </select>
             <div className="palette-summary">
-              <span>{MOIRE_PALETTE_NAMES.length+AUTOMATART_PALETTE_NAMES.length} PALETTES · {appearance.palette.length} COLOR STOPS</span>
-              <button type="button" onClick={mutateColors}>✳ RANDOM PALETTE</button>
+              <span>{MOIRE_PALETTE_NAMES.length+AUTOMATART_PALETTE_NAMES.length} PRESETS · {appearance.palette.length} EDITABLE COLOR STOPS</span>
+              <div className="palette-chaos-buttons">
+                <button type="button" id="random-preset" onClick={randomPreset}>✳ RANDOM PALETTE</button>
+                <button type="button" id="random-colors" onClick={inventPalette}>🎲 RANDOM COLORS · NEW MIX</button>
+              </div>
+            </div>
+            <div className="palette-order-tools">
+              <button type="button" onClick={shuffleStops}>SHUFFLE STOPS</button>
+              <button type="button" onClick={flipStops}>REVERSE STOPS</button>
+              <button type="button" onClick={rotateStops}>ROTATE STOPS ↻</button>
             </div>
             <div className="export-grid">
               <button type="button" onClick={savePortablePalette} className="export">↓ EXPORT PALETTE JSON</button>
@@ -582,6 +653,12 @@ export default function App(){
               <label className="input-label" htmlFor="palette-cycle">Palette cycling per generation <em>{appearance.paletteCycle.toFixed(2)} stops</em></label>
               <input id="palette-cycle" type="range" min="-1" max="1" step=".02" value={appearance.paletteCycle}
                 onChange={e=>updateAppearance('paletteCycle',Number(e.target.value))}/>
+              <label className="input-label" htmlFor="palette-motion">Palette travel</label>
+              <select id="palette-motion" value={appearance.paletteMotion} onChange={e=>
+                updateAppearance('paletteMotion',e.target.value as 'forward'|'pingpong')}>
+                <option value="forward">FORWARD / CONTINUOUS WRAP</option>
+                <option value="pingpong">PING-PONG / BACK AND FORTH</option>
+              </select>
               <label className="toggle"><input type="checkbox" checked={appearance.paletteReverse}
                 onChange={e=>updateAppearance('paletteReverse',e.target.checked)}/><span>Reverse color direction</span></label>
               <label className="toggle"><input type="checkbox" checked={appearance.smoothPalette}
@@ -595,7 +672,7 @@ export default function App(){
               <label className="input-label" htmlFor="color-brightness">Brightness <em>{appearance.brightness.toFixed(2)}×</em></label>
               <input id="color-brightness" type="range" min=".15" max="2.5" step=".05" value={appearance.brightness}
                 onChange={e=>updateAppearance('brightness',Number(e.target.value))}/>
-              <button className="reset-color" onClick={()=>setAppearance(a=>({...a,paletteOffset:0,paletteCycle:0,paletteReverse:false,smoothPalette:false,saturation:1,contrast:1,brightness:1}))}>↺ RESET COLOR MODIFIERS</button>
+              <button className="reset-color" onClick={()=>setAppearance(a=>({...a,paletteOffset:0,paletteCycle:0,paletteMotion:'forward',paletteReverse:false,smoothPalette:false,saturation:1,contrast:1,brightness:1}))}>↺ RESET COLOR MODIFIERS</button>
             </div>
             <p className="module-note">All 26 original It's a Moiré 12-stop palettes are intact. Cycle colors through generations, reverse their order, or route cell activity and position into the same color system. These controls apply to GIF and video exports too.</p>
           </section>

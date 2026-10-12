@@ -1,4 +1,5 @@
 import type {Appearance,World} from './types';
+import { palettePhase } from './funhouse';
 
 type RGB=[number,number,number];
 const clamp=(v:number,min=0,max=1)=>Math.max(min,Math.min(max,v));
@@ -50,7 +51,7 @@ function drawFieldSkin(
     const diffuse=clamp(0.34+height*0.72+nx*0.55-ny*0.46,0,1.8);
     const presence=kind==='mercury'?smoothstep(threshold-0.14,threshold+0.14,height):
       Math.min(1,height*1.8+0.06);
-    const source=color(palette,world.cells[i]+Math.floor((a.paletteOffset??0)+world.generation*(a.paletteCycle??0)));
+    const source=color(palette,world.cells[i]+Math.floor(palettePhase(a,world.generation,palette.length)));
     for(let j=0;j<3;j++){
       // Metal-like material appearance comes from real density gradients.
       const metal=source[j]*(0.12+diffuse*(kind==='mercury'?0.8:0.9))
@@ -91,7 +92,7 @@ function drawContours(
   ctx.lineWidth=Math.max(0.55,a.contourWidth??1.5);
   for(let level=0;level<count;level++){
     const threshold=clamp((a.skinThreshold??0.42)+(level-(count-1)/2)*0.115,0.035,0.96);
-    const c=color(palette,level+Math.floor(a.paletteOffset??0));
+    const c=color(palette,level+Math.floor(palettePhase(a,world.generation,palette.length)));
     ctx.strokeStyle='rgb('+c.join(',')+')';
     ctx.shadowColor=ctx.strokeStyle;
     ctx.shadowBlur=2.5*(a.glowStrength??0.8);
@@ -151,7 +152,7 @@ function drawStainedGlass(
   for(let y=1;y<h-1;y+=skip)for(let x=1;x<w-1;x+=skip){
     const p=y*w+x;
     if(!world.cells[p])continue;
-    const c=color(palette,world.cells[p]+3);
+    const c=color(palette,world.cells[p]+3+Math.floor(palettePhase(a,world.generation,palette.length)));
     ctx.fillStyle='rgb('+c.join(',')+')';
     ctx.fillRect((x+0.3)*sx,(y+0.3)*sy,Math.max(1,sx*0.2),Math.max(1,sy*0.2));
   }

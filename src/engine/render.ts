@@ -1,6 +1,7 @@
 import type { Appearance, World } from './types';
 import { renderSpecialSkin } from './skins';
 import { projectionMap } from './topology';
+import { palettePhase } from './funhouse';
 
 const bg:[number,number,number]=[9,6,23];
 const backBuffers=new WeakMap<HTMLCanvasElement,HTMLCanvasElement>();
@@ -34,7 +35,7 @@ function renderSquareWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,out
   const palette=(a.palette.length?a.palette:['#ffffff']).map(rgb);
   const n=palette.length;
   const direction=a.paletteReverse?-1:1;
-  const cycle=(a.paletteOffset??0)+(world.generation*(a.paletteCycle??0));
+  const cycle=palettePhase(a,world.generation,n);
   const smooth=a.smoothPalette??false;
   const saturation=clamp(a.saturation??1,0,3);
   const contrast=clamp(a.contrast??1,0.2,3);
