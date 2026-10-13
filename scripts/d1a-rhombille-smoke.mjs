@@ -134,7 +134,8 @@ try{
  assert.deepEqual(cap.current.cells,stepWorld(next,s).cells);
  const [rw,rh]=recommendedDimensions(s,360);
  assert.equal(rw%2,0);assert.equal(rh%2,0);
- assert(Math.abs(rh/rw-ey/ex)<.2,'Rhombille recorder preserves real diamond shape');
+ const [liveEx,liveEy]=geometryExtent('rhombille',simW,simH);
+ assert(Math.abs(rh/rw-liveEy/liveEx)<.02,'Rhombille recorder preserves real diamond shape');
  assert(requiresWorldRestart(s,{...s,lattice:'hex'}));
  assert.equal(normalizeActiveVotes({...s,engine:'cyclic',cyclicThreshold:24}).cyclicThreshold,4);
  for(const aspect of ['square','portrait','landscape']){
