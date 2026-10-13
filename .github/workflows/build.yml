@@ -58,7 +58,7 @@ jobs:
 
       - name: Install Chromium and browser automation for recorder UI test
         run: |
-          npm install --no-save --no-audit --no-fund playwright
+          npm install --no-save --no-audit --no-fund playwright gifuct-js
           npx playwright install --with-deps chromium
       - name: Record GIF through actual browser Worker and verify UI
         run: node scripts/recorder-browser-smoke.mjs
