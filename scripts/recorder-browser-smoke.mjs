@@ -425,6 +425,14 @@ try{
   const loadedAgents=JSON.parse(await readFile(await agentRoundtrip.path(),'utf8'));
   assert.deepEqual(loadedAgents.world.turmiteAgents,initialAgents,
    'All agent coordinates and headings survive import/export');
+  await page.locator('#turmite-rule').fill('LLRR'); // deliberately uncommitted
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'c3-same-rule-reload.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(turmiteJson))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-rule')?.value==='RLLR');
+  assert.equal(await page.locator('#turmite-rule').inputValue(),'RLLR',
+   'Same-rule import resets stale draft rather than silently replacing saved agents');
   const corrupt=structuredClone(turmiteJson);corrupt.world.turmiteAgents[0].x=99999;
   await page.locator('input[type=file]').last().setInputFiles({
    name:'invalid-agent.json',mimeType:'application/json',
