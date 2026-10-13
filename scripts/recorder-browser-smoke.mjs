@@ -316,6 +316,63 @@ try{
   await page.waitForFunction(()=>(document.querySelector('.status-msg')?.textContent||'').includes('Could not load recipe'));
   assert.equal(await page.locator('#engine').inputValue(),'sandpile','Invalid grain snapshot rejected');
   console.log('PASS: browser Wireworld brush, sandpile feed, exact Uint32 recipe and bad-file rejection');
+  // C2: new mathematical engines, finger paints, rule parameters and
+  // exact stochastic recipe replay without an unrecorded RNG cursor.
+  await page.locator('#engine').selectOption('hodgepodge');
+  assert(await page.locator('#hodge-k1').isVisible(),'Hodgepodge divisor K1 visible');
+  assert(await page.locator('#hodge-k2').isVisible(),'Hodgepodge divisor K2 visible');
+  assert(await page.locator('#lattice').isDisabled(),'Hodgepodge uses specified Moore square lattice');
+  assert.equal(await page.locator('#neighbor-shape').count(),0);
+  await page.locator('#hodge-growth').fill('20');
+  await page.locator('#hodge-brush').fill('12');
+  const [hodgeFile]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const hodgeJson=JSON.parse(await readFile(await hodgeFile.path(),'utf8'));
+  assert.equal(hodgeJson.settings.engine,'hodgepodge');
+  assert.equal(hodgeJson.settings.hodgeGrowth,20);
+  assert.equal(hodgeJson.settings.hodgeBrush,12);
+  await page.locator('#engine').selectOption('forestfire');
+  assert(await page.locator('#forest-growth').isVisible());
+  assert(await page.locator('#forest-lightning').isVisible());
+  assert(await page.locator('#forest-brush-2').isVisible());
+  await page.locator('#forest-growth').fill('87');
+  await page.locator('#forest-lightning').fill('27');
+  await page.locator('#forest-brush-1').click();
+  assert.equal(await page.locator('#forest-brush-1').getAttribute('aria-pressed'),'true');
+  const [forestFile]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const forestJson=JSON.parse(await readFile(await forestFile.path(),'utf8'));
+  assert.equal(forestJson.settings.forestGrowth,.087);
+  assert.equal(forestJson.settings.forestLightning,.0027);
+  assert.equal(forestJson.settings.forestBrush,1);
+  assert.equal(forestJson.world.engine,'forestfire');
+  const savedCells=forestJson.world.arrays.cells,savedGeneration=forestJson.world.generation;
+  await page.locator('#engine').selectOption('life');
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'c2-forest.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(forestJson))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='forestfire');
+  assert.equal(await page.locator('#forest-lightning').inputValue(),'27');
+  const [forestRoundtrip]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const forestReload=JSON.parse(await readFile(await forestRoundtrip.path(),'utf8'));
+  assert.equal(forestReload.world.arrays.cells,savedCells);
+  assert.equal(forestReload.world.generation,savedGeneration);
+  const bogus=structuredClone(forestJson);
+  const invalid=Buffer.from(bogus.world.arrays.cells,'base64');invalid[3]=9;
+  bogus.world.arrays.cells=invalid.toString('base64');
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'c2-invalid-forest.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(bogus))
+  });
+  await page.waitForFunction(()=>(document.querySelector('.status-msg')?.textContent||'').includes('Could not load recipe'));
+  assert.equal(await page.locator('#engine').inputValue(),'forestfire','Invalid forest snapshot rejected');
+  await page.locator('#engine').selectOption('life');
+  console.log('PASS: C2 real Hodgepodge sliders, seeded fire climate, exact recipe replay and corrupt-state rejection');
   // Exercise custom birth/survival rule editor, then return to cyclic for GIF.
   await page.locator('#engine').selectOption('life');
   await page.locator('#life').selectOption('custom');

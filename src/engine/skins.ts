@@ -15,6 +15,8 @@ function density(world:World):Float32Array{
   for(let y=0;y<h;y++)for(let x=0;x<w;x++){
     const i=y*w+x,v=cells[i];
     let strength=world.engine==='sandpile'?Math.min(1,Math.log2((world.grains?.[i]??v)+1)/5):
+      world.engine==='hodgepodge'?Math.min(1,v/(world.hodgeStates??48)):
+      world.engine==='forestfire'?v===2?1:v===1?.55:0:
       world.engine==='wireworld'?v===2?1:v===3?.7:v===1?.3:0:
       world.engine==='cyclic'||world.engine==='species'?v/highest:
       v===1?1:v>1?0.66:0;

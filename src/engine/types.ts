@@ -4,7 +4,7 @@ import type {PrintShop} from './printshop';
 import type {DualColor} from './dual-color';
 import {DEFAULT_STENCIL_MASK} from './stencil';
 
-export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus' | 'wireworld' | 'sandpile';
+export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus' | 'wireworld' | 'sandpile' | 'hodgepodge' | 'forestfire';
 export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'maze' | 'mazectric' | 'replicator' | 'diamoeba' | 'coral' | 'amoeba' | 'custom';
 export type PatternId = 'noise' | 'center' | 'rings' | 'stripes' | 'checker' | 'spiral' | 'web';
 export type AspectId = 'square' | 'portrait' | 'landscape';
@@ -61,6 +61,16 @@ export interface SimSettings {
   sandRounds:number;
   sandSource:'center'|'random';
   sandBrush:number;
+  /** Gerhardt-Schuster variant: 0 healthy, 1..N-1 sick, N ill. */
+  hodgeStates:number;
+  hodgeK1:number;
+  hodgeK2:number;
+  hodgeGrowth:number;
+  hodgeBrush:number;
+  /** Drossel–Schwabl-style: per-site per-generation probabilities. */
+  forestGrowth:number;
+  forestLightning:number;
+  forestBrush:1|2;
 }
 export interface Appearance {
   print?: PrintShop;
@@ -107,6 +117,8 @@ export interface World {
   cells: Uint8Array;
   /** Canonical 32-bit heights, never conflated with display pixels. */
   grains?:Uint32Array;
+  /** Maximum Hodgepodge severity stage (8..64) for exact skin scaling. */
+  hodgeStates?:number;
   ages: Uint16Array;
   neighbors: Uint8Array;
   events: Uint8Array;
@@ -136,7 +148,9 @@ export const INITIAL_SETTINGS: SimSettings = {
   genStates:8,genBirth:[3],genSurvive:[2,3],exciteStates:8,exciteThreshold:2,
   largeRadius:2,largeBirthMin:6,largeBirthMax:9,largeSurviveMin:5,largeSurviveMax:12,
   speciesCount:3,speciesBirth:2,speciesSurvive:1,speciesAttackBias:1,
-  wireBrush:1,sandFeed:6,sandRounds:3,sandSource:'center',sandBrush:8
+  wireBrush:1,sandFeed:6,sandRounds:3,sandSource:'center',sandBrush:8,
+  hodgeStates:48,hodgeK1:2,hodgeK2:3,hodgeGrowth:12,hodgeBrush:28,
+  forestGrowth:0.012,forestLightning:0.0005,forestBrush:2
 };
 export const INITIAL_APPEARANCE: Appearance = {
   print:structuredClonePrint(INITIAL_PRINT_SHOP),

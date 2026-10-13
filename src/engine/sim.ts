@@ -2,6 +2,7 @@ import { LIFE_RULES, worldDimensions } from './types';
 import type { SimSettings, World } from './types';
 import { neighborOffsets, orientedMatch, ORIENTED_DIRECTIONS, rotateBlocks } from './topology';
 import {stepWireworld,stepSandpile,sandVisualState} from './circuits';
+import {stepHodgepodge,stepForestFire} from './reaction-worlds';
 
 function seededRandom(seed:number):()=>number{
   let a=seed>>>0;
@@ -36,6 +37,10 @@ export function createWorld(s:SimSettings):World{
     }else if(s.engine==='sandpile'){
       const height=rand()<chance?1+Math.floor(rand()*20):0;
       grains![p]=height;cells[p]=sandVisualState(height);
+    }else if(s.engine==='hodgepodge'){
+      cells[p]=rand()<chance?1+Math.floor(rand()*s.hodgeStates):0;
+    }else if(s.engine==='forestfire'){
+      if(rand()<chance)cells[p]=rand()<.015?2:1;
     }else if(s.engine==='cyclic'){
       cells[p]=rand()<chance?1+Math.floor(rand()*(s.cyclicStates-1)):0;
     }else if(s.engine==='brians'){
@@ -49,8 +54,9 @@ export function createWorld(s:SimSettings):World{
     }else cells[p]=rand()<chance?1:0;
     if(cells[p]>0||s.engine==='cyclic'){ages[p]=1;traces[p]=1;}
   }
-  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'?'vonNeumann':s.neighborShape,neighborMask:s.neighborMask,
-    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,ages,
+  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'?'vonNeumann':
+      s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
+    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,ages,
     neighbors:new Uint8Array(n),events:new Uint8Array(n),traces,
     previousCells:cells.slice(),olderCells:cells.slice(),fossils:new Float32Array(n)};
 }
@@ -67,7 +73,24 @@ export function stepWorld(prev:World,s:SimSettings):World{
   let nextGrains:Uint32Array|undefined;
   const neighbors=new Uint8Array(n),events=new Uint8Array(n),nextTraces=new Float32Array(n);
   const nextFossils=new Float32Array(n);
-  if(s.engine==='wireworld'){
+  if(s.engine==='hodgepodge'){
+    next.set(stepHodgepodge(cells,w,h,s.wrap,{states:s.hodgeStates,
+      k1:s.hodgeK1,k2:s.hodgeK2,growth:s.hodgeGrowth}));
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const p=y*w+x;
+      for(const [dx,dy] of neighborOffsets('square',x,y,'moore'))
+        if(valueAt(cells,w,h,x+dx,y+dy,s.wrap)>0)neighbors[p]++;
+    }
+  }else if(s.engine==='forestfire'){
+    next.set(stepForestFire(cells,w,h,s.wrap,{seed:s.seed,generation:prev.generation,
+      growth:s.forestGrowth,lightning:s.forestLightning}));
+    const dirs=neighborOffsets('square',0,0,'vonNeumann');
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const p=y*w+x;
+      for(const [dx,dy] of dirs)
+        if(valueAt(cells,w,h,x+dx,y+dy,s.wrap)===2)neighbors[p]++;
+    }
+  }else if(s.engine==='wireworld'){
     next.set(stepWireworld(cells,w,h,s.wrap));
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
       const p=y*w+x;
@@ -209,9 +232,11 @@ export function stepWorld(prev:World,s:SimSettings):World{
       :(old!==0&&now===0?1:old!==now?0.12:0);
     nextFossils[i]=Math.max(deposit,(prev.fossils?.[i]??0)*0.986);
   }
-  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'?'vonNeumann':s.neighborShape,neighborMask:s.neighborMask,
+  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'?'vonNeumann':
+      s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,
-    cells:next,grains:nextGrains,ages:nextAges,neighbors,events,traces:nextTraces,
+    cells:next,grains:nextGrains,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,
+    ages:nextAges,neighbors,events,traces:nextTraces,
     previousCells:cells.slice(),
     olderCells:prev.previousCells?.slice()??cells.slice(),
     fossils:nextFossils};
@@ -258,7 +283,8 @@ export function paintWorld(world:World,s:SimSettings,x:number,y:number,radius:nu
       const before=world.grains[p];
       const height=erase?0:before+s.sandBrush;
       world.grains[p]=height;world.cells[p]=sandVisualState(height);
-    }else world.cells[p]=erase?0:s.engine==='wireworld'?s.wireBrush:s.engine==='cyclic'?Math.max(1,Math.floor(s.cyclicStates/2))
+    }else world.cells[p]=erase?0:s.engine==='hodgepodge'?s.hodgeBrush:
+      s.engine==='forestfire'?s.forestBrush:s.engine==='wireworld'?s.wireBrush:s.engine==='cyclic'?Math.max(1,Math.floor(s.cyclicStates/2))
       :s.engine==='species'?Math.min(s.speciesCount,Math.max(1,species)):1;
     world.ages[p]=erase?0:1;
     world.traces[p]=erase?0:1;

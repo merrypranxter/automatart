@@ -24,7 +24,7 @@ export const INITIAL_MUTATION_LOCKS:MutationLocks={
 };
 const restartKeys=(s:SimSettings)=>[
   s.engine,s.cellCount,s.aspect,s.seed,s.pattern,s.density,
-  s.cyclicStates,s.genStates,s.exciteStates,s.speciesCount,s.lattice
+  s.cyclicStates,s.genStates,s.exciteStates,s.speciesCount,s.hodgeStates,s.lattice
 ];
 export function requiresWorldRestart(before:SimSettings,after:SimSettings):boolean{
   const a=restartKeys(before),b=restartKeys(after);
@@ -32,9 +32,9 @@ export function requiresWorldRestart(before:SimSettings,after:SimSettings):boole
 }
 const validEngines:EngineId[]=[
   'life','brians','cyclic','wolfram','generations','excitable',
-  'larger','species','oriented','margolus','wireworld','sandpile'
+  'larger','species','oriented','margolus','wireworld','sandpile','hodgepodge','forestfire'
 ];
-const squareOnly:EngineId[]=['wolfram','larger','oriented','margolus','wireworld','sandpile'];
+const squareOnly:EngineId[]=['wolfram','larger','oriented','margolus','wireworld','sandpile','hodgepodge','forestfire'];
 
 export function mutateAutomatart(
   sourceSettings:SimSettings,
@@ -99,7 +99,7 @@ export function mutateAutomatart(
   // A RULE lock protects the live mathematical rule, not merely the name
   // in the Life-like dropdown. Every rule candidate is engine compatible.
   if(!opts.locks.rule){
-    if(s.engine!=='margolus'&&s.engine!=='wolfram'&&s.engine!=='larger'&&s.engine!=='oriented'&&s.engine!=='wireworld'&&s.engine!=='sandpile'){
+    if(s.engine!=='margolus'&&s.engine!=='wolfram'&&s.engine!=='larger'&&s.engine!=='oriented'&&s.engine!=='wireworld'&&s.engine!=='sandpile'&&s.engine!=='hodgepodge'&&s.engine!=='forestfire'){
       if(s.lattice==='square'){
         offer('Neighborhood shape',()=>{
           s.neighborShape=choose(s.neighborShape,['moore','vonNeumann','square2','diamond2','directional','custom'] as const);
@@ -135,6 +135,17 @@ export function mutateAutomatart(
       offer('World edge behavior',()=>{s.wrap=!s.wrap});
     }
     switch(s.engine){
+      case 'hodgepodge':
+        offer('Recovery wave velocity',()=>{s.hodgeGrowth=intStep(s.hodgeGrowth,1,40,4)});
+        offer('Ill cell infection divisor',()=>{s.hodgeK1=intStep(s.hodgeK1,1,8,2)});
+        offer('Sick cell infection divisor',()=>{s.hodgeK2=intStep(s.hodgeK2,1,8,2)});
+        offer('Infection brush phase',()=>{s.hodgeBrush=intStep(s.hodgeBrush,1,s.hodgeStates,4)});
+        break;
+      case 'forestfire':
+        offer('Seeded regrowth probability',()=>{s.forestGrowth=floatStep(s.forestGrowth,.016,0,.2,4)});
+        offer('Seeded lightning probability',()=>{s.forestLightning=floatStep(s.forestLightning,.003,0,.025,5)});
+        offer('Paint trees or fire',()=>{s.forestBrush=s.forestBrush===1?2:1});
+        break;
       case 'wireworld':
         offer('Paint circuit material',()=>{s.wireBrush=choose(s.wireBrush,[1,2,3] as const)});
         break;
@@ -227,6 +238,10 @@ export function mutateAutomatart(
       if(s.engine==='cyclic')offer('Cyclic species count',()=>{s.cyclicStates=intStep(s.cyclicStates,3,24,3)});
       if(s.engine==='generations')offer('Afterlife decay states',()=>{s.genStates=intStep(s.genStates,3,24,3)});
       if(s.engine==='excitable')offer('Refractory states',()=>{s.exciteStates=intStep(s.exciteStates,3,24,3)});
+      if(s.engine==='hodgepodge')offer('Hodgepodge severity states',()=>{
+        s.hodgeStates=intStep(s.hodgeStates,8,64,8);
+        s.hodgeBrush=Math.min(s.hodgeBrush,s.hodgeStates);
+      });
       if(s.engine==='species')offer('Competing species count',()=>{s.speciesCount=intStep(s.speciesCount,2,8)});
     }
   }

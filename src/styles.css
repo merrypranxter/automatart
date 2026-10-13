@@ -491,3 +491,23 @@ body.art-viewer-open{overflow:hidden}
 .c1-grain-count span{font:800 10px 'Chakra Petch',monospace;color:#7debe7}
 @media(max-width:440px){.c1-lab{padding:10px 9px}.c1-materials{gap:4px}
  .c1-materials button{font-size:8px;min-height:59px}}
+
+
+/* C2: reactive fields + seeded forest-fire laboratory */
+.c2-lab{display:flex;flex-direction:column;gap:11px;margin:12px 0;padding:13px;
+ border:1px solid #ff59bb;border-radius:12px;
+ background:linear-gradient(138deg,#321735,#122b40 80%);}
+.c2-heading{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;}
+.c2-heading strong{font:900 13px 'Chakra Petch',monospace;color:#faff71}
+.c2-heading span{font:800 10px 'Chakra Petch',monospace;color:#51ffe5}
+.c2-presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.c2-presets button,.c2-materials button{min-height:43px;border:1px solid #aa64aa;
+ border-radius:8px;background:#39213d;color:#ffedff;
+ font:800 10px 'Chakra Petch',monospace;padding:8px 4px}
+.c2-presets button:focus-visible,.c2-materials button:focus-visible{outline:3px solid #32ffe2}
+.c2-presets button:hover{background:#673369;border-color:#fcff79}
+.c2-materials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.c2-materials button{min-height:66px}
+.c2-materials button b{display:block;font-size:22px}
+.c2-materials button.selected{background:#592a60;border-color:#faff71;box-shadow:0 0 12px #f8479988}
+@media(max-width:440px){.c2-lab{padding:10px 9px;gap:9px}.c2-presets button{font-size:9px}}

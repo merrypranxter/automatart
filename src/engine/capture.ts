@@ -98,7 +98,13 @@ export function createCaptureCursor(source:World,s:SimSettings,fps:number,stepsP
         current=next;
       }
       cursor.current=current;
-      return {settled:unchanged>=3,changed};
+      // A stochastic forest may be quiet for three (or many!) updates and
+      // then suddenly grow a tree or ignite via lightning. Never interpret
+      // a transient lull as mathematical stabilization.
+      const randomFuture=s.engine==='forestfire'&&(
+        (s.forestGrowth>0&&current.cells.includes(0))||
+        (s.forestLightning>0&&current.cells.includes(1)));
+      return {settled:unchanged>=3&&!randomFuture,changed};
     }
   };
   return cursor;
