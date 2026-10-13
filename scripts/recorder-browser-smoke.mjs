@@ -379,7 +379,7 @@ try{
   assert(await page.locator('#lattice').isDisabled(),'Ising requires square grid');
   await page.locator('#ising-temp').fill('110');
   await page.locator('#ising-coupling').fill('-100');
-  await page.locator('#ising-field').fill('35');
+  await page.locator('#ising-field').fill('40');
   await page.locator('#ising-brush-down').click();
   assert.equal(await page.locator('#ising-brush-down').getAttribute('aria-pressed'),'true');
   const [isingFile]=await Promise.all([
@@ -388,7 +388,7 @@ try{
   const isingJson=JSON.parse(await readFile(await isingFile.path(),'utf8'));
   assert.equal(isingJson.settings.isingTemperature,1.1);
   assert.equal(isingJson.settings.isingCoupling,-1);
-  assert.equal(isingJson.settings.isingField,.35);
+  assert.equal(isingJson.settings.isingField,.4);
   assert.equal(isingJson.settings.isingBrush,0);
   await page.locator('#engine').selectOption('turmites');
   assert(await page.locator('#turmite-count').isVisible(),'Turmite population setting exists');
