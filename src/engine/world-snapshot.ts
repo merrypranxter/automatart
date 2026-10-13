@@ -51,7 +51,7 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
     throw new Error('Invalid snapshot generation');
   if(!s.arrays||typeof s.arrays!=='object')throw new Error('Invalid snapshot content');
   const source=s.arrays;
-  const get=(name:keyof PackedWorld['arrays'],len:number)=>unpack(source[name],len);
+  const get=(name:keyof PackedWorld['arrays'],len:number)=>unpack(source[name]??'',len);
   const getU16=(name:keyof PackedWorld['arrays'])=>
     new Uint16Array(get(name,n*2).buffer);
   const getF32=(name:keyof PackedWorld['arrays'])=>
