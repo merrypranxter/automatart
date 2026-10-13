@@ -23,6 +23,7 @@ import ColorSignalControls from './components/ColorSignalControls';
 import {NEW_COLOR_SIGNALS,isNewColorSignal,signalOptions} from './engine/color-signals';
 import DualColorControls from './components/DualColorControls';
 import CircuitControls from './components/CircuitControls';
+import ReactionControls from './components/ReactionControls';
 import {validateDualColor} from './engine/dual-color';
 import {validatePrintShop} from './engine/printshop';
 import StrangeControls, { SQUARE_ONLY_ENGINES } from './components/StrangeControls';
@@ -51,7 +52,9 @@ const ENGINES: {id:EngineId;name:string;hint:string}[] = [
   {id:'oriented',name:'DIRECTIONAL LIFE',hint:'Non-totalistic neighbor patterns'},
   {id:'margolus',name:'REVERSE UNIVERSE',hint:'Reversible 2×2 block CA'},
   {id:'wireworld',name:'WIREWORLD',hint:'Four-state living electrical circuits'},
-  {id:'sandpile',name:'ABELIAN SANDPILE',hint:'Conservative grain avalanches'}
+  {id:'sandpile',name:'ABELIAN SANDPILE',hint:'Conservative grain avalanches'},
+  {id:'hodgepodge',name:'HODGEPODGE MACHINE',hint:'Gerhardt-Schuster reaction waves'},
+  {id:'forestfire',name:'FOREST FIRE',hint:'Seeded growth, spread and lightning'}
 ];
 const ASPECTS: {value:AspectId;name:string}[]=[
   {value:'square',name:'1:1 SQUARE'},
@@ -360,12 +363,13 @@ export default function App(){
     setPopulation(stat(worldRef.current));
   },[settings.engine,settings.cellCount,settings.aspect,settings.seed,
       settings.pattern,settings.density,settings.cyclicStates,
-      settings.genStates,settings.exciteStates,settings.speciesCount,
+      settings.genStates,settings.exciteStates,settings.speciesCount,settings.hodgeStates,
       settings.lattice,resetNumber]);
   useEffect(()=>{
     // Rule-only neighborhood changes preserve living cells and generation,
     // but visual entropy/flow inspectors must use the CURRENT rule graph.
-    worldRef.current.neighborShape=settings.engine==='sandpile'?'vonNeumann':settings.neighborShape;
+    worldRef.current.neighborShape=settings.engine==='sandpile'||settings.engine==='forestfire'?'vonNeumann':
+      settings.engine==='hodgepodge'?'moore':settings.neighborShape;
     worldRef.current.neighborMask=settings.neighborMask;
     worldRef.current.customStencilMask=settings.customStencilMask;
     worldRef.current.customStencilSize=settings.customStencilSize;
@@ -650,6 +654,14 @@ export default function App(){
       s.sandRounds=bounded(s.sandRounds,1,8,3);
       s.sandBrush=bounded(s.sandBrush,1,64,8);
       if(!['center','random'].includes(s.sandSource))s.sandSource='center';
+      s.hodgeStates=bounded(s.hodgeStates,8,64,48);
+      s.hodgeK1=bounded(s.hodgeK1,1,8,2);
+      s.hodgeK2=bounded(s.hodgeK2,1,8,3);
+      s.hodgeGrowth=bounded(s.hodgeGrowth,1,40,12);
+      s.hodgeBrush=bounded(s.hodgeBrush,1,s.hodgeStates,28);
+      s.forestGrowth=Math.max(0,Math.min(.2,Number.isFinite(Number(s.forestGrowth))?Number(s.forestGrowth):.012));
+      s.forestLightning=Math.max(0,Math.min(.025,Number.isFinite(Number(s.forestLightning))?Number(s.forestLightning):.0005));
+      s.forestBrush=bounded(s.forestBrush,1,2,2) as 1|2;
       for(const key of ['genBirth','genSurvive'] as const){
         if(!Array.isArray(s[key]))s[key]=key==='genBirth'?[3]:[2,3];
         s[key]=[...new Set(s[key].filter((v:unknown)=>Number.isInteger(v)&&Number(v)>=0&&Number(v)<=savedRuleCap))].sort((a,b)=>a-b);
@@ -923,6 +935,8 @@ export default function App(){
             {(settings.engine==='wireworld'||settings.engine==='sandpile')&&
               <CircuitControls settings={settings} setSettings={setSettings}
                 grains={worldRef.current.grains} inspectedCell={inspectedCell} width={worldRef.current.width}/>}
+            {(settings.engine==='hodgepodge'||settings.engine==='forestfire')&&
+              <ReactionControls settings={settings} setSettings={setSettings}/>}
             {settings.engine==='brians'&&<p className="module-note">Three-state Brain: OFF → FIRING → REFRACTORY → OFF. Exactly two firing neighbors cause ignition.</p>}
             {settings.engine==='cyclic'&&<>
               <label className="input-label" htmlFor="states">Color species <em>{settings.cyclicStates}</em></label>
