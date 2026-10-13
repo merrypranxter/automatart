@@ -735,3 +735,28 @@ body.art-viewer-open{overflow:hidden}
 .c4-modes button.selected,.c4-masks button.selected,.c4-bits button.selected{border-color:#efff80;background:#642e72;color:#fffab3}
 .c4-modes button:focus-visible,.c4-masks button:focus-visible,.c4-bits button:focus-visible{outline:3px solid #3effe8}
 @media(max-width:440px){.c4-lab{padding:10px 8px}.c4-readouts b{font-size:16px}}
+
+/* Dynamics P1: actual CA behavior, distinct from Color Lab animation controls */
+.cyclic-dynamics-lab{display:flex;flex-direction:column;gap:10px;padding:13px;
+ margin:10px 0;border:1px solid #fe63d2;border-radius:12px;
+ background:linear-gradient(135deg,#36113d,#1b314e 95%)}
+.cyclic-dynamics-heading{display:flex;justify-content:space-between;align-items:center;
+ gap:8px;flex-wrap:wrap}
+.cyclic-dynamics-heading strong{color:#f3ff73;font:900 13px 'Chakra Petch',monospace}
+.cyclic-dynamics-heading span{color:#60fff3;font:800 10px 'Chakra Petch',monospace}
+.cyclic-dynamics-meters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.cyclic-dynamics-meters>div{background:#141b35;border:1px solid #94528b;
+ border-radius:9px;padding:9px;display:flex;flex-direction:column;gap:4px}
+.cyclic-dynamics-meters b{color:#ffff87;font:900 23px 'Chakra Petch',monospace}
+.cyclic-dynamics-meters span{font:800 9px 'Chakra Petch',monospace;color:#74fff0}
+.cyclic-dynamics-status{font-size:12px;color:#fff3b4;border-left:3px solid #f2b85f;
+ padding:7px 9px;background:#312b42;border-radius:3px}
+.cyclic-dynamics-presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.cyclic-dynamics-presets button{min-height:42px;border-radius:8px;padding:7px 5px;
+ background:#422754;color:#f7ecff;border:1px solid #a46a9c;
+ font:800 10px 'Chakra Petch',monospace}
+.cyclic-dynamics-presets button:hover{background:#61316d;border-color:#b9ff88}
+.cyclic-dynamics-presets button:focus-visible{outline:3px solid #5afff2}
+@media(max-width:425px){.cyclic-dynamics-lab{padding:10px 8px}
+ .cyclic-dynamics-meters b{font-size:18px}
+ .cyclic-dynamics-presets button{font-size:9px}}
