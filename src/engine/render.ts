@@ -1,6 +1,6 @@
 import type { Appearance, World } from './types';
 import { renderSpecialSkin } from './skins';
-import { projectionMap } from './topology';
+import { projectionMap, geometryExtent } from './topology';
 import { palettePhase } from './funhouse';
 import {sandStateColorIndex} from './circuits';
 import { applyPrintShop } from './printshop';
