@@ -443,6 +443,7 @@ try{
    'Invalid agents do not corrupt live world');
   // Actual animated-GIF regression: ant marker at its saved location survives
   // canvas rendering, palette quantization and the real browser GIF Worker.
+  const gridBeforeAntGif=await page.locator('#resolution').inputValue();
   await page.locator('#turmite-count').fill('1');
   await page.locator('#resolution').fill('32');
   await page.locator('#skin').selectOption('pixels');
@@ -486,6 +487,7 @@ try{
   await page.locator('.stage-capture-success .dismiss-export').click();
   console.log('PASS: C3 real animated GIF encodes a visible ant marker at its saved coordinate');
   await page.locator('#engine').selectOption('life');
+  await page.locator('#resolution').fill(gridBeforeAntGif);
   console.log('PASS: C3 actual Ising and Turmite controls, L/R rules, agent snapshot and invalid load');
   // Exercise custom birth/survival rule editor, then return to cyclic for GIF.
   await page.locator('#engine').selectOption('life');
@@ -509,6 +511,10 @@ try{
   assert(await page.locator('.rewind-button').isVisible(),'Exact cell-state rewind available');
   assert(await page.locator('#lattice').isDisabled(),'Margolus cannot use triangular / hexagonal partitions');
   await page.locator('#engine').selectOption('cyclic');
+  // A deterministic, populated baseline is required to distinguish all
+  // seven visual skins; don't depend on the sparse seed left by prior tests.
+  await page.locator('#seed-pattern').selectOption('noise');
+  await page.locator('#density').fill('48');
   await page.locator('.transport .primary').click(); // pause for deterministic skin comparison
   const lattices=[];
   for(const shape of ['square','hex','triangle']){
