@@ -373,6 +373,61 @@ try{
   assert.equal(await page.locator('#engine').inputValue(),'forestfire','Invalid forest snapshot rejected');
   await page.locator('#engine').selectOption('life');
   console.log('PASS: C2 real Hodgepodge sliders, seeded fire climate, exact recipe replay and corrupt-state rejection');
+  // C3: physical Ising spins, Turmite heading agents and saved custom L/R rules.
+  await page.locator('#engine').selectOption('ising');
+  assert(await page.locator('#ising-temp').isVisible(),'Ising temperature slider exists');
+  assert(await page.locator('#lattice').isDisabled(),'Ising requires square grid');
+  await page.locator('#ising-temp').fill('110');
+  await page.locator('#ising-coupling').fill('-100');
+  await page.locator('#ising-field').fill('35');
+  await page.locator('#ising-brush-down').click();
+  assert.equal(await page.locator('#ising-brush-down').getAttribute('aria-pressed'),'true');
+  const [isingFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const isingJson=JSON.parse(await readFile(await isingFile.path(),'utf8'));
+  assert.equal(isingJson.settings.isingTemperature,1.1);
+  assert.equal(isingJson.settings.isingCoupling,-1);
+  assert.equal(isingJson.settings.isingField,.35);
+  assert.equal(isingJson.settings.isingBrush,0);
+  await page.locator('#engine').selectOption('turmites');
+  assert(await page.locator('#turmite-count').isVisible(),'Turmite population setting exists');
+  await page.locator('#turmite-count').fill('3');
+  await page.locator('#turmite-rule').fill('RLLR');
+  await page.getByRole('button',{name:'USE RULE'}).click();
+  await page.locator('#turmite-brush').fill('2');
+  const [turmiteFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const turmiteJson=JSON.parse(await readFile(await turmiteFile.path(),'utf8'));
+  assert.equal(turmiteJson.settings.engine,'turmites');
+  assert.equal(turmiteJson.settings.turmiteRule,'RLLR');
+  assert.equal(turmiteJson.settings.turmiteCount,3);
+  assert.equal(turmiteJson.settings.turmiteBrush,2);
+  assert.equal(turmiteJson.world.turmiteAgents.length,3);
+  const initialAgents=turmiteJson.world.turmiteAgents;
+  await page.locator('#engine').selectOption('life');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'c3-turmites.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(turmiteJson))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='turmites');
+  const [agentRoundtrip]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const loadedAgents=JSON.parse(await readFile(await agentRoundtrip.path(),'utf8'));
+  assert.deepEqual(loadedAgents.world.turmiteAgents,initialAgents,
+   'All agent coordinates and headings survive import/export');
+  const corrupt=structuredClone(turmiteJson);corrupt.world.turmiteAgents[0].x=99999;
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'invalid-agent.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(corrupt))
+  });
+  await page.waitForFunction(()=>(document.querySelector('.status-msg')?.textContent||'').includes('Could not load recipe'));
+  assert.equal(await page.locator('#engine').inputValue(),'turmites',
+   'Invalid agents do not corrupt live world');
+  await page.locator('#engine').selectOption('life');
+  console.log('PASS: C3 actual Ising and Turmite controls, L/R rules, agent snapshot and invalid load');
   // Exercise custom birth/survival rule editor, then return to cyclic for GIF.
   await page.locator('#engine').selectOption('life');
   await page.locator('#life').selectOption('custom');
