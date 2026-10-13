@@ -511,3 +511,32 @@ body.art-viewer-open{overflow:hidden}
 .c2-materials button b{display:block;font-size:22px}
 .c2-materials button.selected{background:#592a60;border-color:#faff71;box-shadow:0 0 12px #f8479988}
 @media(max-width:440px){.c2-lab{padding:10px 9px;gap:9px}.c2-presets button{font-size:9px}}
+
+
+/* C3 true Ising magnetic physics and Langton-style Turmite agent lab */
+.c3-lab{display:flex;flex-direction:column;gap:10px;padding:12px;margin:12px 0;
+ border-radius:12px;border:1px solid #ea6dca;background:linear-gradient(135deg,#321540,#14323d 90%)}
+.c3-header{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap;align-items:center}
+.c3-header strong{font:900 13px 'Chakra Petch',monospace;color:#f7ff6c}
+.c3-header span{font:800 10px 'Chakra Petch',monospace;color:#67ffe4}
+.c3-readouts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.c3-readouts>div{background:#17122e;border:1px solid #825a98;border-radius:8px;
+ display:flex;flex-direction:column;gap:4px;padding:10px 7px}
+.c3-readouts b{font:900 22px 'Chakra Petch',monospace;color:#faff73}
+.c3-readouts span{font:800 9px 'Chakra Petch',monospace;color:#8df6ee}
+.c3-presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.c3-presets button,.c3-brush button,.c3-custom button{min-height:42px;border-radius:7px;
+ border:1px solid #a667ad;background:#40204b;color:#fbe3ff;padding:6px;
+ font:800 10px 'Chakra Petch',monospace}
+.c3-presets button:hover,.c3-brush button:hover{background:#68376b;border-color:#dcff6c}
+.c3-brush{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.c3-brush button.selected{border-color:#c7ff6b;background:#6a2d65;color:#faffc0}
+.c3-custom{display:flex;gap:6px}
+.c3-custom input{min-width:0;flex:1;min-height:42px;padding:7px;
+ border:1px solid #c66fcd;border-radius:7px;background:#150e24;color:#eaff79;
+ font:900 15px 'Chakra Petch',monospace;letter-spacing:2px}
+.c3-custom button{flex-shrink:0;background:#283e48;border-color:#7fffe7}
+.c3-custom button:disabled{opacity:.4;cursor:not-allowed}
+.c3-lab button:focus-visible,.c3-custom input:focus-visible{outline:3px solid #4cffeb}
+@media(max-width:425px){.c3-lab{padding:10px 8px}.c3-presets button{font-size:9px}
+.c3-readouts b{font-size:18px}}
