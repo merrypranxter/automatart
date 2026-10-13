@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {readFile} from 'node:fs/promises';
 import {chromium} from 'playwright';
+import {withAutoTabs,openTab} from './ui-tabs.mjs';
 
 const url='http://127.0.0.1:4178';
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','4178','--strictPort'],{
@@ -21,7 +22,8 @@ try{
   }
   assert(ready,'Vite preview server failed to start: '+diagnostics.join(''));
   browser=await chromium.launch({headless:true,args:['--no-sandbox']});
-  const page=await browser.newPage({viewport:{width:390,height:844}});
+  // Controls live in studio-shell tabs; locators open the owning tab first.
+  const page=withAutoTabs(await browser.newPage({viewport:{width:390,height:844}}));
   const errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{
@@ -32,6 +34,28 @@ try{
     };
   });
   await page.goto(url,{waitUntil:'networkidle'});
+  // Studio shell: stage always on screen, one tab rail, one visible panel,
+  // and nothing wider than a phone.
+  const tabIds=['world','rules','paint','mutate','color','patch','skin','print','export'];
+  assert.equal(await page.locator('[role="tab"]').count(),tabIds.length,'One tab per control section');
+  for(const id of tabIds){
+    await openTab(page,id);
+    assert.equal(await page.locator('[role="tabpanel"]:not([hidden])').count(),1,'Exactly one panel visible: '+id);
+    assert(await page.locator('#panel-'+id).isVisible(),id+' panel visible when its tab is selected');
+    assert(await page.locator('canvas[aria-label^="Interactive cellular"]').isVisible(),'Stage stays visible on '+id);
+    assert(await page.locator('.transport .primary').isVisible(),'Transport stays visible on '+id);
+    assert(!(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)),'No horizontal page scroll on '+id);
+  }
+  await page.locator('#tab-export').focus();
+  await page.keyboard.press('Home');
+  assert.equal(await page.locator('#tab-world').getAttribute('aria-selected'),'true','Home jumps to first tab');
+  await page.keyboard.press('ArrowRight');
+  assert.equal(await page.locator('#tab-rules').getAttribute('aria-selected'),'true','Arrow keys move between tabs');
+  await openTab(page,'world');
+  await page.locator('.export-button').click();
+  assert.equal(await page.locator('#tab-export').getAttribute('aria-selected'),'true','Top-bar EXPORT opens the export panel');
+  assert(await page.locator('#engine').isVisible(),'Species picker lives in the always-visible top bar');
+  console.log('PASS: studio shell tabs, keyboard navigation, persistent stage and phone-width layout');
   // Funhouse F1 regression: precise stepping, authentic B/S roulette, and two
   // unmistakably different random color buttons.
   await page.locator('.transport .primary').click(); // pause first
@@ -192,6 +216,14 @@ try{
   await page.locator('.custom-rule-editor .rule-bits').first().locator('button').nth(10).click();
   assert.equal(await page.locator('.custom-rule-editor .rule-bits').first().locator('button').nth(10)
     .getAttribute('aria-pressed'),'true','B10 genuinely selectable');
+  // Hold time still while comparing generation counters: a restart would
+  // still reset the counter to 0, but a running 18 gen/s clock can no longer
+  // race Playwright's scroll/stability waits.
+  const setLive=async want=>{
+    const live=(await page.locator('.transport .primary').getAttribute('aria-label'))==='Pause simulation';
+    if(live!==want)await page.locator('.transport .primary').click();
+  };
+  await setLive(false);
   const b1Gen=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
   await page.locator('#neighbor-shape').selectOption('diamond2');
   assert((await page.locator('.neighborhood-count').innerText()).includes('12'));
@@ -273,6 +305,7 @@ try{
   await page.locator('#lattice').selectOption('square');
   await page.locator('#neighbor-shape').selectOption('moore');
   console.log('PASS: B2 interactive 5x5/3x3 painting, transforms, save/load, invalid center and graph gating');
+  await setLive(true);
   // C1: Both new engines expose real states, exact snapshot data and compatible rules.
   await page.locator('#engine').selectOption('wireworld');
   assert(await page.locator('#wire-brush-2').isVisible(),'Wireworld head brush visible');

@@ -7,6 +7,8 @@ type Props={
   setSettings:Dispatch<SetStateAction<SimSettings>>;
   onRewind:()=>void;
   generation:number;
+  /** Which half to render: the lattice picker (WORLD) or engine rules (RULES). */
+  part?:'lattice'|'rules'|'all';
 };
 const DIRS=[
   {bit:0,label:'NW'},{bit:1,label:'N'},{bit:2,label:'NE'},
@@ -14,12 +16,13 @@ const DIRS=[
   {bit:6,label:'SW'},{bit:5,label:'S'},{bit:4,label:'SE'}
 ];
 export const SQUARE_ONLY_ENGINES=['wolfram','larger','oriented','margolus','wireworld','sandpile','hodgepodge','forestfire','ising','turmites'];
-export default function StrangeControls({settings:s,setSettings,onRewind,generation}:Props){
+export default function StrangeControls({settings:s,setSettings,onRewind,generation,part='all'}:Props){
   const squareOnly=SQUARE_ONLY_ENGINES.includes(s.engine);
   const set=(key:keyof SimSettings,value:unknown)=>
     setSettings(prev=>({...prev,[key]:value}));
+  const showLattice=part!=='rules',showRules=part!=='lattice';
   return <>
-    <div className="lattice-picker">
+    {showLattice&&<div className="lattice-picker">
       <label className="input-label" htmlFor="lattice">Mathematical lattice</label>
       <select id="lattice" value={squareOnly?'square':s.lattice}
         disabled={squareOnly}
@@ -34,8 +37,8 @@ export default function StrangeControls({settings:s,setSettings,onRewind,generat
         s.lattice==='hex'?'Real odd-row-offset hexagonal adjacency; six surrounding neighbors, not hexagon-shaped square rules.':
         s.lattice==='triangle'?'Real triangle edge adjacency: left, right and one vertical neighbor determined by alternating triangle orientation.':
         'Square lattice with Moore, Von Neumann, radius-2 square/diamond or directional neighborhoods.'}</p>
-    </div>
-    {s.engine==='oriented'&&<div className="strange-rule">
+    </div>}
+    {showRules&&s.engine==='oriented'&&<div className="strange-rule">
       <h3>DIRECTIONAL BIRTH STENCIL</h3>
       <p className="skin-description">PURE CA · 8-neighbor non-totalistic rule. Birth responds to the actual arrangement of occupied neighbors, not merely how many are alive. Click the directions to create a birth template.</p>
       <div className="direction-grid">
@@ -75,7 +78,7 @@ export default function StrangeControls({settings:s,setSettings,onRewind,generat
         onChange={e=>set('orientedSurviveMax',Number(e.target.value))}/>
       <p className="skin-description">Choose exact for delicate geometric structures or contains for aggressive directional infections. Rule changes apply to the running universe.</p>
     </div>}
-    {s.engine==='margolus'&&<div className="strange-rule">
+    {showRules&&s.engine==='margolus'&&<div className="strange-rule">
       <h3>MARGOLUS / BLOCK UNIVERSE</h3>
       <p className="skin-description">PURE REVERSIBLE BLOCK CA · Each 2×2 block rotates clockwise on each tick. The partition staggers by one cell every generation. This is a bijection of the complete binary cell configuration. You can exactly invert the cells one generation at a time. Ages and decorative fossils are not reversible.</p>
       <div className="reversible-flow">2×2 BLOCK → ROTATE ↻ → STAGGER ↘ → REPEAT</div>

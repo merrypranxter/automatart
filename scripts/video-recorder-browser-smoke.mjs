@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {chromium} from 'playwright';
+import {withAutoTabs,openTab} from './ui-tabs.mjs';
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','4179','--strictPort'],
   {stdio:['ignore','pipe','pipe']});
 let browser;
@@ -15,7 +16,8 @@ try{
   }
   assert(up,'Video browser preview did not start');
   browser=await chromium.launch({headless:true,args:['--no-sandbox']});
-  const page=await browser.newPage({viewport:{width:390,height:844}});
+  // Controls live in studio-shell tabs; locators open the owning tab first.
+  const page=withAutoTabs(await browser.newPage({viewport:{width:390,height:844}}));
   const failures=[];
   page.on('pageerror',e=>failures.push(e.message));
   await page.addInitScript(()=>{
