@@ -117,6 +117,8 @@ export interface World {
   cells: Uint8Array;
   /** Canonical 32-bit heights, never conflated with display pixels. */
   grains?:Uint32Array;
+  /** Maximum Hodgepodge severity stage (8..64) for exact skin scaling. */
+  hodgeStates?:number;
   ages: Uint16Array;
   neighbors: Uint8Array;
   events: Uint8Array;

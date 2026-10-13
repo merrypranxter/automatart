@@ -56,7 +56,7 @@ export function createWorld(s:SimSettings):World{
   }
   return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
-    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,ages,
+    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,ages,
     neighbors:new Uint8Array(n),events:new Uint8Array(n),traces,
     previousCells:cells.slice(),olderCells:cells.slice(),fossils:new Float32Array(n)};
 }
@@ -235,7 +235,8 @@ export function stepWorld(prev:World,s:SimSettings):World{
   return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,
-    cells:next,grains:nextGrains,ages:nextAges,neighbors,events,traces:nextTraces,
+    cells:next,grains:nextGrains,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,
+    ages:nextAges,neighbors,events,traces:nextTraces,
     previousCells:cells.slice(),
     olderCells:prev.previousCells?.slice()??cells.slice(),
     fossils:nextFossils};

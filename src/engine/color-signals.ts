@@ -29,7 +29,7 @@ function maxStates(world:World){
   if(world.engine==='cyclic'||world.engine==='species'||world.engine==='generations'||world.engine==='excitable')return 12;
   if(world.engine==='brians')return 3;
   if(world.engine==='wireworld')return 4;
-  if(world.engine==='hodgepodge')return 65;
+  if(world.engine==='hodgepodge')return (world.hodgeStates??48)+1;
   if(world.engine==='forestfire')return 3;
   if(world.engine==='sandpile')return 256;
   return 2;

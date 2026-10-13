@@ -75,6 +75,9 @@ try{
  const wave=stepWorld(hWorld,hSettings);
  assert(wave.cells.some(x=>x>0)&&wave.cells.every(x=>x<=30),'Hodgepodge evolves multistate infection');
  assert.equal(wave.neighborShape,'moore');
+ assert.equal(wave.hodgeStates,30,'World preserves active Hodgepodge stage cap');
+ assert.equal(cloneWorld(wave).hodgeStates,30,'Export clone keeps dynamic color scaling');
+ assert.equal(restoreWorldSnapshot(snapshotWorld(wave),hSettings).hodgeStates,30);
  const forest={...INITIAL_SETTINGS,engine:'forestfire',cellCount:32,seed:472,
   density:.24,forestGrowth:.03,forestLightning:.004,forestBrush:2};
  let fw=createWorld(forest);
@@ -96,6 +99,32 @@ try{
  assert.equal(cloneWorld(fw).generation,fw.generation);
  const capture=createCaptureCursor(fw,forest,10,10);
  assert.deepEqual(capture.current.cells,fw.cells,'Recorder clones exact source');
+ // Find a reproducible seed that has three quiet lightning draws at one tree,
+ // followed by an ignition. The settled GIF recorder must NOT end on frame 3.
+ let delayedSeed=0;
+ for(let seed=1;seed<5000;seed++){
+  const v=[0,1,2,3].map(g=>random01(seed,g,0,1));
+  if(v[0]>.2&&v[1]>.2&&v[2]>.2&&v[3]<.2){delayedSeed=seed;break;}
+ }
+ assert(delayedSeed>0,'Found predictable delayed strike fixture');
+ const quietSettings={...forest,seed:delayedSeed,forestGrowth:0,forestLightning:.2};
+ const quietWorld=createWorld(quietSettings);
+ quietWorld.cells.fill(0);quietWorld.cells[0]=1;
+ const quietCapture=createCaptureCursor(quietWorld,quietSettings,10,10);
+ for(let i=0;i<3;i++){
+  const frame=quietCapture.advance();
+  assert.equal(frame.changed,false,'No ignition in first three frames');
+  assert.equal(frame.settled,false,'Quiet forest cannot prematurely settle');
+ }
+ const strike=quietCapture.advance();
+ assert.equal(strike.changed,true,'Seeded lightning strikes after quiet interval');
+ assert.equal(quietCapture.current.cells[0],2,'Late strike is real');
+ const trulyStatic={...forest,forestGrowth:0,forestLightning:0};
+ const stableWorld=createWorld(trulyStatic);
+ stableWorld.cells.fill(0);stableWorld.cells[0]=1;
+ const stableCursor=createCaptureCursor(stableWorld,trulyStatic,10,10);
+ for(let i=0;i<2;i++)assert.equal(stableCursor.advance().settled,false);
+ assert.equal(stableCursor.advance().settled,true,'Genuinely stable forests can settle');
  const forestSignals=computeColorSignal(fw,{...INITIAL_APPEARANCE,colorBy:'entropy'},'entropy');
  assert(forestSignals.every(v=>Number.isFinite(v)&&v>=0&&v<=1.00001));
  const bad=structuredClone(snap);
