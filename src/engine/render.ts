@@ -25,7 +25,8 @@ const clamp=(v:number,min:number,max:number)=>Math.min(max,Math.max(min,v));
 const wrap=(value:number,n:number)=>((value%n)+n)%n;
 function renderSquareWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,outputWidth=900,outputHeight?:number):void{
   const w=world.width,h=world.height;
-  const outW=outputWidth,outH=outputHeight??Math.round(outputWidth*h/w);
+  const [gx,gy]=geometryExtent(world.lattice??'square',w,h);
+  const outW=outputWidth,outH=outputHeight??Math.round(outputWidth*(world.lattice==='rhombille'?gy/gx:h/w));
   if(canvas.width!==outW)canvas.width=outW;
   if(canvas.height!==outH)canvas.height=outH;
   const ctx=canvas.getContext('2d',{alpha:false});
@@ -175,7 +176,8 @@ export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,ou
     return;
   }
   const w=world.width,h=world.height;
-  const outW=outputWidth,outH=outputHeight??Math.round(outputWidth*h/w);
+  const [gx,gy]=geometryExtent(world.lattice,w,h);
+  const outW=outputWidth,outH=outputHeight??Math.round(outputWidth*(world.lattice==='rhombille'?gy/gx:h/w));
   if(canvas.width!==outW)canvas.width=outW;
   if(canvas.height!==outH)canvas.height=outH;
   const ctx=canvas.getContext('2d',{alpha:false});

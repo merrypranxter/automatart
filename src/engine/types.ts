@@ -3,6 +3,7 @@ import {INITIAL_PRINT_SHOP,structuredClonePrint} from './printshop';
 import type {PrintShop} from './printshop';
 import type {DualColor} from './dual-color';
 import {DEFAULT_STENCIL_MASK} from './stencil';
+import {RHOMBILLE_VERTICAL_SCALE} from './rhombille';
 import type {TurmiteAgent} from './spins-turmites';
 
 export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus' | 'wireworld' | 'sandpile' | 'hodgepodge' | 'forestfire' | 'ising' | 'turmites' | 'hpp';
@@ -12,7 +13,7 @@ export type AspectId = 'square' | 'portrait' | 'landscape';
 export type ColorBy = 'state' | 'age' | 'neighbors' | 'events' | 'radius' | 'x' | 'activity' | 'entropy' | 'boundaries' | 'diversity' | 'flow' | 'birthFlash' | 'deathHeat' | 'generationWave' | 'angular' | 'diagonal' | 'gradient';
 export type SkinId = 'pixels' | 'soft' | 'glow' | 'contours' | 'mercury' | 'relief' | 'glass';
 export type NeighborShape = 'moore' | 'vonNeumann' | 'square2' | 'diamond2' | 'directional' | 'custom';
-export type LatticeId = 'square' | 'hex' | 'triangle';
+export type LatticeId = 'square' | 'hex' | 'triangle' | 'rhombille';
 export type OrientedSymmetry = 'fixed' | 'rotations' | 'dihedral';
 export type OrientedMatch = 'exact' | 'contains';
 
@@ -199,12 +200,15 @@ export const LIFE_RULES: Record<LifeRule,{birth:number[];survive:number[];label:
   custom:{birth:[],survive:[],label:'MY OWN B/S RULE'}
 };
 export function worldDimensions(s:SimSettings):[number,number] {
-  const w=s.cellCount;
-  let h=s.aspect==='portrait'?Math.round(w*16/9):
-    s.aspect==='landscape'?Math.round(w*9/16):w;
+  // Three rhombi per underlying hexagonal motif. Keep complete hexes and
+  // even offset rows so the periodic rhombille graph remains reciprocal.
+  const w=s.lattice==='rhombille'?Math.ceil(s.cellCount/3)*3:s.cellCount;
+  const scale=s.lattice==='rhombille'?RHOMBILLE_VERTICAL_SCALE:1;
+  let h=s.aspect==='portrait'?Math.round(w*16/9*scale):
+    s.aspect==='landscape'?Math.round(w*9/16*scale):Math.round(w*scale);
   // Both offset-row hex wrap and staggered triangle geometry require even
   // height for undirected toroidal edge adjacency. Margolus requires even
   // dimensions too; cellCount is already even in the UI.
-  if((s.lattice==='hex'||s.lattice==='triangle'||s.engine==='margolus'||s.engine==='ising')&&h%2!==0)h++;
+  if((s.lattice==='hex'||s.lattice==='triangle'||s.lattice==='rhombille'||s.engine==='margolus'||s.engine==='ising')&&h%2!==0)h++;
   return [w,Math.max(2,h)];
 }

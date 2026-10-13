@@ -1,5 +1,6 @@
 import type {LatticeId,OrientedSymmetry,OrientedMatch,NeighborShape} from './types';
 import {DEFAULT_STENCIL_MASK,stencilOffsets} from './stencil';
+import {rhombilleOffsets,rhombilleExtent,rhombillePolygon} from './rhombille';
 
 export const ORIENTED_DIRECTIONS = [
   [-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]
@@ -13,6 +14,7 @@ for(let y=-2;y<=2;y++)for(let x=-2;x<=2;x++){
  if(Math.abs(x)+Math.abs(y)<=2)radiusDiamond2.push([x,y]);
 }
 export function neighborOffsets(lattice:LatticeId,x:number,y:number,shape:NeighborShape,mask=255,customMask=DEFAULT_STENCIL_MASK,customSize:3|5=5):readonly [number,number][]{
+  if(lattice==='rhombille')return rhombilleOffsets(x,y);
   if(lattice==='hex'){
     const shift=y&1;
     return [[-1,0],[1,0],[-1+shift,-1],[shift,-1],[-1+shift,1],[shift,1]];
@@ -71,10 +73,12 @@ const H=Math.sqrt(3)/2;
 const R3=Math.sqrt(3);
 export function geometryExtent(shape:LatticeId,w:number,h:number):[number,number]{
   if(shape==='hex')return [(w+0.5)*R3,(h-1)*1.5+2];
+  if(shape==='rhombille')return rhombilleExtent(w,h);
   if(shape==='triangle')return [w/2+0.5,h*H];
   return [w,h];
 }
 export function polygonForCell(shape:LatticeId,x:number,y:number):Point[]{
+  if(shape==='rhombille')return rhombillePolygon(x,y);
   if(shape==='hex'){
     const cx=R3*(x+0.5*(y&1)+0.5),cy=y*1.5+1;
     const angles=[-90,-30,30,90,150,210];
@@ -109,7 +113,9 @@ export function projectedSize(w:number,h:number):[number,number]{
   return [pw,Math.max(1,Math.round(pw*h/w))];
 }
 export function projectionMap(lattice:LatticeId,w:number,h:number){
-  const [pw,ph]=projectedSize(w,h);
+  const [pw,normalHeight]=projectedSize(w,h);
+  const [extentWidth,extentHeight]=geometryExtent(lattice,w,h);
+  const ph=lattice==='rhombille'?Math.max(1,Math.round(pw*extentHeight/extentWidth)):normalHeight;
   const key=lattice+':'+w+':'+h+':'+pw+':'+ph;
   const cached=maps.get(key);if(cached)return cached;
   const indices=new Uint32Array(pw*ph),samples=new Uint32Array(pw*ph);
