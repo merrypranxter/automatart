@@ -49,12 +49,17 @@ function renderSquareWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,out
   for(let i=0;i<world.cells.length;i++){
     const state=world.cells[i],trace=world.traces[i],k=i*4;
     const fossil=world.fossils?.[i]??0;
-    const visible=world.engine==='cyclic'||world.engine==='ising'||state!==0||
+    const visible=world.engine==='cyclic'||world.engine==='ising'||
+      (world.engine==='hpp'&&world.hppWalls?.[i]===1)||state!==0||
       ((a.trails&&trace>0.025)||
         ((hasEventColor(a,'events')||hasEventColor(a,'birthFlash'))&&world.events[i]!==0)||
         (hasEventColor(a,'deathHeat')&&(world.events[i]===2||fossil>0.005))||
       ((a.fossilOpacity??0)>0&&fossil>0.02));
     if(!visible){pixels[k]=bg[0];pixels[k+1]=bg[1];pixels[k+2]=bg[2];pixels[k+3]=255;continue;}
+    if(world.engine==='hpp'&&world.hppWalls?.[i]===1){
+      pixels[k]=190;pixels[k+1]=222;pixels[k+2]=231;pixels[k+3]=255;
+      continue;
+    }
     const x=i%w,y=Math.floor(i/w);
     let index=0;
     switch(a.colorBy){

@@ -48,7 +48,7 @@ export function recommendedDimensions(s:SimSettings,size:ExportResolution):[numb
 export function cloneWorld(w:World):World{
   // Preserve every rule graph field, including directional mask. This clone
   // powers first-frame GIF/video capture before any simulated steps occur.
-  return {...w,cells:w.cells.slice(),grains:w.grains?.slice(),
+  return {...w,cells:w.cells.slice(),grains:w.grains?.slice(),hppWalls:w.hppWalls?.slice(),
     turmiteAgents:w.turmiteAgents?.map(a=>({...a})),ages:w.ages.slice(),neighbors:w.neighbors.slice(),
     events:w.events.slice(),traces:w.traces.slice(),
     previousCells:w.previousCells?.slice(),olderCells:w.olderCells?.slice(),

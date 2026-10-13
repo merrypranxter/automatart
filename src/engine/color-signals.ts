@@ -32,6 +32,7 @@ function maxStates(world:World){
   if(world.engine==='hodgepodge')return (world.hodgeStates??48)+1;
   if(world.engine==='forestfire')return 3;
   if(world.engine==='turmites')return world.turmiteRule?.length??2;
+  if(world.engine==='hpp')return 16;
   if(world.engine==='sandpile')return 256;
   return 2;
 }
@@ -47,7 +48,7 @@ function active(world:World,index:number):number{
   return world.cells[index]!==0?1:0;
 }
 function neighbors(world:World,x:number,y:number):number[]{
-  const offsets=neighborOffsets(world.lattice??'square',x,y,(world.engine==='sandpile'||world.engine==='forestfire'||world.engine==='ising'||world.engine==='turmites'?'vonNeumann':
+  const offsets=neighborOffsets(world.lattice??'square',x,y,(world.engine==='sandpile'||world.engine==='forestfire'||world.engine==='ising'||world.engine==='turmites'||world.engine==='hpp'?'vonNeumann':
       world.engine==='hodgepodge'?'moore':world.neighborShape??'moore'),world.neighborMask??255,
     world.customStencilMask,world.customStencilSize);
   const out:number[]=[];

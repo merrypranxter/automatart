@@ -4,6 +4,7 @@ import { neighborOffsets, orientedMatch, ORIENTED_DIRECTIONS, rotateBlocks } fro
 import {stepWireworld,stepSandpile,sandVisualState} from './circuits';
 import {stepHodgepodge,stepForestFire} from './reaction-worlds';
 import {stepIsing,stepTurmites,seedTurmites} from './spins-turmites';
+import {stepHpp,paintHpp,hppCount} from './lattice-gas';
 
 function seededRandom(seed:number):()=>number{
   let a=seed>>>0;
@@ -19,6 +20,7 @@ export function createWorld(s:SimSettings):World{
   const n=width*height;
   const cells=new Uint8Array(n),ages=new Uint16Array(n),traces=new Float32Array(n);
   const grains=s.engine==='sandpile'?new Uint32Array(n):undefined;
+  const hppWalls=s.engine==='hpp'?new Uint8Array(n):undefined;
   const rand=seededRandom(s.seed),cx=(width-1)/2,cy=(height-1)/2;
   const minSide=Math.min(width,height);
   for(let y=0;y<height;y++)for(let x=0;x<width;x++){
@@ -38,6 +40,9 @@ export function createWorld(s:SimSettings):World{
     }else if(s.engine==='sandpile'){
       const height=rand()<chance?1+Math.floor(rand()*20):0;
       grains![p]=height;cells[p]=sandVisualState(height);
+    }else if(s.engine==='hpp'){
+      let mask=0;for(const bit of [1,2,4,8])if(rand()<Math.min(1,chance))mask|=bit;
+      cells[p]=mask;
     }else if(s.engine==='ising'){
       cells[p]=rand()<chance?1:0;
     }else if(s.engine==='turmites'){
@@ -60,9 +65,9 @@ export function createWorld(s:SimSettings):World{
     if(cells[p]>0||s.engine==='cyclic'){ages[p]=1;traces[p]=1;}
   }
   const turmiteAgents=s.engine==='turmites'?seedTurmites(width,height,s.turmiteCount,s.seed):undefined;
-  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'?'vonNeumann':
+  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
-    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,turmiteAgents,
+    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,hppWalls,turmiteAgents,
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,ages,
     neighbors:new Uint8Array(n),events:new Uint8Array(n),traces,
     previousCells:cells.slice(),olderCells:cells.slice(),fossils:new Float32Array(n)};
@@ -81,7 +86,16 @@ export function stepWorld(prev:World,s:SimSettings):World{
   const neighbors=new Uint8Array(n),events=new Uint8Array(n),nextTraces=new Float32Array(n);
   const nextFossils=new Float32Array(n);
   let nextAgents=prev.turmiteAgents;
-  if(s.engine==='ising'){
+  if(s.engine==='hpp'){
+    if(!prev.hppWalls)throw new Error('Missing canonical HPP obstacle array');
+    next.set(stepHpp(cells,w,h,s.wrap,prev.hppWalls));
+    const cardinal=neighborOffsets('square',0,0,'vonNeumann');
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const p=y*w+x;
+      for(const [dx,dy] of cardinal)
+        if(hppCount(valueAt(cells,w,h,x+dx,y+dy,s.wrap))>0)neighbors[p]++;
+    }
+  }else if(s.engine==='ising'){
     next.set(stepIsing(cells,w,h,s.wrap,{temperature:s.isingTemperature,
       coupling:s.isingCoupling,field:s.isingField,sweeps:s.isingSweeps,
       seed:s.seed,generation:prev.generation}));
@@ -259,10 +273,10 @@ export function stepWorld(prev:World,s:SimSettings):World{
       :(old!==0&&now===0?1:old!==now?0.12:0);
     nextFossils[i]=Math.max(deposit,(prev.fossils?.[i]??0)*0.986);
   }
-  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'?'vonNeumann':
+  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,
-    cells:next,grains:nextGrains,turmiteAgents:nextAgents?.map(a=>({...a})),
+    cells:next,grains:nextGrains,hppWalls:prev.hppWalls?.slice(),turmiteAgents:nextAgents?.map(a=>({...a})),
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,
     ages:nextAges,neighbors,events,traces:nextTraces,
     previousCells:cells.slice(),
@@ -307,7 +321,9 @@ export function paintWorld(world:World,s:SimSettings,x:number,y:number,radius:nu
     const xx=x+dx,yy=y+dy;
     if(xx<0||yy<0||xx>=world.width||yy>=world.height)continue;
     const p=yy*world.width+xx;
-    if(s.engine==='sandpile'&&world.grains){
+    if(s.engine==='hpp'&&world.hppWalls){
+      paintHpp(world.cells,world.hppWalls,[p],s.hppTool,s.hppBrush,erase?'erase':'paint');
+    }else if(s.engine==='sandpile'&&world.grains){
       const before=world.grains[p];
       const height=erase?0:before+s.sandBrush;
       world.grains[p]=height;world.cells[p]=sandVisualState(height);

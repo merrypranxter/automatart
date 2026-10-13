@@ -25,6 +25,7 @@ import DualColorControls from './components/DualColorControls';
 import CircuitControls from './components/CircuitControls';
 import ReactionControls from './components/ReactionControls';
 import SpinTurmiteControls from './components/SpinTurmiteControls';
+import LatticeGasControls from './components/LatticeGasControls';
 import {validateDualColor} from './engine/dual-color';
 import {validatePrintShop} from './engine/printshop';
 import StrangeControls, { SQUARE_ONLY_ENGINES } from './components/StrangeControls';
@@ -57,7 +58,8 @@ const ENGINES: {id:EngineId;name:string;hint:string}[] = [
   {id:'hodgepodge',name:'HODGEPODGE MACHINE',hint:'Gerhardt-Schuster reaction waves'},
   {id:'forestfire',name:'FOREST FIRE',hint:'Seeded growth, spread and lightning'},
   {id:'ising',name:'ISING MODEL',hint:'Temperature-driven magnetic domains'},
-  {id:'turmites',name:'TURMITES',hint:'Langton ant agents writing geometry'}
+  {id:'turmites',name:'TURMITES',hint:'Langton ant agents writing geometry'},
+  {id:'hpp',name:'HPP LATTICE GAS',hint:'Conserving particles, collisions and walls'}
 ];
 const ASPECTS: {value:AspectId;name:string}[]=[
   {value:'square',name:'1:1 SQUARE'},
@@ -109,7 +111,7 @@ function download(name:string, content:Blob | string):void{
 }
 function cloneWorld(world:World):World{
   return {...world,
-    cells:world.cells.slice(),grains:world.grains?.slice(),
+    cells:world.cells.slice(),grains:world.grains?.slice(),hppWalls:world.hppWalls?.slice(),
     turmiteAgents:world.turmiteAgents?.map(a=>({...a})),ages:world.ages.slice(),
     neighbors:world.neighbors.slice(),events:world.events.slice(),
     traces:world.traces.slice(),previousCells:world.previousCells?.slice(),
@@ -418,7 +420,7 @@ export default function App(){
   useEffect(()=>{
     // Rule-only neighborhood changes preserve living cells and generation,
     // but visual entropy/flow inspectors must use the CURRENT rule graph.
-    worldRef.current.neighborShape=settings.engine==='sandpile'||settings.engine==='forestfire'||settings.engine==='ising'||settings.engine==='turmites'?'vonNeumann':
+    worldRef.current.neighborShape=settings.engine==='sandpile'||settings.engine==='forestfire'||settings.engine==='ising'||settings.engine==='turmites'||settings.engine==='hpp'?'vonNeumann':
       settings.engine==='hodgepodge'?'moore':settings.neighborShape;
     worldRef.current.neighborMask=settings.neighborMask;
     worldRef.current.customStencilMask=settings.customStencilMask;
@@ -724,6 +726,8 @@ export default function App(){
         throw new Error("Invalid Turmite turning rule");
       s.turmiteCount=bounded(s.turmiteCount,1,12,1);
       s.turmiteBrush=bounded(s.turmiteBrush,0,s.turmiteRule.length-1,1);
+      s.hppBrush=bounded(s.hppBrush,1,15,15);
+      if(!['particles','walls'].includes(s.hppTool))throw new Error('Invalid HPP brush material');
       for(const key of ['genBirth','genSurvive'] as const){
         if(!Array.isArray(s[key]))s[key]=key==='genBirth'?[3]:[2,3];
         s[key]=[...new Set(s[key].filter((v:unknown)=>Number.isInteger(v)&&Number(v)>=0&&Number(v)<=savedRuleCap))].sort((a,b)=>a-b);
@@ -1051,6 +1055,8 @@ export default function App(){
               grains={worldRef.current.grains} inspectedCell={inspectedCell} width={worldRef.current.width}/>}
           {(settings.engine==='hodgepodge'||settings.engine==='forestfire')&&
             <ReactionControls settings={settings} setSettings={setSettings}/>}
+          {settings.engine==='hpp'&&<LatticeGasControls settings={settings}
+              setSettings={setSettings} world={worldRef.current}/>}
           {(settings.engine==='ising'||settings.engine==='turmites')&&
             <SpinTurmiteControls settings={settings} setSettings={setSettings}
               world={worldRef.current} resetNumber={resetNumber}/>}
@@ -1081,7 +1087,7 @@ export default function App(){
           <AlienPaintControls brush={alienBrush} onChange={setAlienBrush}
             settings={settings} randomize={randomAlienStamp}
             randomSymmetry={randomAlienSymmetry}/>
-          {['species','wireworld','sandpile','hodgepodge','forestfire','ising','turmites'].includes(settings.engine)&&
+          {['species','wireworld','sandpile','hodgepodge','forestfire','ising','turmites','hpp'].includes(settings.engine)&&
             <p className="tip">This species also has its own material brush (species, wire, grain, spin, track…). Find it in <button type="button" className="link-button" onClick={()=>selectTab('rules')}>⌘ RULES</button>.</p>}
         </section>
 
