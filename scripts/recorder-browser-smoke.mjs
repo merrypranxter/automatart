@@ -414,6 +414,11 @@ try{
   assert.equal(await page.locator('#hpp-mask-5').getAttribute('aria-pressed'),'true');
   await page.locator('#hpp-tool-walls').click();
   assert.equal(await page.locator('#hpp-tool-walls').getAttribute('aria-pressed'),'true');
+  // Plant a REAL reflecting obstacle using a pointer event on the live canvas.
+  const hppCanvas=page.locator('canvas[aria-label^="Interactive cellular"]');
+  const canvasBox=await hppCanvas.boundingBox();
+  assert(canvasBox&&canvasBox.width>30&&canvasBox.height>30,'Lattice canvas visible');
+  await hppCanvas.click({position:{x:Math.floor(canvasBox.width/2),y:Math.floor(canvasBox.height/2)}});
   const [hppRecipe]=await Promise.all([
     page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
   ]);
@@ -421,8 +426,9 @@ try{
   assert.equal(hppData.settings.engine,'hpp');
   assert.equal(hppData.settings.hppTool,'walls');
   assert.equal(hppData.settings.hppBrush,5);
-  assert.equal(Buffer.from(hppData.world.arrays.hppWalls,'base64').length,
-    hppData.world.width*hppData.world.height,'Walls are saved canonically');
+  const actualWalls=Buffer.from(hppData.world.arrays.hppWalls,'base64');
+  assert.equal(actualWalls.length,hppData.world.width*hppData.world.height,'Walls are saved canonically');
+  assert(actualWalls.some(v=>v===1),'Real pointer painted at least one reflecting wall');
   await page.locator('#engine').selectOption('life');
   await page.locator('input[type=file]').last().setInputFiles({
     name:'c4-hpp-world.json',mimeType:'application/json',
