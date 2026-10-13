@@ -43,6 +43,8 @@ jobs:
         run: node scripts/b1-neighborhood-smoke.mjs
       - name: Verify B2 hand-painted neighbor stencils and mathematics
         run: node scripts/b2-stencil-smoke.mjs
+      - name: Verify C1 canonical circuits, sandpile conservation and JSON/recorder parity
+        run: node scripts/c1-circuits-smoke.mjs
       - name: Verify A2 dual-source mathematical color mixing and exports
         run: node scripts/a2-dual-color-smoke.mjs
       - name: Verify Print Shop effects, compositing and recipe migration

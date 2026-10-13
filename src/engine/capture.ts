@@ -48,10 +48,15 @@ export function recommendedDimensions(s:SimSettings,size:ExportResolution):[numb
 export function cloneWorld(w:World):World{
   // Preserve every rule graph field, including directional mask. This clone
   // powers first-frame GIF/video capture before any simulated steps occur.
-  return {...w,cells:w.cells.slice(),ages:w.ages.slice(),neighbors:w.neighbors.slice(),
+  return {...w,cells:w.cells.slice(),grains:w.grains?.slice(),ages:w.ages.slice(),neighbors:w.neighbors.slice(),
     events:w.events.slice(),traces:w.traces.slice(),
     previousCells:w.previousCells?.slice(),olderCells:w.olderCells?.slice(),
     fossils:w.fossils?.slice()};
+}
+export function equalGrains(a:Uint32Array,b:Uint32Array):boolean{
+  if(a.length!==b.length)return false;
+  for(let i=0;i<a.length;i++)if(a[i]!==b[i])return false;
+  return true;
 }
 export function equalCells(a:Uint8Array,b:Uint8Array):boolean{
   if(a.length!==b.length)return false;
@@ -86,7 +91,8 @@ export function createCaptureCursor(source:World,s:SimSettings,fps:number,stepsP
       let changed=false;
       for(let i=0;i<count;i++){
         const next=stepWorld(current,s);
-        const same=equalCells(current.cells,next.cells);
+        const same=equalCells(current.cells,next.cells)&&
+          (!next.grains||!!current.grains&&equalGrains(current.grains,next.grains));
         unchanged=same?unchanged+1:0;
         if(!same)changed=true;
         current=next;

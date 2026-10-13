@@ -1,6 +1,7 @@
 import type {SimSettings,World,LatticeId} from './types';
 import {geometryExtent,lookupCell,polygonForCell} from './topology';
 import {createMutationRng} from './mutation-core';
+import {sandVisualState} from './circuits';
 
 export type BrushSymmetry='single'|'mirror'|'quad'|'radial8';
 export type StampId='brush'|'spore'|'ring'|'checker'|'cluster'|'spiral'|'cross'|'glider'|'bars'|'diamond';
@@ -145,9 +146,28 @@ export function applyAlienStamp(
 ):number[]{
   const b=validateAlienBrush(rawBrush,settings);
   const affected=footprint(world,anchor,b,seed);
+  // Fail atomically before painting. Saturation would silently destroy mass.
+  if(settings.engine==='sandpile'&&world.grains&&b.mode==='paint'){
+    for(const id of affected)if(world.grains[id]>0xffffffff-settings.sandBrush)
+      throw new RangeError('Cannot paint: 32-bit grain count overflow');
+  }
   for(const id of affected){
     const before=world.cells[id];
-    const value=settings.engine==='cyclic'?Math.max(1,Math.floor(settings.cyclicStates/2)):
+    if(settings.engine==='sandpile'&&world.grains){
+      const oldHeight=world.grains[id];
+      const height=b.mode==='erase'?0:b.mode==='invert'?(oldHeight?0:settings.sandBrush):
+        oldHeight+settings.sandBrush;
+      world.grains[id]=height;
+      const next=sandVisualState(height);
+      world.cells[id]=next;
+      world.ages[id]=height?1:0;world.traces[id]=height?1:0;
+      world.events[id]=oldHeight===height?0:height>oldHeight?1:3;
+      if(world.fossils)world.fossils[id]=height?0:oldHeight?1:0;
+      if(world.previousCells)world.previousCells[id]=next;
+      if(world.olderCells)world.olderCells[id]=next;
+      continue;
+    }
+    const value=settings.engine==='wireworld'?settings.wireBrush:settings.engine==='cyclic'?Math.max(1,Math.floor(settings.cyclicStates/2)):
       settings.engine==='species'?Math.max(1,Math.min(settings.speciesCount,b.species)):1;
     const next=b.mode==='erase'?0:b.mode==='invert'?(before?0:value):value;
     world.cells[id]=next;

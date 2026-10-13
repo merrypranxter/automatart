@@ -57,7 +57,7 @@ function renderSquareWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,out
     const x=i%w,y=Math.floor(i/w);
     let index=0;
     switch(a.colorBy){
-      case 'state':index=state;break;
+      case 'state':index=world.engine==='sandpile'?Math.log2((world.grains?.[i]??state)+1)*1.8:state;break;
       case 'age':index=Math.log2(world.ages[i]+1);break;
       case 'neighbors':index=world.neighbors[i];break;
       case 'events':index=world.events[i]===1?0:world.events[i]===2?3:world.events[i]===3?4:2;break;

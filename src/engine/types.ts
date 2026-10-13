@@ -4,7 +4,7 @@ import type {PrintShop} from './printshop';
 import type {DualColor} from './dual-color';
 import {DEFAULT_STENCIL_MASK} from './stencil';
 
-export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus';
+export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus' | 'wireworld' | 'sandpile';
 export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'maze' | 'mazectric' | 'replicator' | 'diamoeba' | 'coral' | 'amoeba' | 'custom';
 export type PatternId = 'noise' | 'center' | 'rings' | 'stripes' | 'checker' | 'spiral' | 'web';
 export type AspectId = 'square' | 'portrait' | 'landscape';
@@ -56,6 +56,11 @@ export interface SimSettings {
   speciesBirth: number;
   speciesSurvive: number;
   speciesAttackBias: number;
+  wireBrush:1|2|3;
+  sandFeed:number;
+  sandRounds:number;
+  sandSource:'center'|'random';
+  sandBrush:number;
 }
 export interface Appearance {
   print?: PrintShop;
@@ -100,6 +105,8 @@ export interface World {
   customStencilMask?:number;
   customStencilSize?:3|5;
   cells: Uint8Array;
+  /** Canonical 32-bit heights, never conflated with display pixels. */
+  grains?:Uint32Array;
   ages: Uint16Array;
   neighbors: Uint8Array;
   events: Uint8Array;
@@ -128,7 +135,8 @@ export const INITIAL_SETTINGS: SimSettings = {
   cyclicStates:12,cyclicThreshold:2,wolframRule:30,
   genStates:8,genBirth:[3],genSurvive:[2,3],exciteStates:8,exciteThreshold:2,
   largeRadius:2,largeBirthMin:6,largeBirthMax:9,largeSurviveMin:5,largeSurviveMax:12,
-  speciesCount:3,speciesBirth:2,speciesSurvive:1,speciesAttackBias:1
+  speciesCount:3,speciesBirth:2,speciesSurvive:1,speciesAttackBias:1,
+  wireBrush:1,sandFeed:6,sandRounds:3,sandSource:'center',sandBrush:8
 };
 export const INITIAL_APPEARANCE: Appearance = {
   print:structuredClonePrint(INITIAL_PRINT_SHOP),

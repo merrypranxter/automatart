@@ -470,3 +470,24 @@ body.art-viewer-open{overflow:hidden}
 .stencil-presets .chip{min-height:40px}
 @media(max-width:420px){.stencil-studio{padding:10px 8px}.stencil-grid{width:min(100%,290px);
  gap:4px;padding:6px}.stencil-grid button{font-size:17px}.stencil-tools{gap:5px}}
+
+
+/* C1: living circuits and integer avalanche laboratories */
+.c1-lab{display:flex;flex-direction:column;gap:11px;margin:12px 0;padding:13px;
+ border:1px solid #ff59bb;border-radius:10px;background:linear-gradient(145deg,#2b1639,#102d36 90%)}
+.c1-head{display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.c1-head strong{font:800 13px 'Chakra Petch',monospace;color:#ffe86e}
+.c1-head span{font:700 10px 'Chakra Petch',monospace;color:#3affed}
+.c1-materials{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.c1-materials button{padding:7px 4px;min-height:68px;border:1px solid #78577e;border-radius:8px;
+ background:#23152f;color:#dfbfe6;font:700 9px 'Chakra Petch',monospace}
+.c1-materials button b{display:block;font-size:25px;line-height:1.3;color:#67f3f0}
+.c1-materials button.selected{border-color:#faff6b;background:#502553;color:#ffffff;
+ box-shadow:0 0 14px #f53fa75c}
+.c1-materials button.selected b{color:#faff6b}
+.c1-grain-count{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+ padding:11px;background:#140d27;border:1px solid #6bdde2;border-radius:8px}
+.c1-grain-count b{font:900 25px 'Chakra Petch',monospace;color:#f5ff67}
+.c1-grain-count span{font:800 10px 'Chakra Petch',monospace;color:#7debe7}
+@media(max-width:440px){.c1-lab{padding:10px 9px}.c1-materials{gap:4px}
+ .c1-materials button{font-size:8px;min-height:59px}}

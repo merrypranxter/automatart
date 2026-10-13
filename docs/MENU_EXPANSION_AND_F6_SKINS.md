@@ -59,10 +59,12 @@ Automatart remains an instrument in **MATHEMAGICAL! — a Math Art Suite**. This
 - Compatibility checks on all engines/lattices; an incompatible engine shows why the option is disabled rather than silently falling back to 8 neighbors.
 **Implementation:** Exact 25-bit mask with excluded center and separate 3×3/5×5 sizes, touch pointer-capture drag, keyboard-accessible buttons, live count/preview, CW/CCW rotation, mirror/invert, seeded surprise, fan/hook/ring/claw presets, no-world-reset setting edits and compatible six engines. World metadata propagates through colors and capture clones. Seeded mutation honors rule locks, imports validate center/size/mask, and older recipes use safe inactive defaults. Node transition tests, real browser UI/recipe tests, and existing GIF/video suites gate merge. **Physical iPhone Safari acceptance after Netlify deployment remains user-verified.**\n\n**Done when:** tests prove changing one stencil bit changes rule behavior, symmetry/rotation are accurate, capture is deterministic, and mobile editor is usable.
 
-### F5.5C1 — CIRCUITS AND AVALANCHES (NEW ENGINES)
+### F5.5C1 — CIRCUITS AND AVALANCHES (IMPLEMENTED IN PR; CI / MERGE PENDING)
 - **Wireworld**: exact four-state empty/conductor/electron-head/electron-tail transition rules; multi-state conductor/head/tail brush, proper square-grid compatibility.
 - **Abelian sandpile**: integer grain heights, configurable addition and synchronous toppling, explicitly state how synchronous toppling relates to the standard stabilization process; never truncate grain state to Uint8 if larger heights are supported. Real avalanches and recurrent structures.
 - Ensure color maps/skins, painting, mutation adapter, recipe snapshots, exports are truthful for these new state representations.
+**Implementation:** Wireworld has exact 0 empty/1 conductor/2 head/3 tail states and Moore head-count activation. Abelian sandpile uses canonical Uint32 grain heights separate from 8-bit display, controlled feed 0–64 and 1–8 synchronous one-topple-per-site rounds per generation, with a finite dissipative sink or wrapped periodic boundaries. The Alien Paintbrush adds real material/grains, snapshots/capture preserve full integer state, and Mutation Dice respects rule locks. CI tests canonical patterns, serial/parallel stabilization, integer conservation, true browser controls and GIF/video exports. Physical iPhone Safari smoke remains user-verified.
+
 **Done when:** canonical small patterns/circuits and grain-conservation/boundary tests pass.
 
 ### F5.5C2 — REACTION WAVES AND FOREST FIRE (NEW ENGINES)

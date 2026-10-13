@@ -9,7 +9,7 @@ interface PackedWorld {
   width:number;
   height:number;
   generation:number;
-  arrays:Record<'cells'|'ages'|'neighbors'|'events'|'traces'|'previousCells'|'olderCells'|'fossils',string>;
+  arrays:Record<'cells'|'ages'|'neighbors'|'events'|'traces'|'previousCells'|'olderCells'|'fossils',string> & {grains?:string};
 }
 function pack(data:Uint8Array):string{
   let string='';
@@ -35,7 +35,8 @@ export function snapshotWorld(world:World):PackedWorld{
       traces:pack(bytes(world.traces)),
       previousCells:pack(world.previousCells??world.cells),
       olderCells:pack(world.olderCells??world.cells),
-      fossils:pack(bytes(world.fossils??new Float32Array(n)))
+      fossils:pack(bytes(world.fossils??new Float32Array(n))),
+      ...(world.engine==='sandpile'?{grains:pack(bytes(world.grains??new Uint32Array(n)))}:{})
     }
   };
 }
@@ -50,7 +51,7 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
     throw new Error('Invalid snapshot generation');
   if(!s.arrays||typeof s.arrays!=='object')throw new Error('Invalid snapshot content');
   const source=s.arrays;
-  const get=(name:keyof PackedWorld['arrays'],len:number)=>unpack(source[name],len);
+  const get=(name:keyof PackedWorld['arrays'],len:number)=>unpack(source[name]??'',len);
   const getU16=(name:keyof PackedWorld['arrays'])=>
     new Uint16Array(get(name,n*2).buffer);
   const getF32=(name:keyof PackedWorld['arrays'])=>
@@ -60,7 +61,15 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
     cells:get('cells',n),ages:getU16('ages'),neighbors:get('neighbors',n),
     events:get('events',n),traces:getF32('traces'),
     previousCells:get('previousCells',n),olderCells:get('olderCells',n),
-    fossils:getF32('fossils')};
+    fossils:getF32('fossils'),
+    grains:settings.engine==='sandpile'?new Uint32Array(get('grains',n*4).buffer):undefined};
+  if(settings.engine==='sandpile'){
+    // Never trust stale Uint8 display proxies over canonical grain integers.
+    for(let i=0;i<n;i++){
+      if(world.cells[i]!==Math.min(255,world.grains![i]))
+        throw new Error('Sandpile snapshot has inconsistent grain heights');
+    }
+  }
   // Imported binary data may not contain NaN/Infinity in history arrays.
   for(const array of [world.traces,world.fossils!]){
     for(let i=0;i<array.length;i++){
