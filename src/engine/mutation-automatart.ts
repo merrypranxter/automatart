@@ -275,6 +275,9 @@ export function mutateAutomatart(
     candidate.run();
     if(JSON.stringify(s)+JSON.stringify(a)!==before)changes.push(candidate.label);
   }
+  // When a mutation shrinks the number of phases, reconcile the chase field.
+  if(s.engine==='cyclic')s.cyclicReach=Math.max(1,
+    Math.min(6,s.cyclicStates-1,s.cyclicReach??1));
   // Unless user explicitly allows structural resets, the entire running CA
   // state remains intact (even across visual and local-rule mutations).
   if(!supportsNeighborhood(s.engine,s.lattice)&&!['moore','vonNeumann'].includes(s.neighborShape)){

@@ -125,7 +125,7 @@ function stat(world:World):number{
 
 function validatedCyclicReach(v:unknown,states:number):number{
  const n=Number(v);
- return Number.isInteger(n)?Math.max(1,Math.min(states-1,n)):1;
+ return Number.isInteger(n)?Math.max(1,Math.min(6,states-1,n)):1;
 }
 function validatedCyclicDrive(v:unknown):number{
  const n=Number(v);
