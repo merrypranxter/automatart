@@ -93,6 +93,10 @@ HPP Hardy–Pomeau–de Pazzis square-lattice gas: 4 directional occupancy bits 
 - Bring all new engines into Mutation Dice only via safe opt-in adapters; no default corrupt seed/reset behavior.
 **Done when:** collision/streaming/conservation invariants, recipes, iOS bounded compute and cross-engine browser coverage pass.
 
+### F5.5D1 — PERIODIC EXOTIC LATTICES (SPLIT INTO D1A, D1B, D1C)
+
+**D1A / RHOMBILLE (implemented in PR, verification pending):** mathematically exact 60°/120° lozenges obtained by partitioning every regular hexagon of a honeycomb into 3 equal rhombi. Each rhombus has 4 actual shared **edges**: 2 with neighboring diamonds in the same hex and 2 across adjacent hexes. Graph adjacency is reciprocal on finite domains and on even-row tori. No vertex-touch or fake Moore neighbors count. One live cell is a diamond; `x=3×hexColumn+sector`. Width rounds up to complete motifs and height to an even row count. Its natural aspect follows the honeycomb geometry, not stretched square pixels. The same polygon geometry drives render projection, click/touch picking, paint, overlays, preview/PNG/GIF/video dimensioning; engine compatibility includes Life, Brian's Brain, Cyclic, Generations, Excitable, and Species War. Non-compatible engines remain square-only. Custom square stencils cannot silently impersonate the diamond edge graph. Node tests verify every reciprocal edge, one geometrically shared segment per edge, deterministic CA B4 evolution, zero out-of-polygon hit tests, snapshots, and color signals. Real Chromium studio rendering and recipe/brush regression gate merge. **Physical iPhone Safari acceptance pending.** Kagome and square–octagon remain for D1B and D1C.
+
 ### F5.5D1 — PERIODIC EXOTIC LATTICES (REAL GRAPHS)
 - **Rhombille / diamond** (actual rhombus tiling with proper contact relationships).
 - **Kagome / trihexagonal** (interlocked triangle/hex network with mathematically defined cell sites/edges).

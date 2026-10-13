@@ -1,6 +1,7 @@
 import {paintHpp} from './lattice-gas';
 import type {SimSettings,World,LatticeId} from './types';
 import {geometryExtent,lookupCell,polygonForCell} from './topology';
+import {rhombilleCentroid} from './rhombille';
 import {createMutationRng} from './mutation-core';
 import {sandVisualState} from './circuits';
 
@@ -117,16 +118,29 @@ function footprint(
   const rng=createMutationRng(seed^0x85ebca6b);
   const result=new Set<number>();
   const activeOffsets=stampOffsets(b.stamp,b.size,b.rotation,seed);
+  // Rhombille x is a packed sector INDEX, not a uniform Cartesian axis.
+  // In physical space the centroid separation across each edge is √3/2.
+  // Place every brush offset in that metric and hit-test actual polygons.
+  const rhombille=shape==='rhombille';
+  const [ew,eh]=rhombille?geometryExtent(shape,w,h):[1,1];
+  const [anchorX,anchorY]=rhombille?rhombilleCentroid(origin[0],origin[1]):[0,0];
+  const step=Math.sqrt(3)/2;
   for(let cluster=0;cluster<b.scatter;cluster++){
     const jitter=cluster===0?[0,0]:
       [rng.int(-b.size*3,b.size*3),rng.int(-b.size*3,b.size*3)];
     for(const [dx,dy] of activeOffsets){
       if(b.density<1&&rng.float()>b.density)continue;
-      const x=origin[0]+dx+jitter[0],y=origin[1]+dy+jitter[1];
-      if(x<0||y<0||x>=w||y>=h)continue;
-      // Transform EVERY selected cell, not merely a stamp center. This
-      // guarantees symmetry for asymmetric stamps (glider / spiral) too.
-      const [u,v]=centerNormalized(shape,x,y,w,h);
+      let u:number,v:number;
+      if(rhombille){
+        u=(anchorX+(dx+jitter[0])*step)/ew;
+        v=(anchorY+(dy+jitter[1])*step)/eh;
+      }else{
+        const x=origin[0]+dx+jitter[0],y=origin[1]+dy+jitter[1];
+        if(x<0||y<0||x>=w||y>=h)continue;
+        [u,v]=centerNormalized(shape,x,y,w,h);
+      }
+      // Transform every geometric sample, not merely the stamp center.
+      // Symmetry is an artwork transform, distinct from a graph automorphism.
       for(const [tu,tv] of transforms(b.symmetry,u,v)){
         const target=lookupCell(shape,w,h,tu,tv);
         if(target)result.add(target[1]*w+target[0]);

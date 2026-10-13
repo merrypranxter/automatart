@@ -611,12 +611,57 @@ try{
   await page.locator('#density').fill('48');
   await page.locator('.transport .primary').click(); // pause for deterministic skin comparison
   const lattices=[];
-  for(const shape of ['square','hex','triangle']){
+  for(const shape of ['square','hex','triangle','rhombille']){
     await page.locator('#lattice').selectOption(shape);
     await page.waitForTimeout(180);
     lattices.push(await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL('image/png')));
   }
-  assert.equal(new Set(lattices).size,3,'Actual lattice display geometries must differ');
+  assert.equal(new Set(lattices).size,4,'All four real lattice display geometries must differ');
+  // D1a: irregular *tile* geometry, real pointer target and snapshot on the
+  // new periodic diamond graph, not a cosmetic geometry skin.
+  await page.locator('#lattice').selectOption('rhombille');
+  assert((await page.locator('.lattice-picker').innerText()).includes('60°/120°'),
+    'Rhombille states the mathematical geometry and four edge graph');
+  const rhombilleCanvas=page.locator('canvas[aria-label^="Interactive cellular"]');
+  const shapePixels=await rhombilleCanvas.evaluate(c=>[c.width,c.height]);
+  assert(shapePixels[0]>100&&shapePixels[1]>100);
+  // INVERT is guaranteed to change the selected diamond regardless of its
+  // starting color. Save pre-click bytes to prove the pointer actually paints.
+  await page.locator('#alien-stamp').selectOption('brush');
+  await page.locator('#alien-size').fill('0');
+  await page.locator('.alien-button-row button').last().click();
+  const [preTapFile]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const preTap=JSON.parse(await readFile(await preTapFile.path(),'utf8'));
+  // Finger/click maps to a real diamond polygon; save its resulting states.
+  const hitBox=await rhombilleCanvas.boundingBox();
+  assert(hitBox&&hitBox.width>80&&hitBox.height>80);
+  await rhombilleCanvas.click({position:{x:Math.floor(hitBox.width*.55),y:Math.floor(hitBox.height*.48)}});
+  const [d1aRecipe]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const diamondRecipe=JSON.parse(await readFile(await d1aRecipe.path(),'utf8'));
+  assert.notEqual(diamondRecipe.world.arrays.cells,preTap.world.arrays.cells,
+    'Real pointer paints a rhombus instead of silently dropping the gesture');
+  assert.equal(diamondRecipe.settings.lattice,'rhombille');
+  assert.equal(diamondRecipe.world.width%3,0,'Saved rhombille has 3 diamonds per hex');
+  assert.equal(diamondRecipe.world.height%2,0,'Even-offset-row torus');
+  assert.equal(Buffer.from(diamondRecipe.world.arrays.cells,'base64').length,
+    diamondRecipe.world.width*diamondRecipe.world.height);
+  await page.locator('#lattice').selectOption('square');
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'rhombille-real-diamonds.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(diamondRecipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#lattice')?.value==='rhombille');
+  const [d1aRoundtrip]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const restoredDiamonds=JSON.parse(await readFile(await d1aRoundtrip.path(),'utf8'));
+  assert.deepEqual(restoredDiamonds.world.arrays.cells,diamondRecipe.world.arrays.cells,
+    'Diamond graph recipe round-trips real painted cell state');
+  console.log('PASS: D1a rhombille Studio Shell rendering, touch painting and exact diamond snapshot');
   await page.locator('#lattice').selectOption('hex'); // GIF must retain actual hex geometry
   const skinImages=[];
   for(const skin of ['pixels','soft','glow','contours','mercury','relief','glass']){

@@ -31,11 +31,13 @@ export default function StrangeControls({settings:s,setSettings,onRewind,generat
         <option value="square">SQUARE · 4 / 8 / 12 / 24 OR DIRECTIONAL</option>
         <option value="hex">HEXAGON · 6 GENUINE NEIGHBORS</option>
         <option value="triangle">TRIANGLE · 3 EDGE NEIGHBORS</option>
+        <option value="rhombille">RHOMBILLE · 4 TRUE DIAMOND EDGES (D1A)</option>
       </select>
       <p className="module-note">{squareOnly?
         'This engine requires the square lattice to preserve its specified neighborhood or reversible block partition.':
         s.lattice==='hex'?'Real odd-row-offset hexagonal adjacency; six surrounding neighbors, not hexagon-shaped square rules.':
         s.lattice==='triangle'?'Real triangle edge adjacency: left, right and one vertical neighbor determined by alternating triangle orientation.':
+        s.lattice==='rhombille'?'True 60°/120° lozenges partition every honeycomb hexagon in three. Each diamond shares exactly four full edges. Synchronous evolution uses those four actual graph neighbors; no corner contacts or fake square offsets.':
         'Square lattice with Moore, Von Neumann, radius-2 square/diamond or directional neighborhoods.'}</p>
     </div>}
     {showRules&&s.engine==='oriented'&&<div className="strange-rule">
