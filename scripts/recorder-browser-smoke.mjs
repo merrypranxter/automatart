@@ -406,6 +406,38 @@ try{
   assert.equal(await page.locator('#engine').inputValue(),'forestfire','Invalid forest snapshot rejected');
   await page.locator('#engine').selectOption('life');
   console.log('PASS: C2 real Hodgepodge sliders, seeded fire climate, exact recipe replay and corrupt-state rejection');
+  // C4: Studio Shell preserves genuine HPP particle and solid-wall controls.
+  await page.locator('#engine').selectOption('hpp');
+  assert(await page.locator('#hpp-tool-particles').isVisible(),'HPP controls are visible in RULES');
+  assert(await page.locator('#lattice').isDisabled(),'HPP needs a four-velocity square lattice');
+  await page.locator('#hpp-mask-5').click();
+  assert.equal(await page.locator('#hpp-mask-5').getAttribute('aria-pressed'),'true');
+  await page.locator('#hpp-tool-walls').click();
+  assert.equal(await page.locator('#hpp-tool-walls').getAttribute('aria-pressed'),'true');
+  const [hppRecipe]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const hppData=JSON.parse(await readFile(await hppRecipe.path(),'utf8'));
+  assert.equal(hppData.settings.engine,'hpp');
+  assert.equal(hppData.settings.hppTool,'walls');
+  assert.equal(hppData.settings.hppBrush,5);
+  assert.equal(Buffer.from(hppData.world.arrays.hppWalls,'base64').length,
+    hppData.world.width*hppData.world.height,'Walls are saved canonically');
+  await page.locator('#engine').selectOption('life');
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'c4-hpp-world.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(hppData))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='hpp');
+  assert.equal(await page.locator('#hpp-tool-walls').getAttribute('aria-pressed'),'true');
+  const [hppReload]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const restoredHpp=JSON.parse(await readFile(await hppReload.path(),'utf8'));
+  assert.equal(restoredHpp.world.arrays.hppWalls,hppData.world.arrays.hppWalls);
+  assert.equal(restoredHpp.world.arrays.cells,hppData.world.arrays.cells);
+  await page.locator('#engine').selectOption('life');
+  console.log('PASS: C4 HPP controls, immutable wall masks and exact Studio Shell recipe roundtrip');
   // C3: physical Ising spins, Turmite heading agents and saved custom L/R rules.
   await page.locator('#engine').selectOption('ising');
   assert(await page.locator('#ising-temp').isVisible(),'Ising temperature slider exists');

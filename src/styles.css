@@ -715,3 +715,22 @@ body.art-viewer-open{overflow:hidden}
 .c3-lab button:focus-visible,.c3-custom input:focus-visible{outline:3px solid #4cffeb}
 @media(max-width:425px){.c3-lab{padding:10px 8px}.c3-presets button{font-size:9px}
 .c3-readouts b{font-size:18px}}
+
+/* C4 HPP particle lattice: actual four-direction binary channels and barriers */
+.c4-lab{display:flex;flex-direction:column;gap:10px;margin:12px 0;padding:12px;
+ border:1px solid #31f6dc;border-radius:12px;background:linear-gradient(145deg,#122a40,#32173d 88%)}
+.c4-heading{display:flex;justify-content:space-between;gap:7px;flex-wrap:wrap;align-items:center}
+.c4-heading strong{font:900 13px 'Chakra Petch',monospace;color:#f9fa75}
+.c4-heading span{font:800 10px 'Chakra Petch',monospace;color:#55ffe6}
+.c4-readouts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.c4-readouts>div{display:flex;flex-direction:column;gap:4px;min-width:0;
+ border:1px solid #48668c;border-radius:8px;background:#141a32;padding:9px}
+.c4-readouts b{color:#faff7c;font:900 19px 'Chakra Petch',monospace;overflow-wrap:anywhere}
+.c4-readouts span{color:#7effe1;font:700 9px 'Chakra Petch',monospace}
+.c4-modes{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.c4-masks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.c4-modes button,.c4-masks button{min-height:46px;padding:7px 5px;border:1px solid #9065a4;
+ background:#372044;border-radius:8px;color:#ffddfc;font:800 10px 'Chakra Petch',monospace}
+.c4-modes button.selected,.c4-masks button.selected{border-color:#efff80;background:#642e72;color:#fffab3}
+.c4-modes button:focus-visible,.c4-masks button:focus-visible{outline:3px solid #3effe8}
+@media(max-width:440px){.c4-lab{padding:10px 8px}.c4-readouts b{font-size:16px}}
