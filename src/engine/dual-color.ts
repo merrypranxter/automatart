@@ -1,6 +1,7 @@
 import type {Appearance,ColorBy,World} from './types';
 import {computeColorSignal,signalIndex} from './color-signals';
 import {palettePhase} from './funhouse';
+import {sandStateColorIndex} from './circuits';
 
 export type RGB=[number,number,number];
 export interface DualColor {
@@ -56,7 +57,8 @@ export function rawColorIndex(world:World,id:ColorBy,i:number,n:number,field:Flo
   if(field)return signalIndex(field,i,n);
   const w=world.width,h=world.height,x=i%w,y=Math.floor(i/w);
   switch(id){
-    case 'state':return world.cells[i];
+    case 'state':return world.engine==='sandpile'?
+      sandStateColorIndex(world.grains?.[i]??world.cells[i]):world.cells[i];
     case 'age':return Math.log2(world.ages[i]+1);
     case 'neighbors':return world.neighbors[i];
     case 'events':return world.events[i]===1?0:world.events[i]===2?3:world.events[i]===3?4:2;

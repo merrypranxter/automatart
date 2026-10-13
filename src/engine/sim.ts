@@ -49,13 +49,13 @@ export function createWorld(s:SimSettings):World{
     }else cells[p]=rand()<chance?1:0;
     if(cells[p]>0||s.engine==='cyclic'){ages[p]=1;traces[p]=1;}
   }
-  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.neighborShape,neighborMask:s.neighborMask,
+  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'?'vonNeumann':s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,ages,
     neighbors:new Uint8Array(n),events:new Uint8Array(n),traces,
     previousCells:cells.slice(),olderCells:cells.slice(),fossils:new Float32Array(n)};
 }
 
-function valueAt(cells:Uint8Array,w:number,h:number,x:number,y:number,wrap:boolean):number{
+function valueAt(cells:Uint8Array|Uint32Array,w:number,h:number,x:number,y:number,wrap:boolean):number{
   if(wrap){x=(x+w)%w;y=(y+h)%h;}
   else if(x<0||x>=w||y<0||y>=h)return 0;
   return cells[y*w+x];
@@ -80,9 +80,14 @@ export function stepWorld(prev:World,s:SimSettings):World{
     const result=stepSandpile(prev.grains,w,h,s.wrap,s.sandFeed,s.sandRounds,
       s.seed,prev.generation,s.sandSource);
     nextGrains=result.grains;
-    for(let i=0;i<n;i++){
-      next[i]=sandVisualState(nextGrains[i]);
-      neighbors[i]=result.topplings[i];
+    const cardinal=neighborOffsets('square',0,0,'vonNeumann');
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const p=y*w+x;
+      next[p]=sandVisualState(nextGrains[p]);
+      // This field means contributing neighboring piles, not the site's
+      // own toppling count. The latter belongs to a separate future mapping.
+      for(const [dx,dy] of cardinal)
+        if(valueAt(prev.grains,w,h,x+dx,y+dy,s.wrap)>0)neighbors[p]++;
     }
   }else if(s.engine==='margolus'){
     // Staggered 2x2 partitions and an invertible local clockwise permutation.
@@ -190,7 +195,10 @@ export function stepWorld(prev:World,s:SimSettings):World{
     if(s.engine==='cyclic'){
       if(old!==now)events[i]=3;
     }else if(s.engine==='sandpile'){
-      if(nextGrains![i]!==prev.grains![i])events[i]=nextGrains![i]>prev.grains![i]?1:3;
+      const before=prev.grains![i],after=nextGrains![i];
+      if(before===0&&after>0)events[i]=1;
+      else if(before>0&&after===0)events[i]=2;
+      else if(before!==after)events[i]=3;
     }else if(old===0&&now!==0)events[i]=1;
     else if(old!==0&&now===0)events[i]=2;
     else if(old!==now)events[i]=3;
@@ -201,7 +209,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
       :(old!==0&&now===0?1:old!==now?0.12:0);
     nextFossils[i]=Math.max(deposit,(prev.fossils?.[i]??0)*0.986);
   }
-  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.neighborShape,neighborMask:s.neighborMask,
+  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'?'vonNeumann':s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,
     cells:next,grains:nextGrains,ages:nextAges,neighbors,events,traces:nextTraces,
     previousCells:cells.slice(),
@@ -225,7 +233,7 @@ export function rewindWorld(prev:World,s:SimSettings):World{
     else if(cells[i]&&!earlier[i])events[i]=2;
     else if(cells[i]!==earlier[i])events[i]=3;
   }
-  return {engine:'margolus',lattice:'square',wrap:s.wrap,neighborShape:s.neighborShape,neighborMask:s.neighborMask,
+  return {engine:'margolus',lattice:'square',wrap:s.wrap,neighborShape:s.engine==='sandpile'?'vonNeumann':s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,
     generation:prev.generation-1,cells:earlier,ages,traces,events,
     neighbors:new Uint8Array(n),previousCells:earlier.slice(),

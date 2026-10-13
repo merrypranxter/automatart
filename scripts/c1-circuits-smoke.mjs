@@ -10,7 +10,9 @@ const files=[
  ['src/engine/capture.ts','scripts/.c1-capture.mjs'],
  ['src/engine/world-snapshot.ts','scripts/.c1-snapshot.mjs'],
  ['src/engine/alien-paint.ts','scripts/.c1-paint.mjs'],
- ['src/engine/mutation-automatart.ts','scripts/.c1-mutate.mjs']
+ ['src/engine/mutation-automatart.ts','scripts/.c1-mutate.mjs'],
+ ['src/engine/dual-color.ts','scripts/.c1-dual.mjs'],
+ ['src/engine/color-signals.ts','scripts/.c1-signals.mjs']
 ];
 try{
  await Promise.all(files.map(([entry,outfile])=>build({
@@ -18,13 +20,15 @@ try{
  })));
  const mod=async n=>import(pathToFileURL(resolve(files[n][1])).href);
  const {stepWireworld,stepSandpile,grainSum,sandFeedIndex,stepSandpile:topple,
-  sandVisualState}=await mod(0);
+  sandVisualState,sandStateColorIndex}=await mod(0);
  const {createWorld,stepWorld}=await mod(1);
  const {INITIAL_SETTINGS,INITIAL_APPEARANCE}=await mod(2);
  const {cloneWorld,createCaptureCursor,equalGrains}=await mod(3);
  const {snapshotWorld,restoreWorldSnapshot}=await mod(4);
  const {applyAlienStamp,INITIAL_ALIEN_BRUSH}=await mod(5);
  const {mutateAutomatart}=await mod(6);
+ const {rawColorIndex}=await mod(7);
+ const {computeColorSignal}=await mod(8);
  const pos=(x,y,w)=>y*w+x;
  const w=5,h=5,cells=new Uint8Array(w*h);
  cells[pos(2,2,w)]=1;cells[pos(1,2,w)]=2;cells[pos(4,4,w)]=3;
@@ -103,7 +107,24 @@ try{
  const captured=createCaptureCursor(initial,s,10,10);
  assert.equal(captured.current.grains[index],70000);
  assert.equal(equalGrains(initial.grains,clone.grains),true);
+ assert.equal(rawColorIndex(initial,'state',index,12,null),sandStateColorIndex(70000),
+  'Dual-color state mapping uses exact canonical height');
  assert.equal(stepWorld(initial,s).grains[index],69984,'Four parallel topplings per frame');
+ const actualShape=stepWorld(initial,s);
+ assert.equal(actualShape.neighborShape,'vonNeumann','Sandpile uses its true cardinal graph');
+ const testNeighbors=createWorld(s);testNeighbors.grains.fill(0);testNeighbors.cells.fill(0);
+ testNeighbors.grains[15*32+15]=1;testNeighbors.cells[15*32+15]=1;
+ assert.equal(stepWorld(testNeighbors,s).neighbors[index],0,
+  'Diagonal pile is not a cardinal neighbor');
+ const field=computeColorSignal(testNeighbors,{...INITIAL_APPEARANCE,colorBy:'boundaries'},'boundaries');
+ assert.equal(field[index],0,'Boundary inspector ignores sandpile diagonal edges');
+ testNeighbors.grains[15*32+16]=1;testNeighbors.cells[15*32+16]=1;
+ assert.equal(stepWorld(testNeighbors,s).neighbors[index],1,'Cardinal pile contributes');
+ const eventsWorld=createWorld({...s,sandRounds:1});eventsWorld.grains.fill(0);eventsWorld.cells.fill(0);
+ eventsWorld.grains[index]=4;eventsWorld.cells[index]=4;
+ const avalanche=stepWorld(eventsWorld,{...s,sandRounds:1});
+ assert.equal(avalanche.events[index],2,'Pile emptying means death event');
+ assert.equal(avalanche.events[index-1],1,'Empty site receiving grains means birth event');
  const saved=snapshotWorld(initial);
  assert(saved.arrays.grains,'Recipe includes canonical full-width grain data');
  const restored=restoreWorldSnapshot(saved,s);
@@ -126,6 +147,16 @@ try{
  assert.deepEqual(restoreWorldSnapshot(afterBrush,s).grains,restored.grains);
  const wire={...INITIAL_SETTINGS,engine:'wireworld',cellCount:32,wireBrush:2};
  const wireW=createWorld(wire);
+ const invalidWire=snapshotWorld(wireW);
+ const brokenWire=structuredClone(invalidWire);
+ const wireBytes=Uint8Array.from(atob(brokenWire.arrays.cells),c=>c.charCodeAt(0));
+ wireBytes[5]=255;
+ brokenWire.arrays.cells=btoa(String.fromCharCode(...wireBytes));
+ assert.throws(()=>restoreWorldSnapshot(brokenWire,wire),/Wireworld snapshot contains an invalid state/);
+ wireW.cells.fill(0);
+ wireW.cells[1]=1;wireW.cells[2]=2;wireW.cells[3]=3;
+ const ent=computeColorSignal(wireW,{...INITIAL_APPEARANCE,colorBy:'entropy'},'entropy');
+ assert(ent.every(v=>v<=1.000001),'Wireworld four-state entropy stays normalized');
  const touched=applyAlienStamp(wireW,wire,[4,4],brush,4431);
  for(const i of touched)assert.equal(wireW.cells[i],2,'Selected head material actually painted');
  for(const engine of ['wireworld','sandpile']){

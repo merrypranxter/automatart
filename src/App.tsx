@@ -365,13 +365,13 @@ export default function App(){
   useEffect(()=>{
     // Rule-only neighborhood changes preserve living cells and generation,
     // but visual entropy/flow inspectors must use the CURRENT rule graph.
-    worldRef.current.neighborShape=settings.neighborShape;
+    worldRef.current.neighborShape=settings.engine==='sandpile'?'vonNeumann':settings.neighborShape;
     worldRef.current.neighborMask=settings.neighborMask;
     worldRef.current.customStencilMask=settings.customStencilMask;
     worldRef.current.customStencilSize=settings.customStencilSize;
     worldRef.current.wrap=settings.wrap;
   },[settings.neighborShape,settings.neighborMask,settings.customStencilMask,
-    settings.customStencilSize,settings.wrap]);
+    settings.customStencilSize,settings.wrap,settings.engine]);
   useEffect(()=>{draw();},[draw,settings,resetNumber]);
 
   useEffect(()=>{

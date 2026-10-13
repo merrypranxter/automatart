@@ -28,6 +28,8 @@ export function signalOptions(a:Appearance){
 function maxStates(world:World){
   if(world.engine==='cyclic'||world.engine==='species'||world.engine==='generations'||world.engine==='excitable')return 12;
   if(world.engine==='brians')return 3;
+  if(world.engine==='wireworld')return 4;
+  if(world.engine==='sandpile')return 256;
   return 2;
 }
 function at(world:World,x:number,y:number):number{
@@ -42,7 +44,7 @@ function active(world:World,index:number):number{
   return world.cells[index]!==0?1:0;
 }
 function neighbors(world:World,x:number,y:number):number[]{
-  const offsets=neighborOffsets(world.lattice??'square',x,y,world.neighborShape??'moore',world.neighborMask??255,
+  const offsets=neighborOffsets(world.lattice??'square',x,y,(world.engine==='sandpile'?'vonNeumann':world.neighborShape??'moore'),world.neighborMask??255,
     world.customStencilMask,world.customStencilSize);
   const out:number[]=[];
   for(const [dx,dy] of offsets){
@@ -102,7 +104,7 @@ export function computeColorSignal(world:World,a:Appearance,id:ColorBy=a.colorBy
       }
       case 'flow':{
         let vx=0,vy=0,energy=0;
-        const offsets=neighborOffsets(world.lattice??'square',x,y,world.neighborShape??'moore',world.neighborMask??255,
+        const offsets=neighborOffsets(world.lattice??'square',x,y,(world.engine==='sandpile'?'vonNeumann':world.neighborShape??'moore'),world.neighborMask??255,
     world.customStencilMask,world.customStencilSize);
         for(const [dx,dy] of offsets){
           const p=at(world,x+dx,y+dy);

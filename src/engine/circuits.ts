@@ -88,6 +88,10 @@ export function stepSandpile(
  }
  return {grains:state,topplings,added:feed,lost};
 }
+/** Same state-to-palette mapping in single and dual color renderers. */
+export function sandStateColorIndex(grain:number):number{
+ return Math.log2(grain+1)*1.8;
+}
 export function sandVisualState(grain:number):number{
  return Math.min(255,grain);
 }
