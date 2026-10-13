@@ -729,8 +729,9 @@ body.art-viewer-open{overflow:hidden}
 .c4-readouts span{color:#7effe1;font:700 9px 'Chakra Petch',monospace}
 .c4-modes{display:grid;grid-template-columns:1fr 1fr;gap:7px}
 .c4-masks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
-.c4-modes button,.c4-masks button{min-height:46px;padding:7px 5px;border:1px solid #9065a4;
+.c4-bits{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.c4-modes button,.c4-masks button,.c4-bits button{min-height:46px;padding:7px 5px;border:1px solid #9065a4;
  background:#372044;border-radius:8px;color:#ffddfc;font:800 10px 'Chakra Petch',monospace}
-.c4-modes button.selected,.c4-masks button.selected{border-color:#efff80;background:#642e72;color:#fffab3}
-.c4-modes button:focus-visible,.c4-masks button:focus-visible{outline:3px solid #3effe8}
+.c4-modes button.selected,.c4-masks button.selected,.c4-bits button.selected{border-color:#efff80;background:#642e72;color:#fffab3}
+.c4-modes button:focus-visible,.c4-masks button:focus-visible,.c4-bits button:focus-visible{outline:3px solid #3effe8}
 @media(max-width:440px){.c4-lab{padding:10px 8px}.c4-readouts b{font-size:16px}}

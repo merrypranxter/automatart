@@ -34,12 +34,23 @@ export default function LatticeGasControls({settings:s,setSettings,world}:Props)
     className={s.hppTool==='walls'?'selected':''} onClick={()=>set('hppTool','walls')}>▩ SOLID WALLS</button>
   </div>
   {s.hppTool==='particles'?<>
-   <span className="input-label">Paint velocity channels <em>{hppCount(s.hppBrush)} / 4</em></span>
+   <span className="input-label">Paint velocity channels <em>MASK {s.hppBrush} · {hppCount(s.hppBrush)} / 4</em></span>
    <div className="c4-masks" role="group" aria-label="Particle velocity mask">
     {masks.map(m=><button type="button" key={m.mask} id={'hpp-mask-'+m.mask}
      className={s.hppBrush===m.mask?'selected':''} aria-pressed={s.hppBrush===m.mask}
      onClick={()=>set('hppBrush',m.mask)}>{m.label}</button>)}
    </div>
+   <div className="c4-bits" role="group" aria-label="Custom directional particle channels">
+    {([{bit:1,label:'↑ N'},{bit:2,label:'→ E'},{bit:4,label:'↓ S'},{bit:8,label:'← W'}] as const).map(d=>
+      <button type="button" id={'hpp-bit-'+d.bit} key={d.bit}
+       aria-pressed={(s.hppBrush&d.bit)!==0}
+       className={(s.hppBrush&d.bit)?'selected':''}
+       onClick={()=>setSettings(old=>{
+        const mask=old.hppBrush^d.bit;
+        return {...old,hppBrush:mask||old.hppBrush};
+       })}>{d.label}</button>)}
+   </div>
+   <p className="neighborhood-note">Any nonempty combination of N/E/S/W can be selected, including custom masks loaded from JSON. Presets above are shortcuts.</p>
    <p className="neighborhood-note">Paint adds those velocity channels, erase removes the selected channels, invert XOR-toggles them. No particles can be painted inside a solid wall. Each channel holds at most one particle per site.</p>
   </>:<p className="neighborhood-note">PAINT = put up a reflecting wall and clear any particles there. ERASE = remove wall. INVERT = toggle wall. Painting or erasing is external intervention, so it may change total particle count; evolution itself conserves it.</p>}
   <p className="neighborhood-note">Periodic edges conserve both particle count and total momentum. Reflecting walls or finite edges conserve particle count but can exchange momentum with the barriers. HPP has square-lattice anisotropy; it is not Navier–Stokes fluid dynamics.</p>

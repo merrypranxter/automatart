@@ -127,6 +127,17 @@ function renderSquareWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,out
       ctx.restore();
     }
   }
+  // Walls are a canonical *material*, not empty particle masks. Draw after
+  // every special skin (Mercury, Relief, Contours, Glass) so solid barriers
+  // stay identifiable in live rendering, screenshots and recorded exports.
+  if(world.engine==='hpp'&&world.hppWalls){
+    ctx.save();ctx.imageSmoothingEnabled=false;
+    ctx.fillStyle='rgb(190,222,231)';
+    const sx=outW/w,sy=outH/h;
+    for(let i=0;i<world.hppWalls.length;i++)if(world.hppWalls[i]===1)
+      ctx.fillRect((i%w)*sx,Math.floor(i/w)*sy,sx+0.04,sy+0.04);
+    ctx.restore();
+  }
   // The agents are independent of their colored trails. Overlay compact
   // directional markers *after* the skin, so export/video shows active ants.
   if(world.engine==='turmites'&&world.turmiteAgents?.length){

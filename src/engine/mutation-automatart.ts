@@ -101,7 +101,7 @@ export function mutateAutomatart(
   // A RULE lock protects the live mathematical rule, not merely the name
   // in the Life-like dropdown. Every rule candidate is engine compatible.
   if(!opts.locks.rule){
-    if(s.engine!=='margolus'&&s.engine!=='wolfram'&&s.engine!=='larger'&&s.engine!=='oriented'&&s.engine!=='wireworld'&&s.engine!=='sandpile'&&s.engine!=='hodgepodge'&&s.engine!=='forestfire'&&s.engine!=='ising'&&s.engine!=='turmites'){
+    if(s.engine!=='margolus'&&s.engine!=='wolfram'&&s.engine!=='larger'&&s.engine!=='oriented'&&s.engine!=='wireworld'&&s.engine!=='sandpile'&&s.engine!=='hodgepodge'&&s.engine!=='forestfire'&&s.engine!=='ising'&&s.engine!=='turmites'&&s.engine!=='hpp'){
       if(s.lattice==='square'){
         offer('Neighborhood shape',()=>{
           s.neighborShape=choose(s.neighborShape,['moore','vonNeumann','square2','diamond2','directional','custom'] as const);

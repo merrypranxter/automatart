@@ -142,6 +142,15 @@ try{
    allowRestart:false},331);
  assert.equal(locked.settings.hppTool,'walls');
  assert.equal(locked.settings.hppBrush,wsettings.hppBrush);
+ // No generic stencil/neighborhood action may be advertised for a gas
+ // whose movement graph is permanently four cardinal velocity channels.
+ for(let seed=1;seed<=25;seed++){
+  const mutation=mutateAutomatart(s,INITIAL_APPEARANCE,
+   {strength:'wtf',locks:{palette:true,rule:false,engine:true,seed:true},
+    allowRestart:false},seed);
+  assert(!mutation.changes.some(msg=>/neighborhood|stencil|compass/i.test(msg)),
+   'Mutation dice cannot invent inactive HPP neighborhood controls');
+ }
  const signal=computeColorSignal(next,{...INITIAL_APPEARANCE,colorBy:'entropy'},'entropy');
  assert(signal.every(v=>Number.isFinite(v)&&v>=0&&v<=1.00001));
  console.log('PASS: all 16 HPP states, conserved collision mass and momentum');
