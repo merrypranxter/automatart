@@ -98,6 +98,12 @@ try{
  const marked=applyAlienStamp(isWorld,down,[6,6],brush,91);
  assert(marked.length>0);
  for(const id of marked)assert.equal(isWorld.cells[id],0,'Finger brush can paint DOWN as 0');
+ const invertBrush={...brush,mode:'invert'};
+ const toggled=applyAlienStamp(isWorld,down,[6,6],invertBrush,91);
+ for(const id of toggled)assert.equal(isWorld.cells[id],1,
+  'Ising INVERT works even when selected spin is DOWN=0');
+ const restoredDown=applyAlienStamp(isWorld,down,[6,6],invertBrush,91);
+ for(const id of restoredDown)assert.equal(isWorld.cells[id],0);
  const quietWarm={...is,isingTemperature:.05,isingCoupling:1,isingField:0};
  const warmGround=createWorld(quietWarm);warmGround.cells.fill(1);
  const warmCursor=createCaptureCursor(warmGround,quietWarm,10,10);
@@ -123,6 +129,12 @@ try{
  assert.equal(world.turmiteAgents?.length,4);
  const stamped=applyAlienStamp(world,t,[10,10],brush,182);
  for(const id of stamped)assert.equal(world.cells[id],2);
+ const zeroTrack={...t,turmiteBrush:0};
+ const erased=applyAlienStamp(world,zeroTrack,[10,10],{...brush,mode:'erase'},182);
+ for(const id of erased)assert.equal(world.cells[id],0);
+ const inverted=applyAlienStamp(world,zeroTrack,[10,10],{...brush,mode:'invert'},182);
+ for(const id of inverted)assert.equal(world.cells[id],1,
+  'Turmite track-zero brush INVERT still toggles into a nonzero ink stage');
  let other=cloneWorld(world);
  assert.notEqual(other.turmiteAgents,world.turmiteAgents,'Clone deep-copies agents');
  for(let i=0;i<40;i++){

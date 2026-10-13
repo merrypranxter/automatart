@@ -406,12 +406,17 @@ try{
   assert.equal(turmiteJson.settings.turmiteBrush,2);
   assert.equal(turmiteJson.world.turmiteAgents.length,3);
   const initialAgents=turmiteJson.world.turmiteAgents;
-  await page.locator('#engine').selectOption('life');
+  // Remain on the Turmite page while changing the committed rule. Reloading
+  // a recipe must synchronize the editable turn sequence without remounting.
+  await page.getByRole('button',{name:"LANGTON'S ANT"}).click();
+  assert.equal(await page.locator('#turmite-rule').inputValue(),'RL');
   await page.locator('input[type=file]').last().setInputFiles({
    name:'c3-turmites.json',mimeType:'application/json',
    buffer:Buffer.from(JSON.stringify(turmiteJson))
   });
-  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='turmites');
+  await page.waitForFunction(()=>document.querySelector('#turmite-rule')?.value==='RLLR');
+  assert.equal(await page.locator('#turmite-rule').inputValue(),'RLLR',
+    'Rule editor syncs the committed turning sequence after same-engine recipe restore');
   const [agentRoundtrip]=await Promise.all([
    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
   ]);
@@ -426,6 +431,50 @@ try{
   await page.waitForFunction(()=>(document.querySelector('.status-msg')?.textContent||'').includes('Could not load recipe'));
   assert.equal(await page.locator('#engine').inputValue(),'turmites',
    'Invalid agents do not corrupt live world');
+  // Actual animated-GIF regression: ant marker at its saved location survives
+  // canvas rendering, palette quantization and the real browser GIF Worker.
+  await page.locator('#turmite-count').fill('1');
+  await page.locator('#resolution').fill('32');
+  await page.locator('#skin').selectOption('pixels');
+  await page.locator('#source').selectOption('state');
+  if(await page.locator('#print-master').isChecked())
+   await page.locator('#print-master').uncheck();
+  if(await page.locator('#dual-enabled').isChecked())
+   await page.locator('#dual-enabled').uncheck();
+  const [antRecipe]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const antData=JSON.parse(await readFile(await antRecipe.path(),'utf8'));
+  const antPos=antData.world.turmiteAgents[0];
+  const antW=antData.world.width,antH=antData.world.height;
+  await page.locator('#duration-preset').selectOption('custom');
+  await page.locator('#custom-seconds').fill('1');
+  await page.locator('#export-fps').selectOption('10');
+  await page.locator('.record-button').click();
+  await page.locator('.stage-capture-success').waitFor({state:'visible',timeout:60000});
+  const antGifBase64=await page.evaluate(async()=>{
+   const img=document.querySelector('.export-preview img');
+   if(!img?.src)throw Error('Missing Turmite GIF export preview');
+   const bytes=new Uint8Array(await (await fetch(img.src)).arrayBuffer());
+   let binary='';for(let i=0;i<bytes.length;i+=8192)
+    binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
+   return btoa(binary);
+  });
+  const {parseGIF,decompressFrames}=await import('gifuct-js');
+  const parsedAnt=parseGIF(Buffer.from(antGifBase64,'base64'));
+  const antFrames=decompressFrames(parsedAnt,true);
+  assert(antFrames.length>=2,'Real Turmite GIF has multiple animation frames');
+  const firstAnt=antFrames[0],fw=parsedAnt.lsd.width,fh=parsedAnt.lsd.height;
+  // Offset diagonally from the heading stroke while remaining inside
+  // the yellow agent disk (the center line itself is dark).
+  const xx=Math.floor((antPos.x+.68)/antW*fw)-firstAnt.dims.left;
+  const yy=Math.floor((antPos.y+.68)/antH*fh)-firstAnt.dims.top;
+  assert(xx>=0&&yy>=0&&xx<firstAnt.dims.width&&yy<firstAnt.dims.height);
+  const k=(yy*firstAnt.dims.width+xx)*4,rgba=firstAnt.patch.slice(k,k+4);
+  assert(rgba[0]>160&&rgba[1]>160,
+   'Encoded Turmite GIF actually retains a bright yellow agent at its saved grid coordinate: '+rgba.join(','));
+  await page.locator('.stage-capture-success .dismiss-export').click();
+  console.log('PASS: C3 real animated GIF encodes a visible ant marker at its saved coordinate');
   await page.locator('#engine').selectOption('life');
   console.log('PASS: C3 actual Ising and Turmite controls, L/R rules, agent snapshot and invalid load');
   // Exercise custom birth/survival rule editor, then return to cyclic for GIF.

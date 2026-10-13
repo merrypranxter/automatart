@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import type {Dispatch,SetStateAction} from 'react';
 import type {SimSettings,World} from '../engine/types';
 import {isingEnergy,isingMagnetization,validTurmiteRule} from '../engine/spins-turmites';
@@ -11,6 +11,9 @@ const RULES=[
 ] as const;
 export default function SpinTurmiteControls({settings:s,setSettings,world}:Props){
  const [typed,setTyped]=useState(s.turmiteRule);
+ // Recipes may replace the committed rule while the editor stays mounted.
+ // Don't let a stale draft overwrite the freshly restored world.
+ useEffect(()=>setTyped(s.turmiteRule),[s.turmiteRule]);
  const change=<K extends keyof SimSettings>(k:K,v:SimSettings[K])=>
    setSettings(old=>({...old,[k]:v}));
  if(s.engine==='ising'){
