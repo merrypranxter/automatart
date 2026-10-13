@@ -5,7 +5,7 @@ import type {DualColor} from './dual-color';
 import {DEFAULT_STENCIL_MASK} from './stencil';
 import type {TurmiteAgent} from './spins-turmites';
 
-export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus' | 'wireworld' | 'sandpile' | 'hodgepodge' | 'forestfire' | 'ising' | 'turmites';
+export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus' | 'wireworld' | 'sandpile' | 'hodgepodge' | 'forestfire' | 'ising' | 'turmites' | 'hpp';
 export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'maze' | 'mazectric' | 'replicator' | 'diamoeba' | 'coral' | 'amoeba' | 'custom';
 export type PatternId = 'noise' | 'center' | 'rings' | 'stripes' | 'checker' | 'spiral' | 'web';
 export type AspectId = 'square' | 'portrait' | 'landscape';
@@ -80,6 +80,8 @@ export interface SimSettings {
   turmiteRule:string;
   turmiteCount:number;
   turmiteBrush:number;
+  hppBrush:number;
+  hppTool:'particles'|'walls';
 }
 export interface Appearance {
   print?: PrintShop;
@@ -126,6 +128,8 @@ export interface World {
   cells: Uint8Array;
   /** Canonical 32-bit heights, never conflated with display pixels. */
   grains?:Uint32Array;
+  /** Persistent solid obstacles separate from 4-bit particle channels. */
+  hppWalls?:Uint8Array;
   /** Maximum Hodgepodge severity stage (8..64) for exact skin scaling. */
   hodgeStates?:number;
   /** Saved agent coordinates and headings are part of the Turmite world. */
@@ -164,7 +168,8 @@ export const INITIAL_SETTINGS: SimSettings = {
   hodgeStates:48,hodgeK1:2,hodgeK2:3,hodgeGrowth:12,hodgeBrush:28,
   forestGrowth:0.012,forestLightning:0.0005,forestBrush:2,
   isingTemperature:2.25,isingCoupling:1,isingField:0,isingSweeps:1,isingBrush:1,
-  turmiteRule:'RL',turmiteCount:1,turmiteBrush:1
+  turmiteRule:'RL',turmiteCount:1,turmiteBrush:1,
+  hppBrush:15,hppTool:'particles'
 };
 export const INITIAL_APPEARANCE: Appearance = {
   print:structuredClonePrint(INITIAL_PRINT_SHOP),

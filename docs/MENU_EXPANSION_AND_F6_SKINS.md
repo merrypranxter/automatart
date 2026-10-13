@@ -75,6 +75,10 @@ Automatart remains an instrument in **MATHEMAGICAL! — a Math Art Suite**. This
 
 **Done when:** published/reference transitions, reproducible stochastic runs and replay/snapshot tests pass.
 
+### F5.5C4 — HPP LATTICE GAS (IMPLEMENTED IN PR — TEST / MERGE PENDING)
+
+HPP Hardy–Pomeau–de Pazzis square-lattice gas: 4 directional occupancy bits N/E/S/W per site, 16 possible particle masks, exactly head-on N+S ↔ E+W collisions then synchronous one-cell streaming. With periodic edges and no solid walls, both particle count and momentum are conserved. At finite edges or manually placed obstacles, particles reflect elastically, conserving count but exchanging momentum with the walls. Wall cells are a **separate canonical Uint8Array**, validated on recipe import, deep-cloned for undo/export, and displayed in a distinctive silver/cyan neutral material. The Alien Paintbrush can add/erase/XOR individual particle channels and paint/erase/invert reflecting walls. Seven directional/multi-velocity injection presets and real particle / wall count / momentum statistics. All skins, mathematical signals and GIF/video capture remain compatible. HPP has lattice anisotropy and is not Navier–Stokes fluid dynamics. Painting is an external mass-changing intervention. Automated conservation, collision, wall, save/load and mobile browser tests gate PR. Physical iPhone Safari acceptance remains pending.
+
 ### F5.5C3 — STATISTICAL/AGENT WORLDS (IMPLEMENTED IN PR — CI / MERGE PENDING)
 - **Ising-style spin world**: spin up/down, temperature, interaction strength, magnetic field, clearly specify synchronous heat-bath vs asynchronous Glauber or Metropolis update (the chosen scheme dictates its classification; don't pretend all variants are synchronous CA).
 - **Langton's Ant / Turmites**: moving agents with direction/state and grid trail; explicitly **AGENT SYSTEM**, not just another synchronous binary CA. Turn rules, direction, multiple agents where feasible, seeded initialization.

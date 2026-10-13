@@ -406,6 +406,64 @@ try{
   assert.equal(await page.locator('#engine').inputValue(),'forestfire','Invalid forest snapshot rejected');
   await page.locator('#engine').selectOption('life');
   console.log('PASS: C2 real Hodgepodge sliders, seeded fire climate, exact recipe replay and corrupt-state rejection');
+  // C4: Studio Shell preserves genuine HPP particle and solid-wall controls.
+  await page.locator('#engine').selectOption('hpp');
+  assert(await page.locator('#hpp-tool-particles').isVisible(),'HPP controls are visible in RULES');
+  assert(await page.locator('#lattice').isDisabled(),'HPP needs a four-velocity square lattice');
+  await page.locator('#hpp-mask-5').click();
+  assert.equal(await page.locator('#hpp-mask-5').getAttribute('aria-pressed'),'true');
+  // Individual channel switches expose all 15 legal physical masks, not
+  // merely the seven shortcut buttons.
+  await page.locator('#hpp-bit-4').click();
+  assert.equal(await page.locator('#hpp-bit-4').getAttribute('aria-pressed'),'false');
+  await page.locator('#hpp-bit-2').click();
+  assert.equal(await page.locator('#hpp-bit-2').getAttribute('aria-pressed'),'true');
+  await page.locator('#hpp-mask-5').click();
+  await page.locator('#hpp-tool-walls').click();
+  assert.equal(await page.locator('#hpp-tool-walls').getAttribute('aria-pressed'),'true');
+  // Plant a REAL reflecting obstacle using a pointer event on the live canvas.
+  const hppCanvas=page.locator('canvas[aria-label^="Interactive cellular"]');
+  const canvasBox=await hppCanvas.boundingBox();
+  assert(canvasBox&&canvasBox.width>30&&canvasBox.height>30,'Lattice canvas visible');
+  await hppCanvas.click({position:{x:Math.floor(canvasBox.width/2),y:Math.floor(canvasBox.height/2)}});
+  const [hppRecipe]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const hppData=JSON.parse(await readFile(await hppRecipe.path(),'utf8'));
+  assert.equal(hppData.settings.engine,'hpp');
+  assert.equal(hppData.settings.hppTool,'walls');
+  assert.equal(hppData.settings.hppBrush,5);
+  const actualWalls=Buffer.from(hppData.world.arrays.hppWalls,'base64');
+  assert.equal(actualWalls.length,hppData.world.width*hppData.world.height,'Walls are saved canonically');
+  assert(actualWalls.some(v=>v===1),'Real pointer painted at least one reflecting wall');
+  const wallIndex=actualWalls.indexOf(1);
+  const captureWallPixel=()=>hppCanvas.evaluate((canvas,p)=>{
+    const ctx=canvas.getContext('2d');
+    const xx=Math.floor(((p.index%p.w)+.5)*canvas.width/p.w);
+    const yy=Math.floor((Math.floor(p.index/p.w)+.5)*canvas.height/p.h);
+    return Array.from(ctx.getImageData(xx,yy,1,1).data);
+  },{index:wallIndex,w:hppData.world.width,h:hppData.world.height});
+  for(const skin of ['mercury','relief','glass']){
+    await page.locator('#skin').selectOption(skin);
+    await page.waitForTimeout(80);
+    const pixel=await captureWallPixel();
+    assert.deepEqual(pixel,[190,222,231,255],skin+' skin preserves a true silver wall overlay');
+  }
+  await page.locator('#engine').selectOption('life');
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'c4-hpp-world.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(hppData))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='hpp');
+  assert.equal(await page.locator('#hpp-tool-walls').getAttribute('aria-pressed'),'true');
+  const [hppReload]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const restoredHpp=JSON.parse(await readFile(await hppReload.path(),'utf8'));
+  assert.equal(restoredHpp.world.arrays.hppWalls,hppData.world.arrays.hppWalls);
+  assert.equal(restoredHpp.world.arrays.cells,hppData.world.arrays.cells);
+  await page.locator('#engine').selectOption('life');
+  console.log('PASS: C4 HPP controls, immutable wall masks and exact Studio Shell recipe roundtrip');
   // C3: physical Ising spins, Turmite heading agents and saved custom L/R rules.
   await page.locator('#engine').selectOption('ising');
   assert(await page.locator('#ising-temp').isVisible(),'Ising temperature slider exists');

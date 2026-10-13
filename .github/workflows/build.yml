@@ -49,6 +49,8 @@ jobs:
         run: node scripts/c2-reaction-smoke.mjs
       - name: Verify C3 Ising energy, Turmite agent trajectories and snapshot replay
         run: node scripts/c3-spins-turmites-smoke.mjs
+      - name: Verify C4 HPP conservation, boundaries, wall painting, recipes and recording
+        run: node scripts/c4-hpp-smoke.mjs
       - name: Verify A2 dual-source mathematical color mixing and exports
         run: node scripts/a2-dual-color-smoke.mjs
       - name: Verify Print Shop effects, compositing and recipe migration

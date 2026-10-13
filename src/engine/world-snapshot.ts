@@ -12,7 +12,7 @@ interface PackedWorld {
   height:number;
   generation:number;
   turmiteAgents?:TurmiteAgent[];
-  arrays:Record<'cells'|'ages'|'neighbors'|'events'|'traces'|'previousCells'|'olderCells'|'fossils',string> & {grains?:string};
+  arrays:Record<'cells'|'ages'|'neighbors'|'events'|'traces'|'previousCells'|'olderCells'|'fossils',string> & {grains?:string;hppWalls?:string};
 }
 function pack(data:Uint8Array):string{
   let string='';
@@ -40,7 +40,8 @@ export function snapshotWorld(world:World):PackedWorld{
       previousCells:pack(world.previousCells??world.cells),
       olderCells:pack(world.olderCells??world.cells),
       fossils:pack(bytes(world.fossils??new Float32Array(n))),
-      ...(world.engine==='sandpile'?{grains:pack(bytes(world.grains??new Uint32Array(n)))}:{})
+      ...(world.engine==='sandpile'?{grains:pack(bytes(world.grains??new Uint32Array(n)))}:{}),
+      ...(world.engine==='hpp'?{hppWalls:pack(world.hppWalls??new Uint8Array(n))}:{})
     }
   };
 }
@@ -66,7 +67,13 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
     events:get('events',n),traces:getF32('traces'),
     previousCells:get('previousCells',n),olderCells:get('olderCells',n),
     fossils:getF32('fossils'),
-    grains:settings.engine==='sandpile'?new Uint32Array(get('grains',n*4).buffer):undefined};
+    grains:settings.engine==='sandpile'?new Uint32Array(get('grains',n*4).buffer):undefined,
+    hppWalls:settings.engine==='hpp'?get('hppWalls',n):undefined};
+  if(settings.engine==='hpp'){
+    for(let i=0;i<n;i++)if(world.cells[i]>15||world.hppWalls![i]>1||
+      (world.hppWalls![i]!==0&&world.cells[i]!==0))
+      throw new Error('Invalid HPP snapshot: particles and walls conflict');
+  }
   if(settings.engine==='ising'){
     for(let i=0;i<n;i++)if(world.cells[i]>1)throw new Error('Invalid Ising spin state');
   }

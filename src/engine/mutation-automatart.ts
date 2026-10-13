@@ -34,9 +34,9 @@ export function requiresWorldRestart(before:SimSettings,after:SimSettings):boole
 }
 const validEngines:EngineId[]=[
   'life','brians','cyclic','wolfram','generations','excitable',
-  'larger','species','oriented','margolus','wireworld','sandpile','hodgepodge','forestfire','ising','turmites'
+  'larger','species','oriented','margolus','wireworld','sandpile','hodgepodge','forestfire','ising','turmites','hpp'
 ];
-const squareOnly:EngineId[]=['wolfram','larger','oriented','margolus','wireworld','sandpile','hodgepodge','forestfire','ising','turmites'];
+const squareOnly:EngineId[]=['wolfram','larger','oriented','margolus','wireworld','sandpile','hodgepodge','forestfire','ising','turmites','hpp'];
 
 export function mutateAutomatart(
   sourceSettings:SimSettings,
@@ -101,7 +101,7 @@ export function mutateAutomatart(
   // A RULE lock protects the live mathematical rule, not merely the name
   // in the Life-like dropdown. Every rule candidate is engine compatible.
   if(!opts.locks.rule){
-    if(s.engine!=='margolus'&&s.engine!=='wolfram'&&s.engine!=='larger'&&s.engine!=='oriented'&&s.engine!=='wireworld'&&s.engine!=='sandpile'&&s.engine!=='hodgepodge'&&s.engine!=='forestfire'&&s.engine!=='ising'&&s.engine!=='turmites'){
+    if(s.engine!=='margolus'&&s.engine!=='wolfram'&&s.engine!=='larger'&&s.engine!=='oriented'&&s.engine!=='wireworld'&&s.engine!=='sandpile'&&s.engine!=='hodgepodge'&&s.engine!=='forestfire'&&s.engine!=='ising'&&s.engine!=='turmites'&&s.engine!=='hpp'){
       if(s.lattice==='square'){
         offer('Neighborhood shape',()=>{
           s.neighborShape=choose(s.neighborShape,['moore','vonNeumann','square2','diamond2','directional','custom'] as const);
@@ -137,6 +137,10 @@ export function mutateAutomatart(
       offer('World edge behavior',()=>{s.wrap=!s.wrap});
     }
     switch(s.engine){
+      case 'hpp':
+        offer('HPP injection direction',()=>{s.hppBrush=choose(s.hppBrush,[1,2,4,8,5,10,15])});
+        offer('Particles / wall brush material',()=>{s.hppTool=s.hppTool==='particles'?'walls':'particles'});
+        break;
       case 'ising':
         offer('Temperature chaos',()=>{s.isingTemperature=floatStep(s.isingTemperature,.3,0,5,2)});
         offer('Ferromagnetic/antiferromagnetic coupling',()=>{s.isingCoupling=floatStep(s.isingCoupling,.3,-2,2,2)});

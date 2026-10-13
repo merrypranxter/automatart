@@ -32,6 +32,7 @@ function maxStates(world:World){
   if(world.engine==='hodgepodge')return (world.hodgeStates??48)+1;
   if(world.engine==='forestfire')return 3;
   if(world.engine==='turmites')return world.turmiteRule?.length??2;
+  if(world.engine==='hpp')return 17; // 16 particle masks + wall material
   if(world.engine==='sandpile')return 256;
   return 2;
 }
@@ -42,12 +43,16 @@ function at(world:World,x:number,y:number):number{
   }else if(x<0||y<0||x>=w||y>=h)return -1;
   return y*w+x;
 }
+function stateAt(world:World,index:number):number{
+  // Solid walls have a distinct real material state, not empty vacuum.
+  return world.engine==='hpp'&&world.hppWalls?.[index]===1?16:world.cells[index];
+}
 function active(world:World,index:number):number{
   if(index<0)return 0;
   return world.cells[index]!==0?1:0;
 }
 function neighbors(world:World,x:number,y:number):number[]{
-  const offsets=neighborOffsets(world.lattice??'square',x,y,(world.engine==='sandpile'||world.engine==='forestfire'||world.engine==='ising'||world.engine==='turmites'?'vonNeumann':
+  const offsets=neighborOffsets(world.lattice??'square',x,y,(world.engine==='sandpile'||world.engine==='forestfire'||world.engine==='ising'||world.engine==='turmites'||world.engine==='hpp'?'vonNeumann':
       world.engine==='hodgepodge'?'moore':world.neighborShape??'moore'),world.neighborMask??255,
     world.customStencilMask,world.customStencilSize);
   const out:number[]=[];
@@ -85,7 +90,7 @@ export function computeColorSignal(world:World,a:Appearance,id:ColorBy=a.colorBy
       case 'entropy':{
         if(!nb.length)break;
         const hist=new Map<number,number>();
-        for(const p of nb)hist.set(cells[p],(hist.get(cells[p])??0)+1);
+        for(const p of nb){const state=stateAt(world,p);hist.set(state,(hist.get(state)??0)+1);}
         let entropy=0;
         for(const amount of hist.values()){
           const q=amount/nb.length;
@@ -96,19 +101,21 @@ export function computeColorSignal(world:World,a:Appearance,id:ColorBy=a.colorBy
       }
       case 'boundaries':{
         let diff=0;
-        for(const p of nb)if(cells[p]!==cells[i])diff++;
+        for(const p of nb)if(stateAt(world,p)!==stateAt(world,i))diff++;
         value=diff/Math.max(1,nb.length);
         break;
       }
       case 'diversity':{
         const kinds=new Set<number>();
-        for(const p of nb)kinds.add(cells[p]);
+        for(const p of nb)kinds.add(stateAt(world,p));
         value=(kinds.size-1)/Math.max(1,Math.min(cardinality,nb.length)-1);
         break;
       }
       case 'flow':{
         let vx=0,vy=0,energy=0;
-        const offsets=neighborOffsets(world.lattice??'square',x,y,(world.engine==='sandpile'?'vonNeumann':world.neighborShape??'moore'),world.neighborMask??255,
+        const offsets=neighborOffsets(world.lattice??'square',x,y,
+    (['sandpile','forestfire','ising','turmites','hpp'].includes(world.engine)?'vonNeumann':
+     world.engine==='hodgepodge'?'moore':world.neighborShape??'moore'),world.neighborMask??255,
     world.customStencilMask,world.customStencilSize);
         for(const [dx,dy] of offsets){
           const p=at(world,x+dx,y+dy);

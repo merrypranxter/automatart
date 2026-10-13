@@ -1,3 +1,4 @@
+import {paintHpp} from './lattice-gas';
 import type {SimSettings,World,LatticeId} from './types';
 import {geometryExtent,lookupCell,polygonForCell} from './topology';
 import {createMutationRng} from './mutation-core';
@@ -153,6 +154,16 @@ export function applyAlienStamp(
   }
   for(const id of affected){
     const before=world.cells[id];
+    if(settings.engine==='hpp'&&world.hppWalls){
+      paintHpp(world.cells,world.hppWalls,[id],settings.hppTool,settings.hppBrush,b.mode);
+      const next=world.cells[id],wall=world.hppWalls[id];
+      world.ages[id]=next||wall?1:0;world.traces[id]=next||wall?1:0;
+      world.events[id]=before===next?0:before===0?1:next===0?2:3;
+      if(world.fossils)world.fossils[id]=next||wall?0:before?1:0;
+      if(world.previousCells)world.previousCells[id]=next;
+      if(world.olderCells)world.olderCells[id]=next;
+      continue;
+    }
     if(settings.engine==='sandpile'&&world.grains){
       const oldHeight=world.grains[id];
       const height=b.mode==='erase'?0:b.mode==='invert'?(oldHeight?0:settings.sandBrush):
