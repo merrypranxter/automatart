@@ -63,6 +63,14 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
     previousCells:get('previousCells',n),olderCells:get('olderCells',n),
     fossils:getF32('fossils'),
     grains:settings.engine==='sandpile'?new Uint32Array(get('grains',n*4).buffer):undefined};
+  if(settings.engine==='forestfire'){
+    for(let i=0;i<n;i++)if(world.cells[i]>2)
+      throw new Error('Forest fire snapshot contains an invalid state');
+  }
+  if(settings.engine==='hodgepodge'){
+    for(let i=0;i<n;i++)if(world.cells[i]>settings.hodgeStates)
+      throw new Error('Hodgepodge snapshot contains an invalid state');
+  }
   if(settings.engine==='wireworld'){
     for(let i=0;i<n;i++)if(world.cells[i]>3)
       throw new Error('Wireworld snapshot contains an invalid state');

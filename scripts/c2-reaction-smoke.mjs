@@ -32,7 +32,7 @@ try{
  h[p(2,1,5)]=20;h[p(1,2,5)]=20;
  h[p(2,3,5)]=7;h[p(3,2,5)]=8;h[p(1,1,5)]=9;
  const hv=stepHodgepodge(h,5,5,false,hRule);
- assert.equal(hv[12],3,'Healthy picks up floor(2/2)+floor(3/3) = 2?');
+ assert.equal(hv[12],2,'Healthy picks up floor(2/2)+floor(3/3)=2');
  assert.equal(hv[p(2,1,5)],0,'Terminal ill recovers immediately');
  assert.equal(hv[p(2,3,5)],Math.min(20,Math.floor((7+20+8)/9)+5),
   'Active cells advance by live Moore average and G');

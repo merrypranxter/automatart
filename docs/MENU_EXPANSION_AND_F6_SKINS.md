@@ -67,10 +67,12 @@ Automatart remains an instrument in **MATHEMAGICAL! — a Math Art Suite**. This
 
 **Done when:** canonical small patterns/circuits and grain-conservation/boundary tests pass.
 
-### F5.5C2 — REACTION WAVES AND FOREST FIRE (NEW ENGINES)
+### F5.5C2 — REACTION WAVES AND FOREST FIRE (IMPLEMENTED IN PR — CI / MERGE PENDING)
 - **Hodgepodge machine**: multistate excitable reaction automaton, adjustable disease/excitation transition parameters and clear algorithm variant; independent of existing Greenberg–Hastings-like engine.
 - **Stochastic forest fire**: states of growth/burning/empty; seeded per-step stochastic tree birth/lightning, spread; no need to draw literal trees. State sufficient RNG information for identical exported runs.
 - Explicit seed/entropy/performance settings. Preserve mobile control clarity and GIF color behavior.
+**Implementation:** Hodgepodge is an explicitly defined Gerhardt–Schuster-style synchronous Moore-8 variant: stage 0 healthy, 1…N−1 sick, N ill, and a terminal ill cell resets to 0. Healthy cell stage = floor(sick/K₂)+floor(ill/K₁), bounded by N; a sick cell progresses by floor((itself + eight actual neighbor severity values)/(1 + number of actual valid neighbors))+G, also bounded by N. Finite edges use only in-bounds neighbors; periodic square grids wrap. Sliders configure N=8…64 (restart), divisors K₁/K₂=1…8, progression G=1…40 and a real illness-stage paint brush. Forest Fire is a three-state synchronous Drossel–Schwabl-style variant, with EMPTY=0, TREE=1, FIRE=2, strictly four cardinal neighbors, TREE→FIRE from any burning cardinal neighbor or independently seeded lightning, FIRE→EMPTY, EMPTY→TREE with seeded growth. Counter-based random draw keyed by seed, generation, cell and action channel makes every frame replayable without a hidden random cursor; changing probability does not reset the current forest. Species-specific painting, fixed graph compatibility, color signals, skins, recipe import validation, exact world snapshots, rewind-safe undo and GIF/video recording are integrated. Node and Chromium regressions gate merge, and physical iPhone Safari acceptance is user-verified.
+
 **Done when:** published/reference transitions, reproducible stochastic runs and replay/snapshot tests pass.
 
 ### F5.5C3 — STATISTICAL/AGENT WORLDS (HONESTLY LABELED)

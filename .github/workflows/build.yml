@@ -45,6 +45,8 @@ jobs:
         run: node scripts/b2-stencil-smoke.mjs
       - name: Verify C1 canonical circuits, sandpile conservation and JSON/recorder parity
         run: node scripts/c1-circuits-smoke.mjs
+      - name: Verify C2 Hodgepodge waves, seeded forest fires and export replay
+        run: node scripts/c2-reaction-smoke.mjs
       - name: Verify A2 dual-source mathematical color mixing and exports
         run: node scripts/a2-dual-color-smoke.mjs
       - name: Verify Print Shop effects, compositing and recipe migration
