@@ -625,6 +625,15 @@ try{
   const rhombilleCanvas=page.locator('canvas[aria-label^="Interactive cellular"]');
   const shapePixels=await rhombilleCanvas.evaluate(c=>[c.width,c.height]);
   assert(shapePixels[0]>100&&shapePixels[1]>100);
+  // INVERT is guaranteed to change the selected diamond regardless of its
+  // starting color. Save pre-click bytes to prove the pointer actually paints.
+  await page.locator('#alien-stamp').selectOption('brush');
+  await page.locator('#alien-size').fill('0');
+  await page.locator('.alien-button-row button').last().click();
+  const [preTapFile]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const preTap=JSON.parse(await readFile(await preTapFile.path(),'utf8'));
   // Finger/click maps to a real diamond polygon; save its resulting states.
   const hitBox=await rhombilleCanvas.boundingBox();
   assert(hitBox&&hitBox.width>80&&hitBox.height>80);
@@ -633,6 +642,8 @@ try{
     page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
   ]);
   const diamondRecipe=JSON.parse(await readFile(await d1aRecipe.path(),'utf8'));
+  assert.notEqual(diamondRecipe.world.arrays.cells,preTap.world.arrays.cells,
+    'Real pointer paints a rhombus instead of silently dropping the gesture');
   assert.equal(diamondRecipe.settings.lattice,'rhombille');
   assert.equal(diamondRecipe.world.width%3,0,'Saved rhombille has 3 diamonds per hex');
   assert.equal(diamondRecipe.world.height%2,0,'Even-offset-row torus');
