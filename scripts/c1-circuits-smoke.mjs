@@ -60,6 +60,12 @@ try{
  assert.equal(high.grains[12],69996,'Topples retain >255 canonical integer heights');
  assert.equal(sandVisualState(69996),255,'Eight-bit view saturation is presentation only');
  assert.equal(grainSum(high.grains),70000);
+ // Parallel heights at the uint32 ceiling may be legal if the ceiling cell
+ // itself topples in that same round. Order of iteration must not matter.
+ const maximal=new Uint32Array([4,0xffffffff]);
+ const validRound=stepSandpile(maximal,2,1,false,0,1,1,0,'center');
+ assert.deepEqual([...validRound.grains],[1,0xfffffffc],
+  'Simultaneous decrement before transfers prevents false overflow');
  const fed=stepSandpile(corner,5,5,true,17,2,2201,9,'random');
  assert.equal(grainSum(fed.grains),grainSum(corner)+17);
  assert.equal(sandFeedIndex(9,10,5,5),sandFeedIndex(9,10,5,5));
@@ -112,6 +118,10 @@ try{
  const planted=applyAlienStamp(restored,s,[5,5],brush,1234);
  assert(planted.length>0);
  for(const i of planted)assert.equal(restored.grains[i],12);
+ const last=planted[0];restored.grains[last]=0xffffffff;
+ assert.throws(()=>applyAlienStamp(restored,s,[5,5],brush,1234),/overflow/);
+ assert.equal(restored.grains[last],0xffffffff,'Overflowing brush fails atomically');
+ restored.grains[last]=12;restored.cells[last]=12;
  const afterBrush=snapshotWorld(restored);
  assert.deepEqual(restoreWorldSnapshot(afterBrush,s).grains,restored.grains);
  const wire={...INITIAL_SETTINGS,engine:'wireworld',cellCount:32,wireBrush:2};

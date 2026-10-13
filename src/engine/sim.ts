@@ -232,6 +232,15 @@ export function rewindWorld(prev:World,s:SimSettings):World{
     olderCells:earlier.slice(),fossils:new Float32Array(n)};
 }
 export function paintWorld(world:World,s:SimSettings,x:number,y:number,radius:number,erase=false,species=1):void{
+  if(s.engine==='sandpile'&&world.grains&&!erase){
+    for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){
+      if(dx*dx+dy*dy>radius*radius)continue;
+      const xx=x+dx,yy=y+dy;
+      if(xx<0||yy<0||xx>=world.width||yy>=world.height)continue;
+      if(world.grains[yy*world.width+xx]>0xffffffff-s.sandBrush)
+        throw new RangeError('Cannot paint: 32-bit grain count overflow');
+    }
+  }
   for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){
     if(dx*dx+dy*dy>radius*radius)continue;
     const xx=x+dx,yy=y+dy;
@@ -239,7 +248,6 @@ export function paintWorld(world:World,s:SimSettings,x:number,y:number,radius:nu
     const p=yy*world.width+xx;
     if(s.engine==='sandpile'&&world.grains){
       const before=world.grains[p];
-      if(!erase&&before>0xffffffff-s.sandBrush)continue;
       const height=erase?0:before+s.sandBrush;
       world.grains[p]=height;world.cells[p]=sandVisualState(height);
     }else world.cells[p]=erase?0:s.engine==='wireworld'?s.wireBrush:s.engine==='cyclic'?Math.max(1,Math.floor(s.cyclicStates/2))

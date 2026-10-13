@@ -469,7 +469,8 @@ export default function App(){
     cancelBatch();
     const seed=createStrokeSeed(x,y);
     const brush={...alienBrush,species:paintSpecies};
-    applyAlienStamp(worldRef.current,settings,[x,y],brush,seed);
+    try{applyAlienStamp(worldRef.current,settings,[x,y],brush,seed);}
+    catch(error){setMessage('Paint rejected: '+(error instanceof Error?error.message:String(error)));return;}
     strokeLogRef.current.push({x,y,seed,brush:{...brush}});
     if(strokeLogRef.current.length>1500)strokeLogRef.current.shift();
     setPopulation(stat(worldRef.current));

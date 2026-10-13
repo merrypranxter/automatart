@@ -146,12 +146,17 @@ export function applyAlienStamp(
 ):number[]{
   const b=validateAlienBrush(rawBrush,settings);
   const affected=footprint(world,anchor,b,seed);
+  // Fail atomically before painting. Saturation would silently destroy mass.
+  if(settings.engine==='sandpile'&&world.grains&&b.mode==='paint'){
+    for(const id of affected)if(world.grains[id]>0xffffffff-settings.sandBrush)
+      throw new RangeError('Cannot paint: 32-bit grain count overflow');
+  }
   for(const id of affected){
     const before=world.cells[id];
     if(settings.engine==='sandpile'&&world.grains){
       const oldHeight=world.grains[id];
       const height=b.mode==='erase'?0:b.mode==='invert'?(oldHeight?0:settings.sandBrush):
-        Math.min(0xffffffff,oldHeight+settings.sandBrush);
+        oldHeight+settings.sandBrush;
       world.grains[id]=height;
       const next=sandVisualState(height);
       world.cells[id]=next;

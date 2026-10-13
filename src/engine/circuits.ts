@@ -10,6 +10,7 @@ export interface SandResult{
  added:number;
  lost:number;
 }
+const CARDINAL_OFFSETS:readonly (readonly [number,number])[]=[[-1,0],[1,0],[0,-1],[0,1]];
 function idx(x:number,y:number,w:number,h:number,wrap:boolean):number{
  if(wrap)return ((y+h)%h)*w+(x+w)%w;
  return x<0||x>=w||y<0||y>=h?-1:y*w+x;
@@ -65,12 +66,18 @@ export function stepSandpile(
  }
  for(let pass=0;pass<rounds;pass++){
   const next=state.slice();
-  let unstable=false;
-  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
-   const p=y*w+x;
+  const active:number[]=[];
+  // Phase 1: all unstable sites decrement from the SAME old snapshot.
+  // Phase 2: distribute their grains. This avoids false overflow errors
+  // when a maximum-height site also topples during this round.
+  for(let p=0;p<state.length;p++){
    if(state[p]<4)continue;
-   unstable=true;next[p]-=4;topplings[p]++;
-   for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]]){
+   next[p]-=4;topplings[p]++;active.push(p);
+  }
+  if(!active.length)break;
+  for(const p of active){
+   const x=p%w,y=Math.floor(p/w);
+   for(const [dx,dy] of CARDINAL_OFFSETS){
     const q=idx(x+dx,y+dy,w,h,wrap);
     if(q<0){lost++;continue;}
     if(next[q]===0xffffffff)throw Error('Sandpile grain count overflow');
@@ -78,7 +85,6 @@ export function stepSandpile(
    }
   }
   state=next;
-  if(!unstable)break;
  }
  return {grains:state,topplings,added:feed,lost};
 }

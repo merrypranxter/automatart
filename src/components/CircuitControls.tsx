@@ -33,7 +33,9 @@ export default function CircuitControls({settings:s,setSettings,grains,inspected
    <div className="c1-head"><strong>⚡ C1 · ABELIAN SANDPILE</strong><span>INTEGER GRAIN CA</span></div>
    <p className="module-note">Every pile with at least four grains topples once per parallel round, giving one grain to each N/E/S/W neighbor. With finite edges grains fall off into the sink; with wrapping, total grain mass is conserved unless you feed or paint.</p>
    <div className="c1-grain-count"><b>{total.toLocaleString('en-US')}</b><span>ACTUAL GRAINS (32-BIT)</span></div>
-   {inspectedCell&&grains&&<p className="neighborhood-note" aria-label="Selected exact grain height">CELL ({inspectedCell[0]},{inspectedCell[1]}) · <strong>{grains[inspectedCell[1]*width+inspectedCell[0]].toLocaleString('en-US')} GRAINS</strong></p>}
+   {inspectedCell&&grains&&inspectedCell[0]>=0&&inspectedCell[0]<width&&
+    inspectedCell[1]>=0&&inspectedCell[1]*width+inspectedCell[0]<grains.length&&
+    <p className="neighborhood-note" aria-label="Selected exact grain height">CELL ({inspectedCell[0]},{inspectedCell[1]}) · <strong>{grains[inspectedCell[1]*width+inspectedCell[0]].toLocaleString('en-US')} GRAINS</strong></p>}
    <label className="input-label" htmlFor="sand-feed">Grains added each generation <em>{s.sandFeed}</em></label>
    <input id="sand-feed" type="range" min="0" max="64" step="1" value={s.sandFeed}
     onChange={e=>change('sandFeed',Number(e.target.value))}/>
