@@ -56,7 +56,7 @@ const ENGINES: {id:EngineId;name:string;hint:string}[] = [
   {id:'sandpile',name:'ABELIAN SANDPILE',hint:'Conservative grain avalanches'},
   {id:'hodgepodge',name:'HODGEPODGE MACHINE',hint:'Gerhardt-Schuster reaction waves'},
   {id:'forestfire',name:'FOREST FIRE',hint:'Seeded growth, spread and lightning'},
-  {id:'ising',name:'ISING SPIN GLASS',hint:'Temperature-driven magnetic domains'},
+  {id:'ising',name:'ISING MODEL',hint:'Temperature-driven magnetic domains'},
   {id:'turmites',name:'TURMITES',hint:'Langton ant agents writing geometry'}
 ];
 const ASPECTS: {value:AspectId;name:string}[]=[

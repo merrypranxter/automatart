@@ -98,6 +98,18 @@ try{
  const marked=applyAlienStamp(isWorld,down,[6,6],brush,91);
  assert(marked.length>0);
  for(const id of marked)assert.equal(isWorld.cells[id],0,'Finger brush can paint DOWN as 0');
+ const quietWarm={...is,isingTemperature:.05,isingCoupling:1,isingField:0};
+ const warmGround=createWorld(quietWarm);warmGround.cells.fill(1);
+ const warmCursor=createCaptureCursor(warmGround,quietWarm,10,10);
+ for(let i=0;i<3;i++){
+  const frame=warmCursor.advance();
+  assert.equal(frame.changed,false,'A cold, aligned magnet can remain quiet');
+  assert.equal(frame.settled,false,'Positive temperature magnet is never a proven fixed point');
+ }
+ const frozenGround={...quietWarm,isingTemperature:0};
+ const coldCursor=createCaptureCursor(warmGround,frozenGround,10,10);
+ for(let i=0;i<2;i++)assert.equal(coldCursor.advance().settled,false);
+ assert.equal(coldCursor.advance().settled,true,'Ground state at absolute zero can settle');
  const snapshotIs=snapshotWorld(isWorld);
  assert.deepEqual(restoreWorldSnapshot(snapshotIs,down).cells,isWorld.cells);
  const faultyIs=structuredClone(snapshotIs);
