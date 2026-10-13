@@ -21,10 +21,9 @@ const controlPresets=[
 export default function CyclicDynamicsControls({settings:s,setSettings,world,neighborMax}:Props){
  const reach=Math.max(1,Math.min(s.cyclicStates-1,s.cyclicReach??1));
  const drive=s.cyclicDrive??0;
- const events=world.engine==='cyclic'?
-  world.events.reduce((n,v)=>n+(v===3?1:0),0):0;
- const activity=world.engine==='cyclic'&&world.cells.length>0?
-  100*events/world.cells.length:0;
+ const hasStep=world.engine==='cyclic'&&typeof world.stepChanged==='number';
+ const activity=hasStep&&world.cells.length>0?
+  100*world.stepChanged!/world.cells.length:0;
  const predicted=estimateInitialChase(s.cyclicStates,reach,s.cyclicThreshold,
   neighborMax,s.density,drive)*100;
  const change=<K extends keyof SimSettings>(key:K,value:SimSettings[K])=>
@@ -36,10 +35,10 @@ export default function CyclicDynamicsControls({settings:s,setSettings,world,nei
   </div>
   <p className="module-note">Every cell is an integer state on a color cycle. It advances exactly one step if enough neighbors are in phases ahead. These settings change the next generation, not just the palette.</p>
   <div className="cyclic-dynamics-meters">
-   <div><b>{activity.toFixed(activity<1?2:1)}%</b><span>CELLS CHANGED LAST STEP</span></div>
+   <div><b>{hasStep?activity.toFixed(activity<1?2:1)+'%':'—'}</b><span>CELLS CHANGED LAST STEP</span></div>
    <div><b>{s.pattern==='noise'?predicted.toFixed(1)+'%':'—'}</b><span>EST. INITIAL NOISE ACTIVITY</span></div>
   </div>
-  {world.engine==='cyclic'&&world.generation>0&&activity===0&&
+  {hasStep&&world.generation>0&&activity===0&&
    <p className="cyclic-dynamics-status" role="status">
     No cells changed in the last step. {drive>0?
     'Seeded sparks can still restart movement later.':

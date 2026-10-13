@@ -124,6 +124,8 @@ export interface World {
   width: number;
   height: number;
   generation: number;
+  /** True changed-cell count from the most recent simulation step (not painting). */
+  stepChanged?:number;
   lattice?: LatticeId;
   wrap?:boolean;
   neighborShape?:NeighborShape;

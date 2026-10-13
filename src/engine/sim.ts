@@ -189,6 +189,8 @@ export function stepWorld(prev:World,s:SimSettings):World{
         const offsets=s.engine==='larger'?null:neighborOffsets(s.lattice,x,y,s.neighborShape,s.neighborMask,s.customStencilMask,s.customStencilSize);
         if(offsets){
           for(const [ox,oy] of offsets){
+            if(s.engine==='cyclic'&&!s.wrap&&
+               (x+ox<0||x+ox>=w||y+oy<0||y+oy>=h))continue;
             const value=valueAt(cells,w,h,x+ox,y+oy,s.wrap);
             if(s.engine==='species'){
               if(value>0&&value<=s.speciesCount){speciesCounts[value]++;count++;}
@@ -255,8 +257,10 @@ export function stepWorld(prev:World,s:SimSettings):World{
       }
     }
   }
+  let stepChanged=0;
   for(let i=0;i<n;i++){
     const old=cells[i],now=next[i];
+    if(old!==now)stepChanged++;
     nextAges[i]=(now===0&&s.engine!=='cyclic')?0:
       (old===now?Math.min(65535,ages[i]+1):1);
     if(s.engine==='cyclic'){
@@ -278,7 +282,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
   }
   return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
-    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,
+    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,stepChanged,
     cells:next,grains:nextGrains,hppWalls:prev.hppWalls?.slice(),turmiteAgents:nextAgents?.map(a=>({...a})),
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,
     ages:nextAges,neighbors,events,traces:nextTraces,
