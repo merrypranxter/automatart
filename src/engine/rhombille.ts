@@ -37,6 +37,15 @@ export function rhombilleOffsets(x:number,y:number):readonly [number,number][]{
  if(sector===1)return [[-1,0],[1,0],[3*right+1,1],[3*left-1,1]];
  return [[-2,0],[-1,0],[-5,0],[3*left-1,-1]];
 }
+/** Exact lozenge centroid. Also accepts coordinates beyond the finite
+ * array, needed for correct physical directions across periodic seams.
+ */
+export function rhombilleCentroid(x:number,y:number):Point{
+ const sector=((x%3)+3)%3,col=(x-sector)/3;
+ const cx=H*(col+.5*(y&1)+.5),cy=1.5*y+1;
+ const offset=sector===0?[H/4,-.25]:sector===1?[0,.5]:[-H/4,-.25];
+ return [cx+offset[0],cy+offset[1]];
+}
 export function rhombilleArea(poly:readonly Point[]):number{
  let area=0;
  for(let i=0;i<poly.length;i++){
