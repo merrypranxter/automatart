@@ -186,6 +186,8 @@ export function mutateAutomatart(
         break;
       case 'cyclic':
         offer('Chase threshold',()=>{s.cyclicThreshold=intStep(s.cyclicThreshold,1,maxNeighborCount(s))});
+        offer('Forward chase field',()=>{s.cyclicReach=intStep(s.cyclicReach??1,1,Math.min(6,s.cyclicStates-1),2)});
+        offer('Spontaneous chase sparks',()=>{s.cyclicDrive=floatStep(s.cyclicDrive??0,.0015,0,.01,4)});
         break;
       case 'wolfram':
         offer('Wolfram rule',()=>{s.wolframRule=choose(s.wolframRule,[30,54,73,90,105,110,126,150,184,225,254])});

@@ -5,6 +5,7 @@ import {stepWireworld,stepSandpile,sandVisualState} from './circuits';
 import {stepHodgepodge,stepForestFire} from './reaction-worlds';
 import {stepIsing,stepTurmites,seedTurmites} from './spins-turmites';
 import {stepHpp,paintHpp,hppCount} from './lattice-gas';
+import {chaseNeighbor,cyclicAdvance} from './cyclic-dynamics';
 
 function seededRandom(seed:number):()=>number{
   let a=seed>>>0;
@@ -191,7 +192,8 @@ export function stepWorld(prev:World,s:SimSettings):World{
             const value=valueAt(cells,w,h,x+ox,y+oy,s.wrap);
             if(s.engine==='species'){
               if(value>0&&value<=s.speciesCount){speciesCounts[value]++;count++;}
-            }else if(s.engine==='cyclic'?value===sought:value===1)count++;
+            }else if(s.engine==='cyclic'?
+               chaseNeighbor(value,old,s.cyclicStates,s.cyclicReach??1):value===1)count++;
           }
         }else{
           for(let oy=-radius;oy<=radius;oy++)for(let ox=-radius;ox<=radius;ox++){
@@ -215,7 +217,8 @@ export function stepWorld(prev:World,s:SimSettings):World{
           next[p]=old===1?2:old===2?0:count===2?1:0;
           break;
         case 'cyclic':
-          next[p]=count>=s.cyclicThreshold?sought:old;
+          next[p]=cyclicAdvance(old,count,s.cyclicThreshold,s.cyclicDrive??0,
+            s.seed,prev.generation,p,s.cyclicStates);
           break;
         case 'generations':
           // B/S/C: 0 rest, 1 alive, 2..C-1 refractory; only 1 votes.
