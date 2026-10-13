@@ -56,9 +56,56 @@ try{
   assert.equal(await page.locator('#tab-export').getAttribute('aria-selected'),'true','Top-bar EXPORT opens the export panel');
   assert(await page.locator('#engine').isVisible(),'Species picker lives in the always-visible top bar');
   console.log('PASS: studio shell tabs, keyboard navigation, persistent stage and phone-width layout');
+  // Dynamics P1: actual evolution instead of coarse ineffective sliders.
+  await page.locator('.transport .primary').click(); // pause before comparing generations
+  await page.waitForTimeout(100);
+  assert(await page.locator('#cyclic-reach').isVisible(),'Real chase-field control is available');
+  const cyclicGen=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  await page.locator('#cyclic-reach').fill('3');
+  await page.locator('#cyclic-drive').fill('25');
+  await page.locator('#threshold').fill('2');
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),cyclicGen,
+   'Changing chase dynamics does not reset the running cells');
+  const [cyclicFile]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const tunedCyclic=JSON.parse(await readFile(await cyclicFile.path(),'utf8'));
+  assert.equal(tunedCyclic.settings.cyclicReach,3);
+  assert.equal(tunedCyclic.settings.cyclicDrive,.0025);
+  assert.equal(tunedCyclic.settings.cyclicThreshold,2);
+  await page.getByRole('button',{name:'CLASSIC · PURE CA'}).click();
+  assert.equal(await page.locator('#cyclic-drive').inputValue(),'0');
+  await page.locator('#engine').selectOption('life');
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'cyclic-dynamics-p1.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(tunedCyclic))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='cyclic');
+  assert.equal(await page.locator('#cyclic-reach').inputValue(),'3');
+  assert.equal(await page.locator('#cyclic-drive').inputValue(),'25');
+  const legacy=structuredClone(tunedCyclic);
+  delete legacy.settings.cyclicReach;delete legacy.settings.cyclicDrive;
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'cyclic-legacy-recipe.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(legacy))
+  });
+  await page.waitForFunction(()=>document.querySelector('#cyclic-reach')?.value==='1');
+  assert.equal(await page.locator('#cyclic-drive').inputValue(),'0');
+  const oversized=structuredClone(tunedCyclic);
+  oversized.settings.cyclicReach=99;
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'cyclic-out-of-range-recipe.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(oversized))
+  });
+  await page.waitForFunction(()=>document.querySelector('#cyclic-reach')?.value==='6');
+  const [clamped]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const validated=JSON.parse(await readFile(await clamped.path(),'utf8'));
+  assert.equal(validated.settings.cyclicReach,6,'Saved rule exactly matches the visible maximum');
+  console.log('PASS: Dynamics P1 live knobs, seeded drive, exact JSON roundtrip and classic migration');
   // Funhouse F1 regression: precise stepping, authentic B/S roulette, and two
   // unmistakably different random color buttons.
-  await page.locator('.transport .primary').click(); // pause first
   await page.waitForTimeout(100);
   // F2: Mutation Dice must operate on the live world without restarting it,
   // preserve protectable palette/rules, and exactly undo the prior pixels.

@@ -186,6 +186,8 @@ export function mutateAutomatart(
         break;
       case 'cyclic':
         offer('Chase threshold',()=>{s.cyclicThreshold=intStep(s.cyclicThreshold,1,maxNeighborCount(s))});
+        offer('Forward chase field',()=>{s.cyclicReach=intStep(s.cyclicReach??1,1,Math.min(6,s.cyclicStates-1),2)});
+        offer('Spontaneous chase sparks',()=>{s.cyclicDrive=floatStep(s.cyclicDrive??0,.0015,0,.01,4)});
         break;
       case 'wolfram':
         offer('Wolfram rule',()=>{s.wolframRule=choose(s.wolframRule,[30,54,73,90,105,110,126,150,184,225,254])});
@@ -273,6 +275,9 @@ export function mutateAutomatart(
     candidate.run();
     if(JSON.stringify(s)+JSON.stringify(a)!==before)changes.push(candidate.label);
   }
+  // When a mutation shrinks the number of phases, reconcile the chase field.
+  if(s.engine==='cyclic')s.cyclicReach=Math.max(1,
+    Math.min(6,s.cyclicStates-1,s.cyclicReach??1));
   // Unless user explicitly allows structural resets, the entire running CA
   // state remains intact (even across visual and local-rule mutations).
   if(!supportsNeighborhood(s.engine,s.lattice)&&!['moore','vonNeumann'].includes(s.neighborShape)){

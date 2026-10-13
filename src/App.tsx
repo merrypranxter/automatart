@@ -25,6 +25,7 @@ import DualColorControls from './components/DualColorControls';
 import CircuitControls from './components/CircuitControls';
 import ReactionControls from './components/ReactionControls';
 import SpinTurmiteControls from './components/SpinTurmiteControls';
+import CyclicDynamicsControls from './components/CyclicDynamicsControls';
 import LatticeGasControls from './components/LatticeGasControls';
 import {validateDualColor} from './engine/dual-color';
 import {validatePrintShop} from './engine/printshop';
@@ -122,6 +123,14 @@ function stat(world:World):number{
   return living;
 }
 
+function validatedCyclicReach(v:unknown,states:number):number{
+ const n=Number(v);
+ return Number.isInteger(n)?Math.max(1,Math.min(6,states-1,n)):1;
+}
+function validatedCyclicDrive(v:unknown):number{
+ const n=Number(v);
+ return Number.isFinite(n)?Math.max(0,Math.min(.01,n)):0;
+}
 export default function App(){
   const [settings,setSettings]=useState<SimSettings>(INITIAL_SETTINGS);
   const [appearance,setAppearance]=useState<Appearance>(INITIAL_APPEARANCE);
@@ -677,6 +686,9 @@ export default function App(){
       if(!Number.isFinite(s.seed))throw new Error('Invalid seed');
       s.seed=s.seed>>>0;s.cyclicStates=Math.max(3,Math.min(24,Math.floor(s.cyclicStates)||12));
       s.cyclicThreshold=Math.max(1,Math.min(savedRuleCap,Math.floor(s.cyclicThreshold)||2));
+      // Legacy JSON with no new fields preserves the exact classic CA rule.
+      s.cyclicReach=validatedCyclicReach(data.settings.cyclicReach,s.cyclicStates);
+      s.cyclicDrive=validatedCyclicDrive(data.settings.cyclicDrive);
       s.wolframRule=Math.max(0,Math.min(255,Math.floor(s.wolframRule)||30));
 
       for(const k of ['customBirth','customSurvive'] as const){
@@ -1061,13 +1073,9 @@ export default function App(){
             <SpinTurmiteControls settings={settings} setSettings={setSettings}
               world={worldRef.current} resetNumber={resetNumber}/>}
           {settings.engine==='brians'&&<p className="module-note">Three-state Brain: OFF → FIRING → REFRACTORY → OFF. Exactly two firing neighbors cause ignition.</p>}
-          {settings.engine==='cyclic'&&<div className="group">
-            <h3 className="group-head">CYCLIC CHASE</h3>
-            <label className="input-label" htmlFor="states">Color species <em>{settings.cyclicStates}</em></label>
-            <input id="states" type="range" min="3" max="24" value={settings.cyclicStates} onChange={e=>updateSetting('cyclicStates',Number(e.target.value))}/>
-            <label className="input-label" htmlFor="threshold">Chase threshold <em>{settings.cyclicThreshold} neighbors</em></label>
-            <input id="threshold" type="range" min="1" max={neighborMax} value={Math.min(settings.cyclicThreshold,neighborMax)} onChange={e=>updateSetting('cyclicThreshold',Number(e.target.value))}/>
-          </div>}
+          {settings.engine==='cyclic'&&
+            <CyclicDynamicsControls settings={settings} setSettings={setSettings}
+              world={worldRef.current} neighborMax={neighborMax}/>}
           <MutantControls settings={settings} setSettings={setSettings} paintSpecies={paintSpecies} setPaintSpecies={setPaintSpecies}/>
           {settings.engine==='wolfram'&&<div className="group">
             <h3 className="group-head">ELEMENTARY RULE</h3>

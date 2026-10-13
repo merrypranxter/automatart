@@ -5,6 +5,7 @@ import {stepWireworld,stepSandpile,sandVisualState} from './circuits';
 import {stepHodgepodge,stepForestFire} from './reaction-worlds';
 import {stepIsing,stepTurmites,seedTurmites} from './spins-turmites';
 import {stepHpp,paintHpp,hppCount} from './lattice-gas';
+import {chaseNeighbor,cyclicAdvance} from './cyclic-dynamics';
 
 function seededRandom(seed:number):()=>number{
   let a=seed>>>0;
@@ -175,7 +176,6 @@ export function stepWorld(prev:World,s:SimSettings):World{
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
       const p=y*w+x,old=cells[p];
       let count=0;
-      const sought=s.engine==='cyclic'?(old+1)%s.cyclicStates:1;
       if(s.engine==='species')speciesCounts.fill(0);
       let orientedBits=0;
       if(s.engine==='oriented'){
@@ -188,10 +188,13 @@ export function stepWorld(prev:World,s:SimSettings):World{
         const offsets=s.engine==='larger'?null:neighborOffsets(s.lattice,x,y,s.neighborShape,s.neighborMask,s.customStencilMask,s.customStencilSize);
         if(offsets){
           for(const [ox,oy] of offsets){
+            if(s.engine==='cyclic'&&!s.wrap&&
+               (x+ox<0||x+ox>=w||y+oy<0||y+oy>=h))continue;
             const value=valueAt(cells,w,h,x+ox,y+oy,s.wrap);
             if(s.engine==='species'){
               if(value>0&&value<=s.speciesCount){speciesCounts[value]++;count++;}
-            }else if(s.engine==='cyclic'?value===sought:value===1)count++;
+            }else if(s.engine==='cyclic'?
+               chaseNeighbor(value,old,s.cyclicStates,s.cyclicReach??1):value===1)count++;
           }
         }else{
           for(let oy=-radius;oy<=radius;oy++)for(let ox=-radius;ox<=radius;ox++){
@@ -215,7 +218,8 @@ export function stepWorld(prev:World,s:SimSettings):World{
           next[p]=old===1?2:old===2?0:count===2?1:0;
           break;
         case 'cyclic':
-          next[p]=count>=s.cyclicThreshold?sought:old;
+          next[p]=cyclicAdvance(old,count,s.cyclicThreshold,s.cyclicDrive??0,
+            s.seed,prev.generation,p,s.cyclicStates);
           break;
         case 'generations':
           // B/S/C: 0 rest, 1 alive, 2..C-1 refractory; only 1 votes.
@@ -252,8 +256,10 @@ export function stepWorld(prev:World,s:SimSettings):World{
       }
     }
   }
+  let stepChanged=0;
   for(let i=0;i<n;i++){
     const old=cells[i],now=next[i];
+    if(old!==now)stepChanged++;
     nextAges[i]=(now===0&&s.engine!=='cyclic')?0:
       (old===now?Math.min(65535,ages[i]+1):1);
     if(s.engine==='cyclic'){
@@ -275,7 +281,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
   }
   return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
-    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,
+    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,stepChanged,
     cells:next,grains:nextGrains,hppWalls:prev.hppWalls?.slice(),turmiteAgents:nextAgents?.map(a=>({...a})),
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,
     ages:nextAges,neighbors,events,traces:nextTraces,

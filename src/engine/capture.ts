@@ -111,7 +111,8 @@ export function createCaptureCursor(source:World,s:SimSettings,fps:number,stepsP
       // Metropolis at T>0 remains genuinely stochastic even if three whole
       // checkerboard sweeps happened not to flip a single spin.
       const thermalFuture=s.engine==='ising'&&s.isingTemperature>0;
-      return {settled:unchanged>=3&&!randomFuture&&!thermalFuture,changed};
+      const cyclicFuture=s.engine==='cyclic'&&(s.cyclicDrive??0)>0;
+      return {settled:unchanged>=3&&!randomFuture&&!thermalFuture&&!cyclicFuture,changed};
     }
   };
   return cursor;
