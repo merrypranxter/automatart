@@ -426,6 +426,9 @@ try{
   assert.deepEqual(loadedAgents.world.turmiteAgents,initialAgents,
    'All agent coordinates and headings survive import/export');
   await page.locator('#turmite-rule').fill('LLRR'); // deliberately uncommitted
+  await page.locator('#turmite-brush').fill('1');
+  assert.equal(await page.locator('#turmite-rule').inputValue(),'LLRR',
+   'Changing track brush does not destroy uncommitted turn-rule text');
   await page.locator('input[type=file]').last().setInputFiles({
    name:'c3-same-rule-reload.json',mimeType:'application/json',
    buffer:Buffer.from(JSON.stringify(turmiteJson))

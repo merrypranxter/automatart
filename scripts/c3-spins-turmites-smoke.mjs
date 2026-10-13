@@ -163,6 +163,8 @@ try{
  assert.throws(()=>restoreWorldSnapshot(badTrack,t),/Turmite track/);
  assert(requiresWorldRestart(t,{...t,turmiteRule:'RL'}));
  assert(requiresWorldRestart(t,{...t,turmiteCount:2}));
+ assert(!requiresWorldRestart(t,{...t,pattern:'rings',density:.95}),
+  'Unused Turmite starting-pattern/density never destroy live agents');
  assert(!requiresWorldRestart(is,{...is,isingTemperature:4.7}));
  const frozen=mutateAutomatart(is,INITIAL_APPEARANCE,
   {strength:'wtf',locks:{palette:true,rule:true,engine:true,seed:true},

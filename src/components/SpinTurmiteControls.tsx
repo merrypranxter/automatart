@@ -2,18 +2,18 @@ import {useEffect,useState} from 'react';
 import type {Dispatch,SetStateAction} from 'react';
 import type {SimSettings,World} from '../engine/types';
 import {isingEnergy,isingMagnetization,validTurmiteRule} from '../engine/spins-turmites';
-interface Props {settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSettings>>;world:World}
+interface Props {settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSettings>>;world:World;resetNumber:number}
 const RULES=[
  {rule:'RL',label:"LANGTON'S ANT"},
  {rule:'LLRR',label:'SYMMETRIC CHAOS'},
  {rule:'RLLR',label:'MAZE WALKER'},
  {rule:'LRRRRRLLR',label:'MULTICOLOR HIGHWAY'}
 ] as const;
-export default function SpinTurmiteControls({settings:s,setSettings,world}:Props){
+export default function SpinTurmiteControls({settings:s,setSettings,world,resetNumber}:Props){
  const [typed,setTyped]=useState(s.turmiteRule);
  // Recipes may replace the committed rule while the editor stays mounted.
  // Don't let a stale draft overwrite the freshly restored world.
- useEffect(()=>setTyped(s.turmiteRule),[s]);
+ useEffect(()=>setTyped(s.turmiteRule),[s.turmiteRule,s.engine,resetNumber]);
  const change=<K extends keyof SimSettings>(k:K,v:SimSettings[K])=>
    setSettings(old=>({...old,[k]:v}));
  if(s.engine==='ising'){

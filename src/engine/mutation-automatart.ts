@@ -23,7 +23,9 @@ export const INITIAL_MUTATION_LOCKS:MutationLocks={
   palette:false,rule:false,engine:true,seed:true
 };
 const restartKeys=(s:SimSettings)=>[
-  s.engine,s.cellCount,s.aspect,s.seed,s.pattern,s.density,
+  s.engine,s.cellCount,s.aspect,s.seed,
+  s.engine==='turmites'?null:s.pattern,
+  s.engine==='turmites'?null:s.density,
   s.cyclicStates,s.genStates,s.exciteStates,s.speciesCount,s.hodgeStates,s.turmiteCount,s.turmiteRule,s.lattice
 ];
 export function requiresWorldRestart(before:SimSettings,after:SimSettings):boolean{
@@ -241,8 +243,10 @@ export function mutateAutomatart(
     }
     if(!opts.locks.seed){
       offer('Change universe seed',()=>{s.seed=(s.seed+rng.int(1,0x7fffffff))>>>0});
-      offer('Mutate starting pattern',()=>{s.pattern=choose(s.pattern,['noise','center','rings','stripes','checker','spiral','web'] as const)});
-      offer('Starting cell density',()=>{s.density=floatStep(s.density,.17,0.02,.95)});
+      if(s.engine!=='turmites'){
+        offer('Mutate starting pattern',()=>{s.pattern=choose(s.pattern,['noise','center','rings','stripes','checker','spiral','web'] as const)});
+        offer('Starting cell density',()=>{s.density=floatStep(s.density,.17,0.02,.95)});
+      }
     }
     if(!opts.locks.rule){
       if(s.engine==='cyclic')offer('Cyclic species count',()=>{s.cyclicStates=intStep(s.cyclicStates,3,24,3)});

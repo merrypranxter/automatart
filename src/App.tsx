@@ -962,7 +962,8 @@ export default function App(){
             {(settings.engine==='hodgepodge'||settings.engine==='forestfire')&&
               <ReactionControls settings={settings} setSettings={setSettings}/>}
             {(settings.engine==='ising'||settings.engine==='turmites')&&
-              <SpinTurmiteControls settings={settings} setSettings={setSettings} world={worldRef.current}/>}
+              <SpinTurmiteControls settings={settings} setSettings={setSettings}
+                world={worldRef.current} resetNumber={resetNumber}/>}
             {settings.engine==='brians'&&<p className="module-note">Three-state Brain: OFF → FIRING → REFRACTORY → OFF. Exactly two firing neighbors cause ignition.</p>}
             {settings.engine==='cyclic'&&<>
               <label className="input-label" htmlFor="states">Color species <em>{settings.cyclicStates}</em></label>
