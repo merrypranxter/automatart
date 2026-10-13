@@ -20,14 +20,14 @@ try{
  await Promise.all(modules.map(([entry,outfile])=>build({entryPoints:[entry],outfile,
   bundle:true,format:'esm',platform:'node',target:'node22'})));
  const mod=async n=>import(pathToFileURL(resolve(modules[n][1])).href);
- const {rhombilleOffsets,rhombillePolygon,rhombilleArea,rhombilleExtent}=await mod(0);
+ const {rhombilleOffsets,rhombillePolygon,rhombilleArea,rhombilleExtent,rhombilleCentroid}=await mod(0);
  const {neighborOffsets,polygonForCell,geometryExtent,projectionMap,lookupCell}=await mod(1);
  const {createWorld,stepWorld}=await mod(2);
  const {INITIAL_SETTINGS,INITIAL_APPEARANCE,worldDimensions}=await mod(3);
  const {maxNeighborCount,validNeighborhoodSettings,normalizeActiveVotes}=await mod(4);
  const {snapshotWorld,restoreWorldSnapshot}=await mod(5);
  const {cloneWorld,createCaptureCursor,recommendedDimensions}=await mod(6);
- const {applyAlienStamp,INITIAL_ALIEN_BRUSH}=await mod(7);
+ const {applyAlienStamp,alienFootprint,INITIAL_ALIEN_BRUSH}=await mod(7);
  const {computeColorSignal}=await mod(8);
  const {requiresWorldRestart}=await mod(9);
  const {snapshotLayout}=await mod(10);
@@ -129,7 +129,19 @@ try{
  const brush={...INITIAL_ALIEN_BRUSH,stamp:'brush',size:0,mode:'paint'};
  const target=[x,y],painted=createWorld(s);
  const footprint=applyAlienStamp(painted,s,target,brush,242);
- assert(footprint.includes(index),'Symmetric paint uses diamond hit-test and same world index');
+ assert(footprint.includes(index),'Zero-size brush picks actual lozenge polygon');
+ const multi={...brush,size:4,stamp:'brush',density:1,symmetry:'single',scatter:1};
+ const region=alienFootprint(painted,target,multi,919);
+ assert(region.includes(index),'Large physical brush includes its center lozenge');
+ assert(region.length>=8,'Nonzero radius reaches a substantial number of real diamonds');
+ const [cx,cy]=rhombilleCentroid(x,y);
+ for(const tile of region){
+  const [tx,ty]=rhombilleCentroid(tile%simW,Math.floor(tile/simW));
+  assert(Math.hypot(tx-cx,ty-cy)<=4*Math.sqrt(3)/2+1.01,
+   'Large rhombille brush stays within geometrical radius, not packed storage steps');
+ }
+ const regionAgain=alienFootprint(painted,target,multi,919);
+ assert.deepEqual(regionAgain,region,'Geometric multistamp remains deterministically replayable');
  // Sector zero -> sector one physically points left-and-down. Packed x+1
  // is just an address; it must NOT be interpreted as eastward movement.
  const directional=createWorld(s);
