@@ -23,6 +23,7 @@ export function maxNeighborCount(s:Pick<SimSettings,'engine'|'lattice'|'neighbor
  if(s.engine==='larger')return (2*s.largeRadius+1)**2-1;
  if(s.engine==='margolus')return 3;
  if(s.engine==='oriented')return 8;
+ if(s.lattice==='rhombille')return 4;
  if(s.lattice==='hex')return 6;
  if(s.lattice==='triangle')return 3;
  switch(s.neighborShape){
@@ -58,7 +59,8 @@ export function validNeighborhoodSettings(s:Pick<SimSettings,'engine'|'lattice'|
    supportsNeighborhood(s.engine,s.lattice);
 }
 export function neighborhoodLabel(s:SimSettings):string{
- return s.lattice==='hex'?'HEXAGON / SIX EDGES':
+ return s.lattice==='rhombille'?'RHOMBILLE / FOUR SHARED DIAMOND EDGES':
+ s.lattice==='hex'?'HEXAGON / SIX EDGES':
  s.lattice==='triangle'?'TRIANGLE / THREE EDGES':
  s.neighborShape==='square2'?'RADIUS-2 MOORE / 24':
  s.neighborShape==='diamond2'?'RADIUS-2 DIAMOND / 12':

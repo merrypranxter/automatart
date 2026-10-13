@@ -1,5 +1,6 @@
 import type {Appearance,ColorBy,World} from './types';
 import {neighborOffsets} from './topology';
+import {rhombilleCentroid} from './rhombille';
 
 export const NEW_COLOR_SIGNALS:ReadonlyArray<{id:ColorBy;label:string;explanation:string}>= [
   {id:'entropy',label:'Local entropy → mixed-state disorder',explanation:'Normalized Shannon entropy of nearby cell-state frequencies. High where surrounding states are diverse and balanced.'},
@@ -121,7 +122,12 @@ export function computeColorSignal(world:World,a:Appearance,id:ColorBy=a.colorBy
           const p=at(world,x+dx,y+dy);
           if(p<0)continue;
           const change=(cells[p]!==flowPrevious[p]?1:0)+((flowPrevious[p]!==flowOlder[p] ? 0.5*opts.history : 0));
-          vx+=dx*change;vy+=dy*change;energy+=change;
+          if(world.lattice==='rhombille'){
+            const [ox,oy]=rhombilleCentroid(x,y);
+            const [nx,ny]=rhombilleCentroid(x+dx,y+dy);
+            vx+=(nx-ox)*change;vy+=(ny-oy)*change;
+          }else{vx+=dx*change;vy+=dy*change;}
+          energy+=change;
         }
         if(energy>0&&Math.hypot(vx,vy)>.001){
           const angle=(Math.atan2(vy,vx)+Math.PI)/tau;
@@ -158,7 +164,18 @@ export function computeColorSignal(world:World,a:Appearance,id:ColorBy=a.colorBy
       }
       case 'gradient':{
         let dx=0,dy=0;
-        for(const p of nb){
+        if(world.lattice==='rhombille'){
+          const edges=neighborOffsets('rhombille',x,y,'moore');
+          const [cx,cy]=rhombilleCentroid(x,y);
+          for(const [ex,ey] of edges){
+            const p=at(world,x+ex,y+ey);
+            if(p<0)continue;
+            const [nx,ny]=rhombilleCentroid(x+ex,y+ey);
+            const delta=densities![p]-densities![i];
+            const length=Math.hypot(nx-cx,ny-cy)||1;
+            dx+=(nx-cx)/length*delta;dy+=(ny-cy)/length*delta;
+          }
+        }else for(const p of nb){
           const ox=p%w-x,oy=Math.floor(p/w)-y;
           // Toroidal edges must use the shortest wrapped displacement.
           const xDir=world.wrap&&Math.abs(ox)>w/2?(ox>0?ox-w:ox+w):ox;

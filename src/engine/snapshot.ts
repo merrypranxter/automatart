@@ -1,6 +1,7 @@
 import type {Appearance,SimSettings,World} from './types';
 import {renderWorld} from './render';
 import {worldDimensions} from './types';
+import {geometryExtent} from './topology';
 
 export type SnapshotAspect='current'|'square'|'portrait'|'landscape';
 export type SnapshotSize=720|1080|1440|2160;
@@ -15,6 +16,9 @@ const even=(value:number)=>Math.max(2,2*Math.round(value/2));
 export function snapshotLayout(s:SimSettings,options:SnapshotOptions):SnapshotLayout{
   const short=Math.max(720,Math.min(2160,options.shortSide));
   const [w,h]=worldDimensions(s);
+  const [extentW,extentH]=geometryExtent(s.lattice,w,h);
+  const artW=s.lattice==='rhombille'?extentW:w;
+  const artH=s.lattice==='rhombille'?extentH:h;
   let width:number,height:number;
   switch(options.aspect){
     case 'square':width=short;height=short;break;
@@ -22,14 +26,14 @@ export function snapshotLayout(s:SimSettings,options:SnapshotOptions):SnapshotLa
     case 'landscape':width=even(short*16/9);height=short;break;
     case 'current':
     default:
-      width=w>=h?even(short*w/h):short;
-      height=w>=h?short:even(short*h/w);
+      width=artW>=artH?even(short*artW/artH):short;
+      height=artW>=artH?short:even(short*artH/artW);
   }
   // Fit mathematically correct artwork to any requested frame without
   // stretching it. Different ratios leave a deep-space matte, never a crop.
-  const scale=Math.min(width/w,height/h);
-  const targetW=Math.min(width,even(w*scale));
-  const targetH=Math.min(height,even(h*scale));
+  const scale=Math.min(width/artW,height/artH);
+  const targetW=Math.min(width,even(artW*scale));
+  const targetH=Math.min(height,even(artH*scale));
   const image={x:Math.floor((width-targetW)/2),
     y:Math.floor((height-targetH)/2),width:targetW,height:targetH};
   return {width,height,image,letterboxed:targetW!==width||targetH!==height};

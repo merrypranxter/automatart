@@ -664,7 +664,7 @@ export default function App(){
       if(!Number.isInteger(s.cellCount)||s.cellCount<32||s.cellCount>256)throw new Error('Invalid grid size');
       // The geometry/partition requires even horizontal dimensions.
       if(s.cellCount%2!==0)s.cellCount=Math.min(256,s.cellCount+1);
-      if(!['square','hex','triangle'].includes(s.lattice))s.lattice='square';
+      if(!['square','hex','triangle','rhombille'].includes(s.lattice))s.lattice='square';
       if(SQUARE_ONLY_ENGINES.includes(s.engine))s.lattice='square';
       if(s.engine==='margolus')s.wrap=true;
       if(!['moore','vonNeumann','square2','diamond2','directional','custom'].includes(s.neighborShape))
@@ -1009,7 +1009,7 @@ export default function App(){
             <select id="aspect" value={settings.aspect} onChange={e=>updateSetting('aspect',e.target.value as AspectId)}>
               {ASPECTS.map(a=><option value={a.value} key={a.value}>{a.name}</option>)}
             </select>
-            <label className="input-label" htmlFor="resolution">Simulation grid <em>{settings.cellCount} cells across</em></label>
+            <label className="input-label" htmlFor="resolution">Simulation grid <em>{settings.lattice==='rhombille'?worldRef.current.width+' diamond columns / '+worldRef.current.height+' rows':settings.cellCount+' cells across'}</em></label>
             <input id="resolution" type="range" min="32" max="256" step="16" value={settings.cellCount} onChange={e=>updateSetting('cellCount',Number(e.target.value))}/>
             <label className="toggle"><input type="checkbox" disabled={settings.engine==='margolus'}
               checked={settings.engine==='margolus'?true:settings.wrap}

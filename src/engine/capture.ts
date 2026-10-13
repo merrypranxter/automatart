@@ -3,6 +3,7 @@ import { indexGifFrame } from './gif-palette';
 import { createWorld, stepWorld } from './sim';
 import { renderWorld } from './render';
 import { worldDimensions } from './types';
+import { geometryExtent } from './topology';
 import type { Appearance, SimSettings, World } from './types';
 
 export type CaptureFormat = 'gif' | 'video';
@@ -41,7 +42,8 @@ export function recommendedDimensions(s:SimSettings,size:ExportResolution):[numb
   // after captureStream() has been called or some browsers lose the video track.
   let width=s.aspect==='landscape' ? Math.round(size*16/9) : size;
   if(width%2)width++;
-  let height=Math.round(width*h/w);
+  const [gx,gy]=geometryExtent(s.lattice,w,h);
+  let height=Math.round(width*(s.lattice==='rhombille'?gy/gx:h/w));
   if(height%2)height++;
   return [width,height];
 }
