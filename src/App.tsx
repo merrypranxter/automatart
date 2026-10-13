@@ -24,6 +24,7 @@ import {NEW_COLOR_SIGNALS,isNewColorSignal,signalOptions} from './engine/color-s
 import DualColorControls from './components/DualColorControls';
 import CircuitControls from './components/CircuitControls';
 import ReactionControls from './components/ReactionControls';
+import SpinTurmiteControls from './components/SpinTurmiteControls';
 import {validateDualColor} from './engine/dual-color';
 import {validatePrintShop} from './engine/printshop';
 import StrangeControls, { SQUARE_ONLY_ENGINES } from './components/StrangeControls';
@@ -54,7 +55,9 @@ const ENGINES: {id:EngineId;name:string;hint:string}[] = [
   {id:'wireworld',name:'WIREWORLD',hint:'Four-state living electrical circuits'},
   {id:'sandpile',name:'ABELIAN SANDPILE',hint:'Conservative grain avalanches'},
   {id:'hodgepodge',name:'HODGEPODGE MACHINE',hint:'Gerhardt-Schuster reaction waves'},
-  {id:'forestfire',name:'FOREST FIRE',hint:'Seeded growth, spread and lightning'}
+  {id:'forestfire',name:'FOREST FIRE',hint:'Seeded growth, spread and lightning'},
+  {id:'ising',name:'ISING SPIN GLASS',hint:'Temperature-driven magnetic domains'},
+  {id:'turmites',name:'TURMITES',hint:'Langton ant agents writing geometry'}
 ];
 const ASPECTS: {value:AspectId;name:string}[]=[
   {value:'square',name:'1:1 SQUARE'},
@@ -79,7 +82,8 @@ function download(name:string, content:Blob | string):void{
 }
 function cloneWorld(world:World):World{
   return {...world,
-    cells:world.cells.slice(),grains:world.grains?.slice(),ages:world.ages.slice(),
+    cells:world.cells.slice(),grains:world.grains?.slice(),
+    turmiteAgents:world.turmiteAgents?.map(a=>({...a})),ages:world.ages.slice(),
     neighbors:world.neighbors.slice(),events:world.events.slice(),
     traces:world.traces.slice(),previousCells:world.previousCells?.slice(),
     olderCells:world.olderCells?.slice(),fossils:world.fossils?.slice()};
@@ -364,11 +368,12 @@ export default function App(){
   },[settings.engine,settings.cellCount,settings.aspect,settings.seed,
       settings.pattern,settings.density,settings.cyclicStates,
       settings.genStates,settings.exciteStates,settings.speciesCount,settings.hodgeStates,
+      settings.turmiteRule,settings.turmiteCount,
       settings.lattice,resetNumber]);
   useEffect(()=>{
     // Rule-only neighborhood changes preserve living cells and generation,
     // but visual entropy/flow inspectors must use the CURRENT rule graph.
-    worldRef.current.neighborShape=settings.engine==='sandpile'||settings.engine==='forestfire'?'vonNeumann':
+    worldRef.current.neighborShape=settings.engine==='sandpile'||settings.engine==='forestfire'||settings.engine==='ising'||settings.engine==='turmites'?'vonNeumann':
       settings.engine==='hodgepodge'?'moore':settings.neighborShape;
     worldRef.current.neighborMask=settings.neighborMask;
     worldRef.current.customStencilMask=settings.customStencilMask;
@@ -662,6 +667,18 @@ export default function App(){
       s.forestGrowth=Math.max(0,Math.min(.2,Number.isFinite(Number(s.forestGrowth))?Number(s.forestGrowth):.012));
       s.forestLightning=Math.max(0,Math.min(.025,Number.isFinite(Number(s.forestLightning))?Number(s.forestLightning):.0005));
       s.forestBrush=bounded(s.forestBrush,1,2,2) as 1|2;
+      const finite=(v:unknown,low:number,high:number,fall:number)=>{
+        const n=Number(v);return Number.isFinite(n)?Math.max(low,Math.min(high,n)):fall;
+      };
+      s.isingTemperature=finite(s.isingTemperature,0,5,2.25);
+      s.isingCoupling=finite(s.isingCoupling,-2,2,1);
+      s.isingField=finite(s.isingField,-2,2,0);
+      s.isingSweeps=bounded(s.isingSweeps,1,4,1);
+      s.isingBrush=bounded(s.isingBrush,0,1,1) as 0|1;
+      if(typeof s.turmiteRule!=="string"||!/^[LR]{2,12}$/.test(s.turmiteRule))
+        throw new Error("Invalid Turmite turning rule");
+      s.turmiteCount=bounded(s.turmiteCount,1,12,1);
+      s.turmiteBrush=bounded(s.turmiteBrush,0,s.turmiteRule.length-1,1);
       for(const key of ['genBirth','genSurvive'] as const){
         if(!Array.isArray(s[key]))s[key]=key==='genBirth'?[3]:[2,3];
         s[key]=[...new Set(s[key].filter((v:unknown)=>Number.isInteger(v)&&Number(v)>=0&&Number(v)<=savedRuleCap))].sort((a,b)=>a-b);
@@ -937,6 +954,8 @@ export default function App(){
                 grains={worldRef.current.grains} inspectedCell={inspectedCell} width={worldRef.current.width}/>}
             {(settings.engine==='hodgepodge'||settings.engine==='forestfire')&&
               <ReactionControls settings={settings} setSettings={setSettings}/>}
+            {(settings.engine==='ising'||settings.engine==='turmites')&&
+              <SpinTurmiteControls settings={settings} setSettings={setSettings} world={worldRef.current}/>}
             {settings.engine==='brians'&&<p className="module-note">Three-state Brain: OFF → FIRING → REFRACTORY → OFF. Exactly two firing neighbors cause ignition.</p>}
             {settings.engine==='cyclic'&&<>
               <label className="input-label" htmlFor="states">Color species <em>{settings.cyclicStates}</em></label>

@@ -49,7 +49,7 @@ function renderSquareWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,out
   for(let i=0;i<world.cells.length;i++){
     const state=world.cells[i],trace=world.traces[i],k=i*4;
     const fossil=world.fossils?.[i]??0;
-    const visible=world.engine==='cyclic'||state!==0||
+    const visible=world.engine==='cyclic'||world.engine==='ising'||state!==0||
       ((a.trails&&trace>0.025)||
         ((hasEventColor(a,'events')||hasEventColor(a,'birthFlash'))&&world.events[i]!==0)||
         (hasEventColor(a,'deathHeat')&&(world.events[i]===2||fossil>0.005))||
@@ -72,7 +72,7 @@ function renderSquareWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,out
     const second=(first+1)%n;
     const mix=smooth?phase-first:0;
     const c0=palette[first],c1=palette[second];
-    const intensity=world.engine==='cyclic'||state>0?1:
+    const intensity=world.engine==='cyclic'||world.engine==='ising'||state>0?1:
       (hasEventColor(a,'deathHeat')?Math.min(1,Math.max(fossil,world.events[i]===2?1:0)*1.1):
         a.trails?Math.min(0.92,trace):world.events[i]===2?0.38:0);
     const raw=dual?dual.color(i):[
@@ -121,6 +121,21 @@ function renderSquareWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,out
       ctx.drawImage(low,0,0,outW,outH);
       ctx.restore();
     }
+  }
+  // The agents are independent of their colored trails. Overlay compact
+  // directional markers *after* the skin, so export/video shows active ants.
+  if(world.engine==='turmites'&&world.turmiteAgents?.length){
+    ctx.save();const sx=outW/w,sy=outH/h;
+    const headings:readonly (readonly [number,number])[]=[[0,-1],[1,0],[0,1],[-1,0]];
+    for(const agent of world.turmiteAgents){
+      const px=(agent.x+.5)*sx,py=(agent.y+.5)*sy,r=Math.max(1.5,Math.min(sx,sy)*.43);
+      ctx.fillStyle='#fdff73';ctx.strokeStyle='#111027';
+      ctx.lineWidth=Math.max(.75,Math.min(sx,sy)*.09);
+      ctx.beginPath();ctx.arc(px,py,r,0,2*Math.PI);ctx.fill();ctx.stroke();
+      const [dx,dy]=headings[agent.heading];
+      ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+dx*r*.82,py+dy*r*.82);ctx.stroke();
+    }
+    ctx.restore();
   }
   if(a.showGrid){
     const dx=outW/w,dy=outH/h,stride=Math.ceil(Math.max(w,h)/175);

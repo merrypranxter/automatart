@@ -13,7 +13,7 @@ const DIRS=[
   {bit:7,label:'W'},{bit:-1,label:'CELL'},{bit:3,label:'E'},
   {bit:6,label:'SW'},{bit:5,label:'S'},{bit:4,label:'SE'}
 ];
-export const SQUARE_ONLY_ENGINES=['wolfram','larger','oriented','margolus','wireworld','sandpile','hodgepodge','forestfire'];
+export const SQUARE_ONLY_ENGINES=['wolfram','larger','oriented','margolus','wireworld','sandpile','hodgepodge','forestfire','ising','turmites'];
 export default function StrangeControls({settings:s,setSettings,onRewind,generation}:Props){
   const squareOnly=SQUARE_ONLY_ENGINES.includes(s.engine);
   const set=(key:keyof SimSettings,value:unknown)=>

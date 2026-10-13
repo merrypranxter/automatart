@@ -3,8 +3,9 @@ import {INITIAL_PRINT_SHOP,structuredClonePrint} from './printshop';
 import type {PrintShop} from './printshop';
 import type {DualColor} from './dual-color';
 import {DEFAULT_STENCIL_MASK} from './stencil';
+import type {TurmiteAgent} from './spins-turmites';
 
-export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus' | 'wireworld' | 'sandpile' | 'hodgepodge' | 'forestfire';
+export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus' | 'wireworld' | 'sandpile' | 'hodgepodge' | 'forestfire' | 'ising' | 'turmites';
 export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'maze' | 'mazectric' | 'replicator' | 'diamoeba' | 'coral' | 'amoeba' | 'custom';
 export type PatternId = 'noise' | 'center' | 'rings' | 'stripes' | 'checker' | 'spiral' | 'web';
 export type AspectId = 'square' | 'portrait' | 'landscape';
@@ -71,6 +72,14 @@ export interface SimSettings {
   forestGrowth:number;
   forestLightning:number;
   forestBrush:1|2;
+  isingTemperature:number;
+  isingCoupling:number;
+  isingField:number;
+  isingSweeps:number;
+  isingBrush:0|1;
+  turmiteRule:string;
+  turmiteCount:number;
+  turmiteBrush:number;
 }
 export interface Appearance {
   print?: PrintShop;
@@ -119,6 +128,9 @@ export interface World {
   grains?:Uint32Array;
   /** Maximum Hodgepodge severity stage (8..64) for exact skin scaling. */
   hodgeStates?:number;
+  /** Saved agent coordinates and headings are part of the Turmite world. */
+  turmiteAgents?:TurmiteAgent[];
+  turmiteRule?:string;
   ages: Uint16Array;
   neighbors: Uint8Array;
   events: Uint8Array;
@@ -150,7 +162,9 @@ export const INITIAL_SETTINGS: SimSettings = {
   speciesCount:3,speciesBirth:2,speciesSurvive:1,speciesAttackBias:1,
   wireBrush:1,sandFeed:6,sandRounds:3,sandSource:'center',sandBrush:8,
   hodgeStates:48,hodgeK1:2,hodgeK2:3,hodgeGrowth:12,hodgeBrush:28,
-  forestGrowth:0.012,forestLightning:0.0005,forestBrush:2
+  forestGrowth:0.012,forestLightning:0.0005,forestBrush:2,
+  isingTemperature:2.25,isingCoupling:1,isingField:0,isingSweeps:1,isingBrush:1,
+  turmiteRule:'RL',turmiteCount:1,turmiteBrush:1
 };
 export const INITIAL_APPEARANCE: Appearance = {
   print:structuredClonePrint(INITIAL_PRINT_SHOP),
@@ -186,6 +200,6 @@ export function worldDimensions(s:SimSettings):[number,number] {
   // Both offset-row hex wrap and staggered triangle geometry require even
   // height for undirected toroidal edge adjacency. Margolus requires even
   // dimensions too; cellCount is already even in the UI.
-  if((s.lattice==='hex'||s.lattice==='triangle'||s.engine==='margolus')&&h%2!==0)h++;
+  if((s.lattice==='hex'||s.lattice==='triangle'||s.engine==='margolus'||s.engine==='ising')&&h%2!==0)h++;
   return [w,Math.max(2,h)];
 }
