@@ -50,7 +50,7 @@ export default function SpinTurmiteControls({settings:s,setSettings,world}:Props
     <button type="button" id="ising-brush-up" className={s.isingBrush===1?'selected':''}
      aria-pressed={s.isingBrush===1} onClick={()=>change('isingBrush',1)}>↑ UP (+1)</button>
    </div>
-   <p className="neighborhood-note">Both spin orientations are rendered, not just the UP spins. Changing T/J/H is live. Altering the universe seed restarts from a reproducible initial pattern. Wrapped grids are kept even-by-even so checkerboard updates remain mathematically valid.</p>
+   <p className="neighborhood-note">Both spin orientations are visible across material skins, not just the UP spins. Changing T/J/H is live. Altering the universe seed restarts from a reproducible initial pattern. Wrapped grids are kept even-by-even so checkerboard updates remain mathematically valid.</p>
   </section>;
  }
  if(s.engine==='turmites')return <section className="c3-lab" aria-label="Langton ant and Turmite controls">

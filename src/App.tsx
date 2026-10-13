@@ -903,11 +903,18 @@ export default function App(){
             <label className="input-label" htmlFor="resolution">Simulation grid <em>{settings.cellCount} cells across</em></label>
             <input id="resolution" type="range" min="32" max="256" step="16" value={settings.cellCount} onChange={e=>updateSetting('cellCount',Number(e.target.value))}/>
             <label className="input-label" htmlFor="seed-pattern">Starting pattern</label>
-            <select id="seed-pattern" value={settings.pattern} onChange={e=>updateSetting('pattern',e.target.value as PatternId)}>
+            <select id="seed-pattern" value={settings.pattern} disabled={settings.engine==='turmites'}
+              onChange={e=>updateSetting('pattern',e.target.value as PatternId)}>
               {PATTERNS.map(p=><option value={p.value} key={p.value}>{p.name}</option>)}
             </select>
             <label className="input-label" htmlFor="density">Initial fill <em>{densityLabel}</em></label>
-            <input id="density" type="range" min="1" max="95" step="1" value={Math.round(settings.density*100)} onChange={e=>updateSetting('density',Number(e.target.value)/100)}/>
+            <input id="density" type="range" min="1" max="95" step="1"
+              disabled={settings.engine==='turmites'}
+              value={Math.round(settings.density*100)} onChange={e=>updateSetting('density',Number(e.target.value)/100)}/>
+            {settings.engine==='turmites'&&<p className="module-note">
+              Turmites start from a clean track. Starting pattern and initial fill
+              do not apply; the seed places agents reproducibly.
+            </p>}
             <label className="input-label" htmlFor="seed">Universe seed</label>
             <input id="seed" type="number" min="0" max="4294967295" value={settings.seed} onChange={e=>updateSetting('seed',Number(e.target.value)>>>0)}/>
             <label className="toggle"><input type="checkbox" disabled={settings.engine==='margolus'}

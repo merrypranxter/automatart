@@ -392,6 +392,8 @@ try{
   assert.equal(isingJson.settings.isingBrush,0);
   await page.locator('#engine').selectOption('turmites');
   assert(await page.locator('#turmite-count').isVisible(),'Turmite population setting exists');
+  assert(await page.locator('#density').isDisabled(),'No destructive dummy density knob for Turmites');
+  assert(await page.locator('#seed-pattern').isDisabled(),'No destructive dummy pattern knob for Turmites');
   await page.locator('#turmite-count').fill('3');
   await page.locator('#turmite-rule').fill('RLLR');
   await page.getByRole('button',{name:'USE RULE'}).click();
