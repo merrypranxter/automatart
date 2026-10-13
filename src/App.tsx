@@ -22,6 +22,7 @@ import PrintShopControls from './components/PrintShopControls';
 import ColorSignalControls from './components/ColorSignalControls';
 import {NEW_COLOR_SIGNALS,isNewColorSignal,signalOptions} from './engine/color-signals';
 import DualColorControls from './components/DualColorControls';
+import CircuitControls from './components/CircuitControls';
 import {validateDualColor} from './engine/dual-color';
 import {validatePrintShop} from './engine/printshop';
 import StrangeControls, { SQUARE_ONLY_ENGINES } from './components/StrangeControls';
@@ -48,7 +49,9 @@ const ENGINES: {id:EngineId;name:string;hint:string}[] = [
   {id:'larger',name:'LARGER THAN LIFE',hint:'Wide-neighborhood growth'},
   {id:'species',name:'SPECIES WAR',hint:'Territorial competition'},
   {id:'oriented',name:'DIRECTIONAL LIFE',hint:'Non-totalistic neighbor patterns'},
-  {id:'margolus',name:'REVERSE UNIVERSE',hint:'Reversible 2×2 block CA'}
+  {id:'margolus',name:'REVERSE UNIVERSE',hint:'Reversible 2×2 block CA'},
+  {id:'wireworld',name:'WIREWORLD',hint:'Four-state living electrical circuits'},
+  {id:'sandpile',name:'ABELIAN SANDPILE',hint:'Conservative grain avalanches'}
 ];
 const ASPECTS: {value:AspectId;name:string}[]=[
   {value:'square',name:'1:1 SQUARE'},
@@ -73,7 +76,7 @@ function download(name:string, content:Blob | string):void{
 }
 function cloneWorld(world:World):World{
   return {...world,
-    cells:world.cells.slice(),ages:world.ages.slice(),
+    cells:world.cells.slice(),grains:world.grains?.slice(),ages:world.ages.slice(),
     neighbors:world.neighbors.slice(),events:world.events.slice(),
     traces:world.traces.slice(),previousCells:world.previousCells?.slice(),
     olderCells:world.olderCells?.slice(),fossils:world.fossils?.slice()};
@@ -641,6 +644,11 @@ export default function App(){
       s.speciesBirth=bounded(s.speciesBirth,1,savedRuleCap,2);
       s.speciesSurvive=bounded(s.speciesSurvive,0,savedRuleCap,1);
       s.speciesAttackBias=bounded(s.speciesAttackBias,0,savedRuleCap,1);
+      s.wireBrush=bounded(s.wireBrush,1,3,1) as 1|2|3;
+      s.sandFeed=bounded(s.sandFeed,0,64,6);
+      s.sandRounds=bounded(s.sandRounds,1,8,3);
+      s.sandBrush=bounded(s.sandBrush,1,64,8);
+      if(!['center','random'].includes(s.sandSource))s.sandSource='center';
       for(const key of ['genBirth','genSurvive'] as const){
         if(!Array.isArray(s[key]))s[key]=key==='genBirth'?[3]:[2,3];
         s[key]=[...new Set(s[key].filter((v:unknown)=>Number.isInteger(v)&&Number(v)>=0&&Number(v)<=savedRuleCap))].sort((a,b)=>a-b);
@@ -911,6 +919,9 @@ export default function App(){
                 <span>B/S rules use the neighborhood geometry selected above.</span>
               </div>}
             </>}
+            {(settings.engine==='wireworld'||settings.engine==='sandpile')&&
+              <CircuitControls settings={settings} setSettings={setSettings}
+                grains={worldRef.current.grains}/>}
             {settings.engine==='brians'&&<p className="module-note">Three-state Brain: OFF → FIRING → REFRACTORY → OFF. Exactly two firing neighbors cause ignition.</p>}
             {settings.engine==='cyclic'&&<>
               <label className="input-label" htmlFor="states">Color species <em>{settings.cyclicStates}</em></label>

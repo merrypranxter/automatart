@@ -32,9 +32,9 @@ export function requiresWorldRestart(before:SimSettings,after:SimSettings):boole
 }
 const validEngines:EngineId[]=[
   'life','brians','cyclic','wolfram','generations','excitable',
-  'larger','species','oriented','margolus'
+  'larger','species','oriented','margolus','wireworld','sandpile'
 ];
-const squareOnly:EngineId[]=['wolfram','larger','oriented','margolus'];
+const squareOnly:EngineId[]=['wolfram','larger','oriented','margolus','wireworld','sandpile'];
 
 export function mutateAutomatart(
   sourceSettings:SimSettings,
@@ -99,7 +99,7 @@ export function mutateAutomatart(
   // A RULE lock protects the live mathematical rule, not merely the name
   // in the Life-like dropdown. Every rule candidate is engine compatible.
   if(!opts.locks.rule){
-    if(s.engine!=='margolus'&&s.engine!=='wolfram'&&s.engine!=='larger'&&s.engine!=='oriented'){
+    if(s.engine!=='margolus'&&s.engine!=='wolfram'&&s.engine!=='larger'&&s.engine!=='oriented'&&s.engine!=='wireworld'&&s.engine!=='sandpile'){
       if(s.lattice==='square'){
         offer('Neighborhood shape',()=>{
           s.neighborShape=choose(s.neighborShape,['moore','vonNeumann','square2','diamond2','directional','custom'] as const);
@@ -135,6 +135,15 @@ export function mutateAutomatart(
       offer('World edge behavior',()=>{s.wrap=!s.wrap});
     }
     switch(s.engine){
+      case 'wireworld':
+        offer('Paint circuit material',()=>{s.wireBrush=choose(s.wireBrush,[1,2,3] as const)});
+        break;
+      case 'sandpile':
+        offer('Avalanche feed',()=>{s.sandFeed=intStep(s.sandFeed,0,64,8)});
+        offer('Toppling rounds per frame',()=>{s.sandRounds=intStep(s.sandRounds,1,8,2)});
+        offer('Grain feed location',()=>{s.sandSource=s.sandSource==='center'?'random':'center'});
+        offer('Sand brush grain count',()=>{s.sandBrush=intStep(s.sandBrush,1,64,8)});
+        break;
       case 'life':
         offer('Life rule roulette',()=>{s.lifeRule=choose(s.lifeRule,Object.keys(LIFE_RULES) as LifeRule[])});
         offer('Personal birth rule',()=>{

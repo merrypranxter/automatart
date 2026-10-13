@@ -14,6 +14,8 @@ export function supportsNeighborhood(engine:EngineId,lattice:LatticeId){
  return lattice==='square'&&NEIGHBORHOOD_ENGINES.includes(engine);
 }
 export function maxNeighborCount(s:Pick<SimSettings,'engine'|'lattice'|'neighborShape'|'neighborMask'|'customStencilMask'|'customStencilSize'|'largeRadius'>):number{
+ if(s.engine==='wireworld')return 8;
+ if(s.engine==='sandpile')return 4;
  if(s.engine==='wolfram')return 2;
  if(s.engine==='larger')return (2*s.largeRadius+1)**2-1;
  if(s.engine==='margolus')return 3;

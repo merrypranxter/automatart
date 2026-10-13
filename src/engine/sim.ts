@@ -1,6 +1,7 @@
 import { LIFE_RULES, worldDimensions } from './types';
 import type { SimSettings, World } from './types';
 import { neighborOffsets, orientedMatch, ORIENTED_DIRECTIONS, rotateBlocks } from './topology';
+import {stepWireworld,stepSandpile,sandVisualState} from './circuits';
 
 function seededRandom(seed:number):()=>number{
   let a=seed>>>0;
@@ -15,6 +16,7 @@ export function createWorld(s:SimSettings):World{
   const [width,height]=worldDimensions(s);
   const n=width*height;
   const cells=new Uint8Array(n),ages=new Uint16Array(n),traces=new Float32Array(n);
+  const grains=s.engine==='sandpile'?new Uint32Array(n):undefined;
   const rand=seededRandom(s.seed),cx=(width-1)/2,cy=(height-1)/2;
   const minSide=Math.min(width,height);
   for(let y=0;y<height;y++)for(let x=0;x<width;x++){
@@ -29,6 +31,11 @@ export function createWorld(s:SimSettings):World{
     if(s.engine==='wolfram'){
       if(y!==height-1)continue;
       cells[p]=s.pattern==='center'?(x===Math.floor(cx)?1:0):(rand()<chance?1:0);
+    }else if(s.engine==='wireworld'){
+      if(rand()<chance){const q=rand();cells[p]=q<.055?2:q<.085?3:1;}
+    }else if(s.engine==='sandpile'){
+      const height=rand()<chance?1+Math.floor(rand()*20):0;
+      grains![p]=height;cells[p]=sandVisualState(height);
     }else if(s.engine==='cyclic'){
       cells[p]=rand()<chance?1+Math.floor(rand()*(s.cyclicStates-1)):0;
     }else if(s.engine==='brians'){
@@ -43,7 +50,7 @@ export function createWorld(s:SimSettings):World{
     if(cells[p]>0||s.engine==='cyclic'){ages[p]=1;traces[p]=1;}
   }
   return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.neighborShape,neighborMask:s.neighborMask,
-    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,ages,
+    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,ages,
     neighbors:new Uint8Array(n),events:new Uint8Array(n),traces,
     previousCells:cells.slice(),olderCells:cells.slice(),fossils:new Float32Array(n)};
 }
@@ -57,9 +64,27 @@ function valueAt(cells:Uint8Array,w:number,h:number,x:number,y:number,wrap:boole
 export function stepWorld(prev:World,s:SimSettings):World{
   const {width:w,height:h,cells,ages,traces}=prev,n=w*h;
   const next=new Uint8Array(n),nextAges=new Uint16Array(n);
+  let nextGrains:Uint32Array|undefined;
   const neighbors=new Uint8Array(n),events=new Uint8Array(n),nextTraces=new Float32Array(n);
   const nextFossils=new Float32Array(n);
-  if(s.engine==='margolus'){
+  if(s.engine==='wireworld'){
+    next.set(stepWireworld(cells,w,h,s.wrap));
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const p=y*w+x;
+      for(const [dx,dy] of neighborOffsets('square',x,y,'moore')){
+        if(valueAt(cells,w,h,x+dx,y+dy,s.wrap)===2)neighbors[p]++;
+      }
+    }
+  }else if(s.engine==='sandpile'){
+    if(!prev.grains)throw new Error('Missing canonical sandpile grain array');
+    const result=stepSandpile(prev.grains,w,h,s.wrap,s.sandFeed,s.sandRounds,
+      s.seed,prev.generation,s.sandSource);
+    nextGrains=result.grains;
+    for(let i=0;i<n;i++){
+      next[i]=sandVisualState(nextGrains[i]);
+      neighbors[i]=result.topplings[i];
+    }
+  }else if(s.engine==='margolus'){
     // Staggered 2x2 partitions and an invertible local clockwise permutation.
     next.set(rotateBlocks(cells,w,h,(prev.generation%2) as 0|1));
   }else if(s.engine==='wolfram'){
@@ -164,6 +189,8 @@ export function stepWorld(prev:World,s:SimSettings):World{
       (old===now?Math.min(65535,ages[i]+1):1);
     if(s.engine==='cyclic'){
       if(old!==now)events[i]=3;
+    }else if(s.engine==='sandpile'){
+      if(nextGrains![i]!==prev.grains![i])events[i]=nextGrains![i]>prev.grains![i]?1:3;
     }else if(old===0&&now!==0)events[i]=1;
     else if(old!==0&&now===0)events[i]=2;
     else if(old!==now)events[i]=3;
@@ -176,7 +203,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
   }
   return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,
-    cells:next,ages:nextAges,neighbors,events,traces:nextTraces,
+    cells:next,grains:nextGrains,ages:nextAges,neighbors,events,traces:nextTraces,
     previousCells:cells.slice(),
     olderCells:prev.previousCells?.slice()??cells.slice(),
     fossils:nextFossils};
@@ -210,7 +237,12 @@ export function paintWorld(world:World,s:SimSettings,x:number,y:number,radius:nu
     const xx=x+dx,yy=y+dy;
     if(xx<0||yy<0||xx>=world.width||yy>=world.height)continue;
     const p=yy*world.width+xx;
-    world.cells[p]=erase?0:s.engine==='cyclic'?Math.max(1,Math.floor(s.cyclicStates/2))
+    if(s.engine==='sandpile'&&world.grains){
+      const before=world.grains[p];
+      if(!erase&&before>0xffffffff-s.sandBrush)continue;
+      const height=erase?0:before+s.sandBrush;
+      world.grains[p]=height;world.cells[p]=sandVisualState(height);
+    }else world.cells[p]=erase?0:s.engine==='wireworld'?s.wireBrush:s.engine==='cyclic'?Math.max(1,Math.floor(s.cyclicStates/2))
       :s.engine==='species'?Math.min(s.speciesCount,Math.max(1,species)):1;
     world.ages[p]=erase?0:1;
     world.traces[p]=erase?0:1;
