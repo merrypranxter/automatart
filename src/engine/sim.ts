@@ -233,7 +233,7 @@ export function rewindWorld(prev:World,s:SimSettings):World{
     else if(cells[i]&&!earlier[i])events[i]=2;
     else if(cells[i]!==earlier[i])events[i]=3;
   }
-  return {engine:'margolus',lattice:'square',wrap:s.wrap,neighborShape:s.engine==='sandpile'?'vonNeumann':s.neighborShape,neighborMask:s.neighborMask,
+  return {engine:'margolus',lattice:'square',wrap:s.wrap,neighborShape:s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,
     generation:prev.generation-1,cells:earlier,ages,traces,events,
     neighbors:new Uint8Array(n),previousCells:earlier.slice(),
