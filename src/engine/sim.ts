@@ -176,7 +176,6 @@ export function stepWorld(prev:World,s:SimSettings):World{
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
       const p=y*w+x,old=cells[p];
       let count=0;
-      const sought=s.engine==='cyclic'?(old+1)%s.cyclicStates:1;
       if(s.engine==='species')speciesCounts.fill(0);
       let orientedBits=0;
       if(s.engine==='oriented'){
