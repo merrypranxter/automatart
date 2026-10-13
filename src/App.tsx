@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { paletteFromColors, automatartColorsFromPortable } from './palettes/portable';
-import type { ChangeEvent, PointerEvent } from 'react';
+import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, PointerEvent } from 'react';
 import { createWorld, stepWorld, rewindWorld } from './engine/sim';
 import { lookupCell,polygonForCell,geometryExtent } from './engine/topology';
 import {applyAlienStamp,alienFootprint,INITIAL_ALIEN_BRUSH,STAMPS,isGliderCompatible,validateAlienBrush} from './engine/alien-paint';
@@ -73,6 +73,33 @@ const PATTERNS: {value:PatternId;name:string}[]=[
   {value:'spiral',name:'Spiral arms'},
   {value:'web',name:'Alien lattice web'}
 ];
+
+type TabId='world'|'rules'|'paint'|'mutate'|'color'|'patch'|'skin'|'print'|'export';
+// One tab rail, grouped build → look → output. Dividers sit after the last
+// tab of each group. Panels stay mounted (hidden) so nothing loses state.
+const TABS:{id:TabId;icon:string;label:string;title:string;blurb:string;divider?:boolean}[]=[
+  {id:'world',icon:'◎',label:'WORLD',title:'WORLD MACHINE',blurb:'The board itself: canvas shape, grid, lattice, starting cells and seed. Changes here start a fresh universe.'},
+  {id:'rules',icon:'⌘',label:'RULES',title:'RULE REACTOR',blurb:'The local law every cell obeys, plus its neighborhood. Edits apply to the running universe.'},
+  {id:'paint',icon:'✎',label:'PAINT',title:'ALIEN PAINTBRUSH',blurb:'Tap or drag on the canvas to plant real cells. Quick paint / erase / invert also sit under the canvas.'},
+  {id:'mutate',icon:'☣',label:'MUTATE',title:'MUTATION DICE',blurb:'Seeded, rule-safe chaos for this exact universe. Undo restores the previous cells too.',divider:true},
+  {id:'color',icon:'🌈',label:'COLOR',title:'COLOR UNIVERSE',blurb:'Palette, color stops and chromatic misbehavior. Shared palette format across the suite.'},
+  {id:'patch',icon:'🔌',label:'PATCH',title:'CHROMA PATCHBAY',blurb:'Route real math into color: which signal decides each cell\'s color, alone or mixed A + B.'},
+  {id:'skin',icon:'◈',label:'SKIN',title:'SKIN MACHINE',blurb:'How cells are drawn. Visual only — the automaton never changes.'},
+  {id:'print',icon:'▦',label:'PRINT',title:'PRINT SHOP',blurb:'Stackable print effects layered on top of the skin. Visual only.',divider:true},
+  {id:'export',icon:'↓',label:'EXPORT',title:'EXPORT',blurb:'Record GIF / video, save a full-res PNG, or keep the whole universe as a JSON recipe.'}
+];
+const TAB_STORAGE_KEY='automatart.activeTab';
+function initialTab():TabId{
+  try{
+    const saved=localStorage.getItem(TAB_STORAGE_KEY);
+    if(TABS.some(t=>t.id===saved))return saved as TabId;
+  }catch{/* storage unavailable: default tab */}
+  return 'world';
+}
+function PanelHead({id}:{id:TabId}){
+  const tab=TABS.find(t=>t.id===id)!;
+  return <header className="panel-head"><h2>{tab.title}</h2><p>{tab.blurb}</p></header>;
+}
 
 function download(name:string, content:Blob | string):void{
   const url=typeof content==='string'?content:URL.createObjectURL(content);
@@ -160,14 +187,29 @@ export default function App(){
   const stageRef=useRef<HTMLElement>(null);
   const viewerWrapRef=useRef<HTMLDivElement>(null);
   const [viewerFullscreen,setViewerFullscreen]=useState(false);
+  const [activeTab,setActiveTab]=useState<TabId>(initialTab);
+  const selectTab=(id:TabId)=>{
+    setActiveTab(id);
+    try{localStorage.setItem(TAB_STORAGE_KEY,id);}catch{/* not persisted */}
+  };
+  function onTabKey(event:ReactKeyboardEvent<HTMLElement>){
+    const keys=['ArrowDown','ArrowRight','ArrowUp','ArrowLeft','Home','End'];
+    if(!keys.includes(event.key))return;
+    event.preventDefault();
+    const index=TABS.findIndex(t=>t.id===activeTab);
+    const next=event.key==='Home'?0:event.key==='End'?TABS.length-1:
+      (index+(event.key==='ArrowDown'||event.key==='ArrowRight'?1:-1)+TABS.length)%TABS.length;
+    selectTab(TABS[next].id);
+    document.getElementById('tab-'+TABS[next].id)?.focus();
+  }
   // The simulation paints to a fixed-resolution backing canvas; CSS alone
   // with width:auto never enlarges it for a big desktop monitor. Compute an
-  // actual displayed size that covers as much of the fullscreen frame as
-  // possible, without distorting the cell grid or changing export pixels.
+  // actual displayed size that covers as much of the stage (or fullscreen
+  // frame) as possible, without distorting the cell grid or export pixels.
   useEffect(()=>{
     const wrap=viewerWrapRef.current;
     const canvas=canvasRef.current;
-    if(!viewerFullscreen||!wrap||!canvas)return;
+    if(!wrap||!canvas)return;
     const fit=()=>{
       if(!canvas.width||!canvas.height||!wrap.clientWidth||!wrap.clientHeight)return;
       const availableWidth=Math.max(1,wrap.clientWidth-2);
@@ -230,7 +272,10 @@ export default function App(){
   const loadRef=useRef<HTMLInputElement>(null);
   const paletteImportRef=useRef<HTMLInputElement>(null);
   const recorderRef=useRef<HTMLDivElement>(null);
-  const jumpToRecorder=()=>recorderRef.current?.scrollIntoView({behavior:'smooth',block:'center'});
+  const jumpToRecorder=()=>{
+    selectTab('export');
+    requestAnimationFrame(()=>recorderRef.current?.scrollIntoView({behavior:'smooth',block:'start'}));
+  };
   const updateSetting=<K extends keyof SimSettings>(key:K,value:SimSettings[K])=>
     setSettings(s=>({...s,[key]:value}));
   const updateAppearance=<K extends keyof Appearance>(key:K,value:Appearance[K])=>
@@ -819,89 +864,144 @@ export default function App(){
   const densityLabel=Math.round(settings.density*100)+'%';
   const neighborMax=maxNeighborCount(settings);
   return (
-    <div className="app-shell">
-      <header className="masthead">
-        <div className="brand-top"><span className="signal-dot" /> EXPERIMENTAL GENERATIVE INSTRUMENT · V0.1</div>
-        <h1>AUTOMAT<span>ART</span><span className="h1-spark">✳</span></h1>
-        <p>Mathematical mutation studio. Make the cells misbehave.</p>
+    <div className="app">
+      <header className="topbar">
+        <div className="brand">
+          <div className="eyebrow"><span className="signal-dot" />MATH ART SUITE <span>· CELLULAR AUTOMATA</span></div>
+          <h1>AUTOMAT<span>ART</span><em>✳</em></h1>
+        </div>
+        <div className="species-pick">
+          <label htmlFor="engine">Automaton species</label>
+          <select id="engine" value={settings.engine} onChange={e=>{
+            const engine=e.target.value as EngineId;
+            setSettings(s=>{
+              const lattice=SQUARE_ONLY_ENGINES.includes(engine)?'square':s.lattice;
+              return normalizeActiveVotes({...s,engine,lattice,
+                neighborShape:supportsNeighborhood(engine,lattice)?s.neighborShape:'moore',
+                wrap:engine==='margolus'?true:s.wrap});
+            });
+          }}>
+            {ENGINES.map(x=><option key={x.id} value={x.id}>{x.name} — {x.hint}</option>)}
+          </select>
+        </div>
+        <button type="button" className={'export-button'+(capturing?' busy':'')}
+          aria-controls="panel-export" onClick={()=>selectTab('export')}>↓ EXPORT</button>
       </header>
-      <main className="studio">
-        <section ref={stageRef} className={"stage"+(viewerFullscreen?" viewer-fullscreen":"")} aria-label="Live automaton preview">
-          <div className="stage-header">
-            <div><b className="eyebrow">LIVE UNIVERSE</b><span className="stage-engine">{activeEngine?.name}</span></div>
-            <div className="stage-view-actions">
-              <span className={'live-label '+(playing?'':'is-paused')}>{capturing?'● EXPORTING':playing?'● LIVE':'Ⅱ PAUSED'}</span>
-              {viewerFullscreen&&<button type="button" className="viewer-pause" onClick={()=>setPlaying(v=>!v)}>{playing?'Ⅱ PAUSE':'▶ PLAY'}</button>}
-              <button type="button" className="viewer-toggle" aria-pressed={viewerFullscreen} onClick={()=>void toggleViewerFullscreen()} title="Fullscreen artwork viewer (Esc to exit)">{viewerFullscreen?'✕ EXIT':'⛶ FULLSCREEN'}</button>
-            </div>
+
+      <section ref={stageRef} className={"stage"+(viewerFullscreen?" viewer-fullscreen":"")} aria-label="Live automaton preview">
+        <div className="stage-header">
+          <div><b className="eyebrow">LIVE UNIVERSE</b><span className="stage-engine">{activeEngine?.name}<small>{activeEngine?.hint}</small></span></div>
+          <div className="stage-view-actions">
+            <span className={'live-label '+(playing?'':'is-paused')}>{capturing?'● EXPORTING':playing?'● LIVE':'Ⅱ PAUSED'}</span>
+            {viewerFullscreen&&<button type="button" className="viewer-pause" onClick={()=>setPlaying(v=>!v)}>{playing?'Ⅱ PAUSE':'▶ PLAY'}</button>}
+            <button type="button" className="viewer-toggle" aria-pressed={viewerFullscreen} onClick={()=>void toggleViewerFullscreen()} title="Fullscreen artwork viewer (Esc to exit)">{viewerFullscreen?'✕ EXIT':'⛶ FULLSCREEN'}</button>
           </div>
-          <div className="canvas-wrap" ref={viewerWrapRef}>
-            <div className="art-canvas-layer">
-              <canvas ref={canvasRef} aria-label="Interactive cellular automata canvas. Drag to paint cells." onPointerDown={onPointerDown} onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
-              onPointerLeave={()=>drawStampPreview(null)} />
-              <canvas ref={previewRef} className="alien-brush-preview" aria-hidden="true"/>
-            </div>
-            <span className="canvas-corner tl">A / {String(generation).padStart(6,'0')}</span>
-            <span className="canvas-corner tr">{settings.cellCount} GRID</span>
-            <span className="canvas-corner bl">{alienBrush.mode.toUpperCase()} · {alienBrush.stamp.toUpperCase()}</span>
+        </div>
+        <div className="canvas-wrap" ref={viewerWrapRef}>
+          <div className="art-canvas-layer">
+            <canvas ref={canvasRef} aria-label="Interactive cellular automata canvas. Drag to paint cells." onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
+            onPointerLeave={()=>drawStampPreview(null)} />
+            <canvas ref={previewRef} className="alien-brush-preview" aria-hidden="true"/>
           </div>
+          <span className="canvas-corner tl">A / {String(generation).padStart(6,'0')}</span>
+          <span className="canvas-corner tr">{settings.cellCount} GRID</span>
+          <span className="canvas-corner bl">{alienBrush.mode.toUpperCase()} · {alienBrush.stamp.toUpperCase()}</span>
+        </div>
+        <div className="stage-bar">
           <div className="transport">
             <button className="primary" onClick={()=>{cancelBatch();setPlaying(v=>!v);}} aria-label={playing?'Pause simulation':'Play simulation'}>{playing?'Ⅱ PAUSE':'▶ PLAY'}</button>
             <button onClick={oneStep} disabled={batchProgress!==null||capturing} title="Advance one generation">STEP +1</button>
             <button onClick={restart} title="Restart from same seed">↺ RESET</button>
-            <button className="surprise" onClick={randomize}>✳ NEW SEED</button>
+            <button className="surprise" onClick={randomize} title="Generate a new random universe seed">✳ NEW SEED</button>
           </div>
           <div className="funhouse-time-controls">
-            <button type="button" disabled={batchProgress!==null||capturing} onClick={()=>void advanceBatch(10)}>⏭ STEP +10</button>
-            <button type="button" disabled={batchProgress!==null||capturing} onClick={()=>void advanceBatch(100)}>⏭ STEP +100</button>
+            <button type="button" disabled={batchProgress!==null||capturing} onClick={()=>void advanceBatch(10)}>⏭ +10</button>
+            <button type="button" disabled={batchProgress!==null||capturing} onClick={()=>void advanceBatch(100)}>⏭ +100</button>
             {batchProgress&&<>
               <span role="status">FAST FORWARD {batchProgress.done}/{batchProgress.total}</span>
               <button type="button" onClick={cancelBatch} aria-label="Cancel fast forward">✕ STOP</button>
             </>}
           </div>
+          <div className="speed-pick">
+            <label htmlFor="speed">SPEED <em>{speed}/s</em></label>
+            <input id="speed" type="range" min="1" max="40" value={speed} aria-label="Evolution speed (generations per second)" onChange={e=>setSpeed(Number(e.target.value))}/>
+          </div>
+        </div>
+        <div className="stage-foot">
           <div className="readouts">
             <span><b>{generation.toLocaleString()}</b> GEN</span>
             <span><b>{population.toLocaleString()}</b> NONZERO CELLS</span>
             <span><b>{worldRef.current.width}×{worldRef.current.height}</b> GRID</span>
           </div>
-          {capturing&&<div className="stage-capture-state" role="status" aria-live="polite">
-            <div className="stage-capture-head">
-              <b>● RECORDING {captureFormat.toUpperCase()}</b>
-              <span>{captureProgress?.frames||0} frames / {Math.round((captureProgress?.fraction||0)*100)}%</span>
+          <div className="stage-tools">
+            <div className="brush-modes" role="group" aria-label="Quick brush mode">
+              {(['paint','erase','invert'] as const).map(mode=><button type="button" key={mode}
+                aria-pressed={alienBrush.mode===mode} aria-label={'Quick brush mode: '+mode}
+                title={mode==='paint'?'Paint cells':mode==='erase'?'Erase cells':'Invert cells'}
+                onClick={()=>setAlienBrush(b=>({...b,mode}))}>{mode==='paint'?'✎':mode==='erase'?'⌫':'◉'}</button>)}
             </div>
-            <progress max="1" value={captureProgress?.fraction||0}/>
-            <div className="stage-capture-foot">
-              <span>{captureProgress?.phase||'Preparing…'} · Live playback paused for export</span>
-              <button onClick={()=>controllerRef.current?.abort()}>CANCEL</button>
-            </div>
-          </div>}
-          {!capturing&&captureError&&<div className="stage-capture-error" role="alert">
-            <b>EXPORT FAILED</b>
-            <span>{captureError}</span>
-            <button onClick={jumpToRecorder}>BACK TO RECORDER ↓</button>
-            <button type="button" className="dismiss-export" aria-label="Close export failed notification" onClick={dismissFailure}>×</button>
-          </div>}
-          {!capturing&&lastExport&&<div className="stage-capture-success" role="status">
-            <div className="stage-success-top"><b>✓ ANIMATION READY</b><span>{lastExport.frames} frames · {lastExport.elapsed.toFixed(1)} sec</span>
-              <button type="button" className="dismiss-export" aria-label="Dismiss animation ready banner" title="Close this notification" onClick={dismissExport}>×</button>
-            </div>
-            <div className="stage-capture-buttons">
-              <button onClick={saveLastExport}>SAVE / SHARE</button>
-              <button onClick={jumpToRecorder}>PLAY PREVIEW ↓</button>
-            </div>
-          </div>}
-        </section>
-        <section className="rack" aria-label="Simulation controls">
-          <div className="rack-intro"><span>01—04 / INSTRUMENT RACK</span><span>B1 / NEIGHBORHOOD ANARCHY</span></div>
-          <section className="module">
-            <div className="module-heading"><span className="module-num">01</span><h2>WORLD MACHINE</h2><span className="module-symbol">◎</span></div>
+            <button type="button" className="quick-png" disabled={snapshotBusy||capturing}
+              aria-label="Quick PNG snapshot" title="Save a full-resolution PNG of this exact generation"
+              onClick={()=>void savePng()}>{snapshotBusy?'◌':'📷'}<span> PNG</span></button>
+          </div>
+        </div>
+        {capturing&&<div className="stage-capture-state" role="status" aria-live="polite">
+          <div className="stage-capture-head">
+            <b>● RECORDING {captureFormat.toUpperCase()}</b>
+            <span>{captureProgress?.frames||0} frames / {Math.round((captureProgress?.fraction||0)*100)}%</span>
+          </div>
+          <progress max="1" value={captureProgress?.fraction||0}/>
+          <div className="stage-capture-foot">
+            <span>{captureProgress?.phase||'Preparing…'} · Live playback paused for export</span>
+            <button onClick={()=>controllerRef.current?.abort()}>CANCEL</button>
+          </div>
+        </div>}
+        {/* The recording surface lives on the stage so it stays attached and
+            painted whatever tab is open (WebKit freezes invisible canvases). */}
+        <div id="capture-canvas-mount" className={capturing?'capture-live':'capture-live capture-hidden'} aria-label="Live export preview" />
+        {!capturing&&captureError&&<div className="stage-capture-error" role="alert">
+          <b>EXPORT FAILED</b>
+          <span>{captureError}</span>
+          <button onClick={jumpToRecorder}>OPEN RECORDER</button>
+          <button type="button" className="dismiss-export" aria-label="Close export failed notification" onClick={dismissFailure}>×</button>
+        </div>}
+        {!capturing&&lastExport&&<div className="stage-capture-success" role="status">
+          <div className="stage-success-top"><b>✓ ANIMATION READY</b><span>{lastExport.frames} frames · {lastExport.elapsed.toFixed(1)} sec</span>
+            <button type="button" className="dismiss-export" aria-label="Dismiss animation ready banner" title="Close this notification" onClick={dismissExport}>×</button>
+          </div>
+          <div className="stage-capture-buttons">
+            <button onClick={saveLastExport}>SAVE / SHARE</button>
+            <button onClick={jumpToRecorder}>PLAY PREVIEW</button>
+          </div>
+        </div>}
+      </section>
+
+      <nav className="deck-tabs" role="tablist" aria-label="Control sections" aria-orientation="vertical" onKeyDown={onTabKey}>
+        {TABS.map(tab=><button type="button" role="tab" key={tab.id} id={'tab-'+tab.id}
+          aria-selected={activeTab===tab.id} aria-controls={'panel-'+tab.id}
+          tabIndex={activeTab===tab.id?0:-1} className={tab.divider?'tab-divider':undefined}
+          onClick={()=>selectTab(tab.id)}><i aria-hidden="true">{tab.icon}</i><span>{tab.label}</span></button>)}
+      </nav>
+
+      <div className="deck-panels">
+        <section className="panel" id="panel-world" role="tabpanel" aria-labelledby="tab-world" tabIndex={0} hidden={activeTab!=='world'}>
+          <PanelHead id="world"/>
+          <div className="group">
+            <h3 className="group-head">CANVAS <small>restarts the universe</small></h3>
             <label className="input-label" htmlFor="aspect">Canvas geometry</label>
             <select id="aspect" value={settings.aspect} onChange={e=>updateSetting('aspect',e.target.value as AspectId)}>
               {ASPECTS.map(a=><option value={a.value} key={a.value}>{a.name}</option>)}
             </select>
             <label className="input-label" htmlFor="resolution">Simulation grid <em>{settings.cellCount} cells across</em></label>
             <input id="resolution" type="range" min="32" max="256" step="16" value={settings.cellCount} onChange={e=>updateSetting('cellCount',Number(e.target.value))}/>
+            <label className="toggle"><input type="checkbox" disabled={settings.engine==='margolus'}
+              checked={settings.engine==='margolus'?true:settings.wrap}
+              onChange={e=>updateSetting('wrap',e.target.checked)}/><span>Wrap world edges</span></label>
+            <StrangeControls part="lattice" settings={settings} setSettings={setSettings} onRewind={rewindStep} generation={generation}/>
+          </div>
+          <div className="group">
+            <h3 className="group-head">STARTING CELLS <small>restarts the universe</small></h3>
             <label className="input-label" htmlFor="seed-pattern">Starting pattern</label>
             <select id="seed-pattern" value={settings.pattern} disabled={settings.engine==='turmites'}
               onChange={e=>updateSetting('pattern',e.target.value as PatternId)}>
@@ -916,81 +1016,160 @@ export default function App(){
               do not apply; the seed places agents reproducibly.
             </p>}
             <label className="input-label" htmlFor="seed">Universe seed</label>
-            <input id="seed" type="number" min="0" max="4294967295" value={settings.seed} onChange={e=>updateSetting('seed',Number(e.target.value)>>>0)}/>
-            <label className="toggle"><input type="checkbox" disabled={settings.engine==='margolus'}
-              checked={settings.engine==='margolus'?true:settings.wrap}
-              onChange={e=>updateSetting('wrap',e.target.checked)}/><span>Wrap world edges</span></label>
-            <StrangeControls settings={settings} setSettings={setSettings} onRewind={rewindStep} generation={generation}/>
-          </section>
-          <section className="module">
-            <div className="module-heading"><span className="module-num">02</span><h2>RULE REACTOR</h2><span className="module-symbol">⌘</span></div>
-            <label className="input-label" htmlFor="engine">Automaton species</label>
-            <select id="engine" value={settings.engine} onChange={e=>{
-              const engine=e.target.value as EngineId;
-              setSettings(s=>{
-                const lattice=SQUARE_ONLY_ENGINES.includes(engine)?'square':s.lattice;
-                return normalizeActiveVotes({...s,engine,lattice,
-                  neighborShape:supportsNeighborhood(engine,lattice)?s.neighborShape:'moore',
-                  wrap:engine==='margolus'?true:s.wrap});
-              });
-            }}>
-              {ENGINES.map(x=><option key={x.id} value={x.id}>{x.name} — {x.hint}</option>)}
+            <div className="seed-row">
+              <input id="seed" type="number" min="0" max="4294967295" value={settings.seed} onChange={e=>updateSetting('seed',Number(e.target.value)>>>0)}/>
+              <button type="button" className="chip" onClick={randomize} title="Same as ✳ NEW SEED under the canvas">✳ RANDOM</button>
+            </div>
+          </div>
+        </section>
+
+        <section className="panel" id="panel-rules" role="tabpanel" aria-labelledby="tab-rules" tabIndex={0} hidden={activeTab!=='rules'}>
+          <PanelHead id="rules"/>
+          <div className="engine-card">
+            <b>{activeEngine?.name}</b><span>{activeEngine?.hint}</span>
+            <small>Change species in the top bar. Rule edits below apply to the running universe.</small>
+          </div>
+          {settings.engine==='life'&&<div className="group">
+            <h3 className="group-head">BIRTH / SURVIVAL</h3>
+            <label className="input-label" htmlFor="life">Birth / survival</label>
+            <select id="life" value={settings.lifeRule} onChange={e=>updateSetting('lifeRule',e.target.value as LifeRule)}>
+              {Object.entries(LIFE_RULES).map(([id,r])=><option key={id} value={id}>{r.label}</option>)}
             </select>
-            {supportsNeighborhood(settings.engine,settings.lattice)&&
-              <NeighborhoodControls settings={settings} setSettings={setSettings}/>}
-            {!supportsNeighborhood(settings.engine,settings.lattice)&&
-              <p className="module-note">This lattice or engine has its own specified neighborhood. The B1/B2 square-neighborhood options are disabled here to protect the mathematical rules.</p>}
-            {settings.engine==='life'&&<>
-              <label className="input-label" htmlFor="life">Birth / survival</label>
-              <select id="life" value={settings.lifeRule} onChange={e=>updateSetting('lifeRule',e.target.value as LifeRule)}>
-                {Object.entries(LIFE_RULES).map(([id,r])=><option key={id} value={id}>{r.label}</option>)}
-              </select>
-              {settings.lifeRule==='custom'&&<div className="custom-rule-editor">
-                <p>Choose how many neighbors cause birth or survival. Changes apply live.</p>
-                {(['customBirth','customSurvive'] as const).map(kind=><div key={kind}>
-                  <b>{kind==='customBirth'?'BIRTH · B':'SURVIVE · S'}{settings[kind].join(',')}</b>
-                  <div className="rule-bits">{Array.from({length:Math.max(neighborMax,...settings[kind])+1},(_,i)=><button type="button" key={i}
-                    aria-pressed={settings[kind].includes(i)} className={settings[kind].includes(i)?'active':''}
-                    title={i>neighborMax?'Inactive here; tap to remove':'Toggle B/S count'} onClick={()=>toggleCustomRule(kind,i)}>{i}</button>)}</div>
-                </div>)}
-                <span>B/S rules use the neighborhood geometry selected above.</span>
-              </div>}
-            </>}
-            {(settings.engine==='wireworld'||settings.engine==='sandpile')&&
-              <CircuitControls settings={settings} setSettings={setSettings}
-                grains={worldRef.current.grains} inspectedCell={inspectedCell} width={worldRef.current.width}/>}
-            {(settings.engine==='hodgepodge'||settings.engine==='forestfire')&&
-              <ReactionControls settings={settings} setSettings={setSettings}/>}
-            {(settings.engine==='ising'||settings.engine==='turmites')&&
-              <SpinTurmiteControls settings={settings} setSettings={setSettings}
-                world={worldRef.current} resetNumber={resetNumber}/>}
-            {settings.engine==='brians'&&<p className="module-note">Three-state Brain: OFF → FIRING → REFRACTORY → OFF. Exactly two firing neighbors cause ignition.</p>}
-            {settings.engine==='cyclic'&&<>
-              <label className="input-label" htmlFor="states">Color species <em>{settings.cyclicStates}</em></label>
-              <input id="states" type="range" min="3" max="24" value={settings.cyclicStates} onChange={e=>updateSetting('cyclicStates',Number(e.target.value))}/>
-              <label className="input-label" htmlFor="threshold">Chase threshold <em>{settings.cyclicThreshold} neighbors</em></label>
-              <input id="threshold" type="range" min="1" max={neighborMax} value={Math.min(settings.cyclicThreshold,neighborMax)} onChange={e=>updateSetting('cyclicThreshold',Number(e.target.value))}/>
-            </>}
-            <MutantControls settings={settings} setSettings={setSettings} paintSpecies={paintSpecies} setPaintSpecies={setPaintSpecies}/>
-            {settings.engine==='wolfram'&&<>
-              <label className="input-label" htmlFor="rule">Wolfram rule number (0–255)</label>
-              <input id="rule" type="number" min="0" max="255" value={settings.wolframRule} onChange={e=>updateSetting('wolframRule',Math.max(0,Math.min(255,Number(e.target.value)||0)))}/>
-              <div className="chip-row">{[30,90,110,184].map(n=><button className="chip" key={n} onClick={()=>updateSetting('wolframRule',n)}>R{n}</button>)}</div>
-            </>}
-            <MutationControls strength={mutationStrength} setStrength={setMutationStrength}
-              locks={mutationLocks} setLocks={setMutationLocks}
-              allowRestart={allowMutationRestart} setAllowRestart={setAllowMutationRestart}
-              mutate={mutateNow} undo={undoMutation}
-              canUndo={hasMutationUndo} disabled={capturing||batchProgress!==null}
-              lastMutation={lastMutation}/>
-            <label className="input-label" htmlFor="speed">Evolution speed <em>{speed} gen/sec</em></label>
-            <input id="speed" type="range" min="1" max="40" value={speed} onChange={e=>setSpeed(Number(e.target.value))}/>
-            <AlienPaintControls brush={alienBrush} onChange={setAlienBrush}
-              settings={settings} randomize={randomAlienStamp}
-              randomSymmetry={randomAlienSymmetry}/>
-          </section>
-          <section className="module">
-            <div className="module-heading"><span className="module-num">03</span><h2>CHROMA PATCHBAY</h2><span className="module-symbol">✺</span></div>
+            {settings.lifeRule==='custom'&&<div className="custom-rule-editor">
+              <p>Choose how many neighbors cause birth or survival. Changes apply live.</p>
+              {(['customBirth','customSurvive'] as const).map(kind=><div key={kind}>
+                <b>{kind==='customBirth'?'BIRTH · B':'SURVIVE · S'}{settings[kind].join(',')}</b>
+                <div className="rule-bits">{Array.from({length:Math.max(neighborMax,...settings[kind])+1},(_,i)=><button type="button" key={i}
+                  aria-pressed={settings[kind].includes(i)} className={settings[kind].includes(i)?'active':''}
+                  title={i>neighborMax?'Inactive here; tap to remove':'Toggle B/S count'} onClick={()=>toggleCustomRule(kind,i)}>{i}</button>)}</div>
+              </div>)}
+              <span>B/S rules use the neighborhood geometry selected below.</span>
+            </div>}
+          </div>}
+          {(settings.engine==='wireworld'||settings.engine==='sandpile')&&
+            <CircuitControls settings={settings} setSettings={setSettings}
+              grains={worldRef.current.grains} inspectedCell={inspectedCell} width={worldRef.current.width}/>}
+          {(settings.engine==='hodgepodge'||settings.engine==='forestfire')&&
+            <ReactionControls settings={settings} setSettings={setSettings}/>}
+          {(settings.engine==='ising'||settings.engine==='turmites')&&
+            <SpinTurmiteControls settings={settings} setSettings={setSettings}
+              world={worldRef.current} resetNumber={resetNumber}/>}
+          {settings.engine==='brians'&&<p className="module-note">Three-state Brain: OFF → FIRING → REFRACTORY → OFF. Exactly two firing neighbors cause ignition.</p>}
+          {settings.engine==='cyclic'&&<div className="group">
+            <h3 className="group-head">CYCLIC CHASE</h3>
+            <label className="input-label" htmlFor="states">Color species <em>{settings.cyclicStates}</em></label>
+            <input id="states" type="range" min="3" max="24" value={settings.cyclicStates} onChange={e=>updateSetting('cyclicStates',Number(e.target.value))}/>
+            <label className="input-label" htmlFor="threshold">Chase threshold <em>{settings.cyclicThreshold} neighbors</em></label>
+            <input id="threshold" type="range" min="1" max={neighborMax} value={Math.min(settings.cyclicThreshold,neighborMax)} onChange={e=>updateSetting('cyclicThreshold',Number(e.target.value))}/>
+          </div>}
+          <MutantControls settings={settings} setSettings={setSettings} paintSpecies={paintSpecies} setPaintSpecies={setPaintSpecies}/>
+          {settings.engine==='wolfram'&&<div className="group">
+            <h3 className="group-head">ELEMENTARY RULE</h3>
+            <label className="input-label" htmlFor="rule">Wolfram rule number (0–255)</label>
+            <input id="rule" type="number" min="0" max="255" value={settings.wolframRule} onChange={e=>updateSetting('wolframRule',Math.max(0,Math.min(255,Number(e.target.value)||0)))}/>
+            <div className="chip-row">{[30,90,110,184].map(n=><button className={'chip'+(settings.wolframRule===n?' selected':'')} key={n} onClick={()=>updateSetting('wolframRule',n)}>R{n}</button>)}</div>
+          </div>}
+          <StrangeControls part="rules" settings={settings} setSettings={setSettings} onRewind={rewindStep} generation={generation}/>
+          {supportsNeighborhood(settings.engine,settings.lattice)&&
+            <NeighborhoodControls settings={settings} setSettings={setSettings}/>}
+          {!supportsNeighborhood(settings.engine,settings.lattice)&&
+            <p className="module-note">This lattice or engine has its own specified neighborhood. The B1/B2 square-neighborhood options are disabled here to protect the mathematical rules.</p>}
+        </section>
+
+        <section className="panel" id="panel-paint" role="tabpanel" aria-labelledby="tab-paint" tabIndex={0} hidden={activeTab!=='paint'}>
+          <PanelHead id="paint"/>
+          <AlienPaintControls brush={alienBrush} onChange={setAlienBrush}
+            settings={settings} randomize={randomAlienStamp}
+            randomSymmetry={randomAlienSymmetry}/>
+          {['species','wireworld','sandpile','hodgepodge','forestfire','ising','turmites'].includes(settings.engine)&&
+            <p className="tip">This species also has its own material brush (species, wire, grain, spin, track…). Find it in <button type="button" className="link-button" onClick={()=>selectTab('rules')}>⌘ RULES</button>.</p>}
+        </section>
+
+        <section className="panel" id="panel-mutate" role="tabpanel" aria-labelledby="tab-mutate" tabIndex={0} hidden={activeTab!=='mutate'}>
+          <PanelHead id="mutate"/>
+          <MutationControls strength={mutationStrength} setStrength={setMutationStrength}
+            locks={mutationLocks} setLocks={setMutationLocks}
+            allowRestart={allowMutationRestart} setAllowRestart={setAllowMutationRestart}
+            mutate={mutateNow} undo={undoMutation}
+            canUndo={hasMutationUndo} disabled={capturing||batchProgress!==null}
+            lastMutation={lastMutation}/>
+        </section>
+
+        <section className="panel" id="panel-color" role="tabpanel" aria-labelledby="tab-color" tabIndex={0} hidden={activeTab!=='color'}>
+          <PanelHead id="color"/>
+          <div className="group">
+            <h3 className="group-head">PALETTE <small>{MOIRE_PALETTE_NAMES.length+AUTOMATART_PALETTE_NAMES.length} presets · {appearance.palette.length} stops</small></h3>
+            <label className="input-label" htmlFor="palette">Load a color universe</label>
+            <select id="palette" value={Object.keys(PALETTES).find(k=>PALETTES[k].length===appearance.palette.length&&PALETTES[k].every((c,i)=>c.toLowerCase()===appearance.palette[i]?.toLowerCase()))||'CUSTOM'}
+              onChange={e=>{if(PALETTES[e.target.value])updateAppearance('palette',[...PALETTES[e.target.value]]);}}>
+              <optgroup label="IT'S A MOIRÉ · 26 ORIGINAL 12-COLOR PALETTES">
+                {MOIRE_PALETTE_NAMES.map(k=><option key={k} value={k}>{k}</option>)}
+              </optgroup>
+              <optgroup label="AUTOMATART · 5 ORIGINAL PALETTES">
+                {AUTOMATART_PALETTE_NAMES.map(k=><option key={k} value={k}>{k}</option>)}
+              </optgroup>
+              <option value="CUSTOM">CUSTOM MIX</option>
+            </select>
+            <div className="color-wells">
+              {appearance.palette.map((c,i)=><label key={i} title={'Edit color '+(i+1)}>
+                <input aria-label={'Edit palette color '+(i+1)} type="color" value={c}
+                  onChange={e=>updateAppearance('palette',appearance.palette.map((x,j)=>j===i?e.target.value:x))}/>
+                <span>{String(i+1).padStart(2,'0')}</span>
+              </label>)}
+            </div>
+            <div className="palette-chaos-buttons">
+              <button type="button" id="random-preset" onClick={randomPreset}>✳ RANDOM PALETTE</button>
+              <button type="button" id="random-colors" onClick={inventPalette}>🎲 RANDOM COLORS · NEW MIX</button>
+            </div>
+            <div className="palette-order-tools">
+              <button type="button" onClick={shuffleStops}>SHUFFLE STOPS</button>
+              <button type="button" onClick={flipStops}>REVERSE STOPS</button>
+              <button type="button" onClick={rotateStops}>ROTATE STOPS ↻</button>
+            </div>
+          </div>
+          <div className="group">
+            <h3 className="group-head">CHROMATIC MISBEHAVIOR <small>also applies to GIF / video</small></h3>
+            <label className="input-label" htmlFor="palette-offset">Palette offset <em>{appearance.paletteOffset.toFixed(1)}</em></label>
+            <input id="palette-offset" type="range" min="-12" max="12" step=".25" value={appearance.paletteOffset}
+              onChange={e=>updateAppearance('paletteOffset',Number(e.target.value))}/>
+            <label className="input-label" htmlFor="palette-cycle">Palette cycling per generation <em>{appearance.paletteCycle.toFixed(2)} stops</em></label>
+            <input id="palette-cycle" type="range" min="-1" max="1" step=".02" value={appearance.paletteCycle}
+              onChange={e=>updateAppearance('paletteCycle',Number(e.target.value))}/>
+            <label className="input-label" htmlFor="palette-motion">Palette travel</label>
+            <select id="palette-motion" value={appearance.paletteMotion} onChange={e=>
+              updateAppearance('paletteMotion',e.target.value as 'forward'|'pingpong')}>
+              <option value="forward">FORWARD / CONTINUOUS WRAP</option>
+              <option value="pingpong">PING-PONG / BACK AND FORTH</option>
+            </select>
+            <label className="toggle"><input type="checkbox" checked={appearance.paletteReverse}
+              onChange={e=>updateAppearance('paletteReverse',e.target.checked)}/><span>Reverse color direction</span></label>
+            <label className="toggle"><input type="checkbox" checked={appearance.smoothPalette}
+              onChange={e=>updateAppearance('smoothPalette',e.target.checked)}/><span>Smoothly blend color stops</span></label>
+            <label className="input-label" htmlFor="color-saturation">Saturation <em>{Math.round(appearance.saturation*100)}%</em></label>
+            <input id="color-saturation" type="range" min="0" max="3" step=".05" value={appearance.saturation}
+              onChange={e=>updateAppearance('saturation',Number(e.target.value))}/>
+            <label className="input-label" htmlFor="color-contrast">Contrast <em>{appearance.contrast.toFixed(2)}×</em></label>
+            <input id="color-contrast" type="range" min=".2" max="3" step=".05" value={appearance.contrast}
+              onChange={e=>updateAppearance('contrast',Number(e.target.value))}/>
+            <label className="input-label" htmlFor="color-brightness">Brightness <em>{appearance.brightness.toFixed(2)}×</em></label>
+            <input id="color-brightness" type="range" min=".15" max="2.5" step=".05" value={appearance.brightness}
+              onChange={e=>updateAppearance('brightness',Number(e.target.value))}/>
+            <button className="reset-color" onClick={()=>setAppearance(a=>({...a,paletteOffset:0,paletteCycle:0,paletteMotion:'forward',paletteReverse:false,smoothPalette:false,saturation:1,contrast:1,brightness:1}))}>↺ RESET COLOR MODIFIERS</button>
+          </div>
+          <div className="group">
+            <h3 className="group-head">SHARE ACROSS THE SUITE <small>portable palette JSON</small></h3>
+            <div className="export-grid">
+              <button type="button" onClick={savePortablePalette} className="export">↓ EXPORT PALETTE JSON</button>
+              <button type="button" onClick={()=>paletteImportRef.current?.click()} className="export">↑ IMPORT PALETTE JSON</button>
+              <input ref={paletteImportRef} className="sr-only" aria-label="Import portable palette JSON" type="file" accept=".json,application/json" onChange={loadPortablePalette}/>
+            </div>
+            <p className="fineprint">Same format as It's a Moiré and the Math Art Suite. Importing only changes colors — never rules or cells.</p>
+          </div>
+        </section>
+
+        <section className="panel" id="panel-patch" role="tabpanel" aria-labelledby="tab-patch" tabIndex={0} hidden={activeTab!=='patch'}>
+          <PanelHead id="patch"/>
+          <div className="group">
             <div className="patch-visual"><span>SIGNAL</span><strong>→</strong><span>COLOR</span></div>
             <label className="input-label" htmlFor="source">What controls the colors?</label>
             <select id="source" value={appearance.colorBy} onChange={e=>updateAppearance('colorBy',e.target.value as ColorBy)}>
@@ -1005,80 +1184,19 @@ export default function App(){
                 {NEW_COLOR_SIGNALS.map(v=><option key={v.id} value={v.id}>{v.label}</option>)}
               </optgroup>
             </select>
-            {isNewColorSignal(appearance.colorBy)&&
-              <ColorSignalControls appearance={appearance} setAppearance={setAppearance}
-                inspectedCell={inspectedCell} world={worldRef.current}/>}
-            <DualColorControls appearance={appearance} setAppearance={setAppearance}
-              inspectedCell={inspectedCell} world={worldRef.current}/>
-            
-            <label className="input-label" htmlFor="palette">Load a color universe</label>
-            <select id="palette" value={Object.keys(PALETTES).find(k=>PALETTES[k].length===appearance.palette.length&&PALETTES[k].every((c,i)=>c.toLowerCase()===appearance.palette[i]?.toLowerCase()))||'CUSTOM'}
-              onChange={e=>{if(PALETTES[e.target.value])updateAppearance('palette',[...PALETTES[e.target.value]]);}}>
-              <optgroup label="IT'S A MOIRÉ · 26 ORIGINAL 12-COLOR PALETTES">
-                {MOIRE_PALETTE_NAMES.map(k=><option key={k} value={k}>{k}</option>)}
-              </optgroup>
-              <optgroup label="AUTOMATART · 5 ORIGINAL PALETTES">
-                {AUTOMATART_PALETTE_NAMES.map(k=><option key={k} value={k}>{k}</option>)}
-              </optgroup>
-              <option value="CUSTOM">CUSTOM MIX</option>
-            </select>
-            <div className="palette-summary">
-              <span>{MOIRE_PALETTE_NAMES.length+AUTOMATART_PALETTE_NAMES.length} PRESETS · {appearance.palette.length} EDITABLE COLOR STOPS</span>
-              <div className="palette-chaos-buttons">
-                <button type="button" id="random-preset" onClick={randomPreset}>✳ RANDOM PALETTE</button>
-                <button type="button" id="random-colors" onClick={inventPalette}>🎲 RANDOM COLORS · NEW MIX</button>
-              </div>
-            </div>
-            <div className="palette-order-tools">
-              <button type="button" onClick={shuffleStops}>SHUFFLE STOPS</button>
-              <button type="button" onClick={flipStops}>REVERSE STOPS</button>
-              <button type="button" onClick={rotateStops}>ROTATE STOPS ↻</button>
-            </div>
-            <div className="export-grid">
-              <button type="button" onClick={savePortablePalette} className="export">↓ EXPORT PALETTE JSON</button>
-              <button type="button" onClick={()=>paletteImportRef.current?.click()} className="export">↑ IMPORT PALETTE JSON</button>
-              <input ref={paletteImportRef} className="sr-only" aria-label="Import portable palette JSON" type="file" accept=".json,application/json" onChange={loadPortablePalette}/>
-            </div>
-            <div className="color-wells">
-              {appearance.palette.map((c,i)=><label key={i} title={'Edit color '+(i+1)}>
-                <input aria-label={'Edit palette color '+(i+1)} type="color" value={c}
-                  onChange={e=>updateAppearance('palette',appearance.palette.map((x,j)=>j===i?e.target.value:x))}/>
-                <span>{String(i+1).padStart(2,'0')}</span>
-              </label>)}
-            </div>
-            <div className="advanced-color-controls">
-              <h3>CHROMATIC MISBEHAVIOR</h3>
-              <label className="input-label" htmlFor="palette-offset">Palette offset <em>{appearance.paletteOffset.toFixed(1)}</em></label>
-              <input id="palette-offset" type="range" min="-12" max="12" step=".25" value={appearance.paletteOffset}
-                onChange={e=>updateAppearance('paletteOffset',Number(e.target.value))}/>
-              <label className="input-label" htmlFor="palette-cycle">Palette cycling per generation <em>{appearance.paletteCycle.toFixed(2)} stops</em></label>
-              <input id="palette-cycle" type="range" min="-1" max="1" step=".02" value={appearance.paletteCycle}
-                onChange={e=>updateAppearance('paletteCycle',Number(e.target.value))}/>
-              <label className="input-label" htmlFor="palette-motion">Palette travel</label>
-              <select id="palette-motion" value={appearance.paletteMotion} onChange={e=>
-                updateAppearance('paletteMotion',e.target.value as 'forward'|'pingpong')}>
-                <option value="forward">FORWARD / CONTINUOUS WRAP</option>
-                <option value="pingpong">PING-PONG / BACK AND FORTH</option>
-              </select>
-              <label className="toggle"><input type="checkbox" checked={appearance.paletteReverse}
-                onChange={e=>updateAppearance('paletteReverse',e.target.checked)}/><span>Reverse color direction</span></label>
-              <label className="toggle"><input type="checkbox" checked={appearance.smoothPalette}
-                onChange={e=>updateAppearance('smoothPalette',e.target.checked)}/><span>Smoothly blend color stops</span></label>
-              <label className="input-label" htmlFor="color-saturation">Saturation <em>{Math.round(appearance.saturation*100)}%</em></label>
-              <input id="color-saturation" type="range" min="0" max="3" step=".05" value={appearance.saturation}
-                onChange={e=>updateAppearance('saturation',Number(e.target.value))}/>
-              <label className="input-label" htmlFor="color-contrast">Contrast <em>{appearance.contrast.toFixed(2)}×</em></label>
-              <input id="color-contrast" type="range" min=".2" max="3" step=".05" value={appearance.contrast}
-                onChange={e=>updateAppearance('contrast',Number(e.target.value))}/>
-              <label className="input-label" htmlFor="color-brightness">Brightness <em>{appearance.brightness.toFixed(2)}×</em></label>
-              <input id="color-brightness" type="range" min=".15" max="2.5" step=".05" value={appearance.brightness}
-                onChange={e=>updateAppearance('brightness',Number(e.target.value))}/>
-              <button className="reset-color" onClick={()=>setAppearance(a=>({...a,paletteOffset:0,paletteCycle:0,paletteMotion:'forward',paletteReverse:false,smoothPalette:false,saturation:1,contrast:1,brightness:1}))}>↺ RESET COLOR MODIFIERS</button>
-            </div>
-            <p className="module-note">All 26 original It's a Moiré 12-stop palettes are intact. Cycle colors through generations, reverse their order, or route cell activity and position into the same color system. These controls apply to GIF and video exports too.</p>
-          </section>
-          <section className="module">
-            <div className="module-heading"><span className="module-num">04</span><h2>SKIN / PRINT / HARVEST</h2><span className="module-symbol">◈</span></div>
+            <p className="fineprint">Tip: tap a cell on the canvas to inspect the real signal value under your finger.</p>
+          </div>
+          {isNewColorSignal(appearance.colorBy)&&
+            <ColorSignalControls appearance={appearance} setAppearance={setAppearance}
+              inspectedCell={inspectedCell} world={worldRef.current}/>}
+          <DualColorControls appearance={appearance} setAppearance={setAppearance}
+            inspectedCell={inspectedCell} world={worldRef.current}/>
+        </section>
+
+        <section className="panel" id="panel-skin" role="tabpanel" aria-labelledby="tab-skin" tabIndex={0} hidden={activeTab!=='skin'}>
+          <PanelHead id="skin"/>
+          <div className="group">
+            <h3 className="group-head">RENDERING SKIN</h3>
             <label className="input-label" htmlFor="skin">Rendering skin</label>
             <select id="skin" value={appearance.skin} onChange={e=>updateAppearance('skin',e.target.value as SkinId)}>
               <option value="pixels">CRISP / PIXELATED</option>
@@ -1096,192 +1214,194 @@ export default function App(){
               <input id="glow-strength" type="range" min="0" max="1" step=".05" value={appearance.glowStrength}
                 onChange={e=>updateAppearance('glowStrength',Number(e.target.value))}/>
             </>}
-            <SkinControls appearance={appearance} setAppearance={setAppearance}/>
-            <PrintShopControls appearance={appearance} setAppearance={setAppearance}/>
+          </div>
+          <SkinControls appearance={appearance} setAppearance={setAppearance}/>
+          <div className="group">
+            <h3 className="group-head">OVERLAYS &amp; AFTERIMAGES</h3>
+            <label className="toggle"><input type="checkbox" checked={appearance.showGrid} onChange={e=>updateAppearance('showGrid',e.target.checked)}/><span>Show mathematical grid</span></label>
+            <label className="toggle"><input type="checkbox" checked={appearance.trails} onChange={e=>updateAppearance('trails',e.target.checked)}/><span>Show cell afterimages</span></label>
             {settings.engine!=='cyclic'&&<>
               <label className="input-label" htmlFor="trail-persistence">Cell afterimage persistence <em>{Math.round(settings.trailDecay*100)}%</em></label>
               <input id="trail-persistence" type="range" min=".65" max=".99" step=".01" value={settings.trailDecay}
                 onChange={e=>updateSetting('trailDecay',Number(e.target.value))}/>
             </>}
-            <label className="toggle"><input type="checkbox" checked={appearance.showGrid} onChange={e=>updateAppearance('showGrid',e.target.checked)}/><span>Show mathematical grid</span></label>
-            <label className="toggle"><input type="checkbox" checked={appearance.trails} onChange={e=>updateAppearance('trails',e.target.checked)}/><span>Show cell afterimages</span></label>
-            <section className="snapshot-studio" aria-label="High-resolution snapshot studio">
-              <div className="snapshot-heading"><b>F5 · SNAPSHOT STUDIO</b><span>EXACT PIXELS · CURRENT GENERATION</span></div>
-              <div className="snapshot-options">
-                <label htmlFor="snapshot-aspect">Canvas frame
-                  <select id="snapshot-aspect" value={snapshotAspect} disabled={snapshotBusy||capturing}
-                    onChange={e=>setSnapshotAspect(e.target.value as SnapshotAspect)}>
-                    <option value="current">MATCH UNIVERSE · NO MATTE</option>
-                    <option value="square">1:1 · SQUARE</option>
-                    <option value="portrait">9:16 · PORTRAIT</option>
-                    <option value="landscape">16:9 · LANDSCAPE</option>
-                  </select>
-                </label>
-                <label htmlFor="snapshot-size">Short side resolution
-                  <select id="snapshot-size" value={snapshotSize} disabled={snapshotBusy||capturing}
-                    onChange={e=>setSnapshotSize(Number(e.target.value) as SnapshotSize)}>
-                    <option value={720}>720 PX</option>
-                    <option value={1080}>1080 PX</option>
-                    <option value={1440}>1440 PX</option>
-                    <option value={2160}>2160 PX · 4K FRAME</option>
-                  </select>
-                </label>
+          </div>
+        </section>
+
+        <section className="panel" id="panel-print" role="tabpanel" aria-labelledby="tab-print" tabIndex={0} hidden={activeTab!=='print'}>
+          <PanelHead id="print"/>
+          <PrintShopControls appearance={appearance} setAppearance={setAppearance}/>
+        </section>
+
+        <section className="panel" id="panel-export" role="tabpanel" aria-labelledby="tab-export" tabIndex={0} hidden={activeTab!=='export'}>
+          <PanelHead id="export"/>
+          <div className="recorder-panel" ref={recorderRef}>
+            <div className="recorder-heading"><span>✹ ANIMATION RECORDER</span><span className="recorder-ready">GIF · MP4 / WEBM</span></div>
+            <label className="input-label" htmlFor="export-format">Animation format</label>
+            <select id="export-format" value={captureFormat} disabled={capturing}
+              onChange={e=>{
+                const format=e.target.value as CaptureFormat;
+                setCaptureFormat(format);
+                setExportFps(format==='gif'?10:30);
+                setResolution(format==='gif'?360:720);
+              }}>
+              <option value="gif">GIF · LOOPING ANIMATION</option>
+              <option value="video">VIDEO · MP4 / WEBM (BROWSER-DEPENDENT)</option>
+            </select>
+            <label className="input-label" htmlFor="duration-mode">When should recording end?</label>
+            <select id="duration-mode" value={durationMode} disabled={capturing}
+              onChange={e=>setDurationMode(e.target.value as DurationMode)}>
+              <option value="fixed">After a chosen duration</option>
+              <option value="settled">When the cells stop changing</option>
+            </select>
+            {durationMode==='fixed' ? <>
+              <label className="input-label" htmlFor="duration-preset">Duration</label>
+              <select id="duration-preset" value={durationPreset} disabled={capturing}
+                onChange={e=>setDurationPreset(e.target.value)}>
+                <option value="10">10 seconds</option>
+                <option value="30">30 seconds</option>
+                <option value="60">1 minute</option>
+                <option value="120">2 minutes</option>
+                <option value="300">5 minutes</option>
+                <option value="custom">Custom duration</option>
+              </select>
+              {durationPreset==='custom'&&<>
+                <label className="input-label" htmlFor="custom-seconds">Custom length <em>1–600 seconds</em></label>
+                <input id="custom-seconds" type="number" min="1" max="600" step="1" value={customSeconds}
+                  disabled={capturing}
+                  onChange={e=>setCustomSeconds(Math.max(1,Math.min(600,Number(e.target.value)||1)))}/>
+              </>}
+            </>:<p className="module-note">
+              The recorder checks for 3 unchanged generations in a row and stops automatically.
+              Oscillators, moving patterns, and cyclic universes may never settle, so recordings are capped at 10 minutes.
+              Videos finish on the last frame; GIFs play once and stay on the final frame where supported.
+            </p>}
+            <div className="record-settings-grid">
+              <div>
+                <label className="input-label" htmlFor="export-resolution">Export quality</label>
+                <select id="export-resolution" value={resolution} disabled={capturing}
+                  onChange={e=>setResolution(Number(e.target.value) as ExportResolution)}>
+                  <option value={360}>360 · SMALL</option>
+                  <option value={480}>480 · LIGHT</option>
+                  <option value={720}>720 · HD</option>
+                  <option value={1080}>1080 · FULL HD</option>
+                  <option value={2160}>2160 · ULTRA HD</option>
+                </select>
               </div>
-              <div className="snapshot-dimensions">
-                <b>{stillLayout.width.toLocaleString()} × {stillLayout.height.toLocaleString()} PX</b>
-                <span>{stillLayout.letterboxed?'CENTERED / NO STRETCH / DARK MATTE':'NATIVE RATIO / NO CROP'}</span>
+              <div>
+                <label className="input-label" htmlFor="export-fps">Frames / second</label>
+                <select id="export-fps" value={exportFps} disabled={capturing}
+                  onChange={e=>setExportFps(Number(e.target.value))}>
+                  {[5,10,15,24,30].map(n=><option value={n} key={n}>{n} FPS</option>)}
+                </select>
               </div>
-              {stillLayout.width*stillLayout.height>6_000_000&&
-                <p className="snapshot-advice">Large PNG: it can take a moment to process on iPhone. If Safari runs out of memory, use the 1080 or 1440 option.</p>}
-              <button type="button" className="snapshot-button" disabled={snapshotBusy||capturing}
-                onClick={()=>void savePng()}>{snapshotBusy?'◌ RENDERING PNG…':'⇩ SAVE FULL-RES PNG'}</button>
-              {lastStill&&<div className="snapshot-ready" role="status">
-                <span>✓ PNG READY · {lastStill.width}×{lastStill.height}</span>
-                <button type="button" onClick={()=>void shareStill()}>SAVE / SHARE</button>
-                <button type="button" className="dismiss-export" onClick={()=>setLastStill(null)}
-                  aria-label="Dismiss PNG ready panel">×</button>
+            </div>
+            <div className="capture-specs">
+              <b>{outputSize[0]} × {outputSize[1]}</b>
+              <span>{captureFormat==='gif'?'GIF / 256 COLORS PER FRAME':'VIDEO / MP4 OR WEBM'} · {exportFps} FPS</span>
+            </div>
+            <label className="toggle"><input type="checkbox" checked={restartCapture} disabled={capturing}
+              onChange={e=>setRestartCapture(e.target.checked)}/>
+              <span>Restart from original seed before recording</span>
+            </label>
+            {largeGif&&!hiddenWarnings.includes(largeGifWarningKey)&&
+              <div className="capture-warning dismissable-notice" role="note">
+                <span>⚠ {Math.ceil(predictedFrames)} frames at {outputSize[0]} × {outputSize[1]} may make a large GIF. We'll attempt the export and measure actual compressed bytes; if the file reaches the device safety limit, the finished partial animation will still be saved.</span>
+                <button type="button" className="dismiss-export" aria-label="Dismiss large GIF advisory" onClick={()=>hideWarning(largeGifWarningKey)}>×</button>
               </div>}
-              <p className="snapshot-advice">Your live world and generation are preserved. Alternate frame shapes center the original artwork with a dark matte instead of stretching or cropping it. On iPhone use SAVE / SHARE after rendering.</p>
-            </section>
+            {captureFormat==='video'&&!videoSupported&&!hiddenWarnings.includes('video-unsupported')&&
+              <div className="capture-warning dismissable-notice" role="note">
+                <span>This browser has not reported a supported video encoder. GIF recording should still work.</span>
+                <button type="button" className="dismiss-export" aria-label="Dismiss video encoder warning" onClick={()=>hideWarning('video-unsupported')}>×</button>
+              </div>}
+            {capturing&&captureProgress&&<div className="capture-progress" role="status">
+              <div><b>{captureProgress.phase}</b><span>{Math.floor(captureProgress.seconds)}s · {captureProgress.frames} frames</span></div>
+              <progress max="1" value={captureProgress.fraction}/>
+              <p>Keep this tab open while recording. Video exports run in real time. The live recording preview is under the canvas.</p>
+            </div>}
+            {captureError&&!capturing&&<div className="capture-warning dismissable-notice" role="alert">
+              <span>EXPORT FAILED: {captureError}</span>
+              <button type="button" className="dismiss-export" aria-label="Close recorder error" onClick={dismissFailure}>×</button>
+            </div>}
+            <div className="capture-buttons">
+              <button className="record-button" disabled={capturing||(captureFormat==='video'&&!videoSupported)}
+                onClick={startCapture}>{capturing?'● RECORDING':'● RECORD '+captureFormat.toUpperCase()}</button>
+              {capturing&&<button className="cancel-button" onClick={()=>controllerRef.current?.abort()}>✕ CANCEL</button>}
+            </div>
+            {lastExport&&!capturing&&<div className="finished-export" role="status">
+              <div className="finished-export-top"><b>✓ EXPORT READY · {lastExport.frames} FRAMES</b>
+                <button type="button" className="dismiss-export" aria-label="Close finished export panel" onClick={dismissExport}>×</button>
+              </div>
+              <div>
+                <span>{lastExport.name} · {lastExport.elapsed.toFixed(1)} sec · {lastExport.distinctFrames} changing steps</span>
+              </div>
+              <div className="export-preview">
+                {lastExport.extension==='gif'?
+                  <img src={lastExport.url} alt="Preview of exported animated GIF" />:
+                  <video src={lastExport.url} controls autoPlay muted loop playsInline preload="metadata" />}
+              </div>
+              {lastExport.distinctFrames===0&&!hideStaticWarning&&<div className="capture-warning dismissable-notice">
+                <span>The mathematical state didn't change during recording, so every frame shows the same picture. Try NEW SEED, a different automaton, or restart from the original seed.</span>
+                <button type="button" className="dismiss-export" aria-label="Dismiss static animation warning" onClick={()=>setHideStaticWarning(true)}>×</button>
+              </div>}
+              <button onClick={saveLastExport}>⇩ SAVE / SHARE TO FILES</button>
+            </div>}
+            <p className="fineprint">
+              GIF encoding runs on a separate worker thread with actual compressed-byte size monitoring. Long GIFs are attempted instead of being rejected by a raw-pixel estimate; very large exports may finish early with a clearly labeled partial animation.
+              Video is recorded in real time and may save as MP4 or WebM depending on your browser.
+              Recording copies your current universe without changing the live one. Video contains no audio.
+            </p>
+          </div>
+          <section className="snapshot-studio" aria-label="High-resolution snapshot studio">
+            <div className="snapshot-heading"><b>📷 SNAPSHOT STUDIO</b><span>EXACT PIXELS · CURRENT GENERATION</span></div>
+            <div className="snapshot-options">
+              <label htmlFor="snapshot-aspect">Canvas frame
+                <select id="snapshot-aspect" value={snapshotAspect} disabled={snapshotBusy||capturing}
+                  onChange={e=>setSnapshotAspect(e.target.value as SnapshotAspect)}>
+                  <option value="current">MATCH UNIVERSE · NO MATTE</option>
+                  <option value="square">1:1 · SQUARE</option>
+                  <option value="portrait">9:16 · PORTRAIT</option>
+                  <option value="landscape">16:9 · LANDSCAPE</option>
+                </select>
+              </label>
+              <label htmlFor="snapshot-size">Short side resolution
+                <select id="snapshot-size" value={snapshotSize} disabled={snapshotBusy||capturing}
+                  onChange={e=>setSnapshotSize(Number(e.target.value) as SnapshotSize)}>
+                  <option value={720}>720 PX</option>
+                  <option value={1080}>1080 PX</option>
+                  <option value={1440}>1440 PX</option>
+                  <option value={2160}>2160 PX · 4K FRAME</option>
+                </select>
+              </label>
+            </div>
+            <div className="snapshot-dimensions">
+              <b>{stillLayout.width.toLocaleString()} × {stillLayout.height.toLocaleString()} PX</b>
+              <span>{stillLayout.letterboxed?'CENTERED / NO STRETCH / DARK MATTE':'NATIVE RATIO / NO CROP'}</span>
+            </div>
+            {stillLayout.width*stillLayout.height>6_000_000&&
+              <p className="snapshot-advice">Large PNG: it can take a moment to process on iPhone. If Safari runs out of memory, use the 1080 or 1440 option.</p>}
+            <button type="button" className="snapshot-button" disabled={snapshotBusy||capturing}
+              onClick={()=>void savePng()}>{snapshotBusy?'◌ RENDERING PNG…':'⇩ SAVE FULL-RES PNG'}</button>
+            {lastStill&&<div className="snapshot-ready" role="status">
+              <span>✓ PNG READY · {lastStill.width}×{lastStill.height}</span>
+              <button type="button" onClick={()=>void shareStill()}>SAVE / SHARE</button>
+              <button type="button" className="dismiss-export" onClick={()=>setLastStill(null)}
+                aria-label="Dismiss PNG ready panel">×</button>
+            </div>}
+            <p className="snapshot-advice">Your live world and generation are preserved. Alternate frame shapes center the original artwork with a dark matte instead of stretching or cropping it. On iPhone use SAVE / SHARE after rendering.</p>
+          </section>
+          <div className="group">
+            <h3 className="group-head">RECIPES <small>JSON · rules, colors, real cells, brush</small></h3>
             <div className="export-grid">
-              <button type="button" onClick={()=>void savePng()} disabled={snapshotBusy||capturing} className="export">⇩ QUICK PNG</button>
               <button onClick={saveRecipe} className="export">⇩ SAVE RECIPE</button>
               <button onClick={()=>loadRef.current?.click()} className="export">⇧ LOAD RECIPE</button>
               <input className="sr-only" ref={loadRef} type="file" accept=".json,application/json" onChange={loadRecipe}/>
             </div>
-            <div className="recorder-panel" ref={recorderRef}>
-              <div className="recorder-heading"><span>✹ ANIMATION RECORDER</span><span className="recorder-ready">EXPORT LAB / F5 VERIFIED</span></div>
-              <label className="input-label" htmlFor="export-format">Animation format</label>
-              <select id="export-format" value={captureFormat} disabled={capturing}
-                onChange={e=>{
-                  const format=e.target.value as CaptureFormat;
-                  setCaptureFormat(format);
-                  setExportFps(format==='gif'?10:30);
-                  setResolution(format==='gif'?360:720);
-                }}>
-                <option value="gif">GIF · LOOPING ANIMATION</option>
-                <option value="video">VIDEO · MP4 / WEBM (BROWSER-DEPENDENT)</option>
-              </select>
-              <label className="input-label" htmlFor="duration-mode">When should recording end?</label>
-              <select id="duration-mode" value={durationMode} disabled={capturing}
-                onChange={e=>setDurationMode(e.target.value as DurationMode)}>
-                <option value="fixed">After a chosen duration</option>
-                <option value="settled">When the cells stop changing</option>
-              </select>
-              {durationMode==='fixed' ? <>
-                <label className="input-label" htmlFor="duration-preset">Duration</label>
-                <select id="duration-preset" value={durationPreset} disabled={capturing}
-                  onChange={e=>setDurationPreset(e.target.value)}>
-                  <option value="10">10 seconds</option>
-                  <option value="30">30 seconds</option>
-                  <option value="60">1 minute</option>
-                  <option value="120">2 minutes</option>
-                  <option value="300">5 minutes</option>
-                  <option value="custom">Custom duration</option>
-                </select>
-                {durationPreset==='custom'&&<>
-                  <label className="input-label" htmlFor="custom-seconds">Custom length <em>1–600 seconds</em></label>
-                  <input id="custom-seconds" type="number" min="1" max="600" step="1" value={customSeconds}
-                    disabled={capturing}
-                    onChange={e=>setCustomSeconds(Math.max(1,Math.min(600,Number(e.target.value)||1)))}/>
-                </>}
-              </>:<p className="module-note">
-                The recorder checks for 3 unchanged generations in a row and stops automatically.
-                Oscillators, moving patterns, and cyclic universes may never settle, so recordings are capped at 10 minutes.
-                Videos finish on the last frame; GIFs play once and stay on the final frame where supported.
-              </p>}
-              <div className="record-settings-grid">
-                <div>
-                  <label className="input-label" htmlFor="export-resolution">Export quality</label>
-                  <select id="export-resolution" value={resolution} disabled={capturing}
-                    onChange={e=>setResolution(Number(e.target.value) as ExportResolution)}>
-                    <option value={360}>360 · SMALL</option>
-                    <option value={480}>480 · LIGHT</option>
-                    <option value={720}>720 · HD</option>
-                    <option value={1080}>1080 · FULL HD</option>
-                    <option value={2160}>2160 · ULTRA HD</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="input-label" htmlFor="export-fps">Frames / second</label>
-                  <select id="export-fps" value={exportFps} disabled={capturing}
-                    onChange={e=>setExportFps(Number(e.target.value))}>
-                    {[5,10,15,24,30].map(n=><option value={n} key={n}>{n} FPS</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="capture-specs">
-                <b>{outputSize[0]} × {outputSize[1]}</b>
-                <span>{captureFormat==='gif'?'GIF / 256 COLORS PER FRAME':'VIDEO / MP4 OR WEBM'} · {exportFps} FPS</span>
-              </div>
-              <label className="toggle"><input type="checkbox" checked={restartCapture} disabled={capturing}
-                onChange={e=>setRestartCapture(e.target.checked)}/>
-                <span>Restart from original seed before recording</span>
-              </label>
-              {largeGif&&!hiddenWarnings.includes(largeGifWarningKey)&&
-                <div className="capture-warning dismissable-notice" role="note">
-                  <span>⚠ {Math.ceil(predictedFrames)} frames at {outputSize[0]} × {outputSize[1]} may make a large GIF. We'll attempt the export and measure actual compressed bytes; if the file reaches the device safety limit, the finished partial animation will still be saved.</span>
-                  <button type="button" className="dismiss-export" aria-label="Dismiss large GIF advisory" onClick={()=>hideWarning(largeGifWarningKey)}>×</button>
-                </div>}
-              {captureFormat==='video'&&!videoSupported&&!hiddenWarnings.includes('video-unsupported')&&
-                <div className="capture-warning dismissable-notice" role="note">
-                  <span>This browser has not reported a supported video encoder. GIF recording should still work.</span>
-                  <button type="button" className="dismiss-export" aria-label="Dismiss video encoder warning" onClick={()=>hideWarning('video-unsupported')}>×</button>
-                </div>}
-              <div id="capture-canvas-mount" className={capturing?'capture-live':'capture-live capture-hidden'} aria-label="Live export preview" />
-              {capturing&&captureProgress&&<div className="capture-progress" role="status">
-                <div><b>{captureProgress.phase}</b><span>{Math.floor(captureProgress.seconds)}s · {captureProgress.frames} frames</span></div>
-                <progress max="1" value={captureProgress.fraction}/>
-                <p>Keep this tab open while recording. Video exports run in real time.</p>
-              </div>}
-              {captureError&&!capturing&&<div className="capture-warning dismissable-notice" role="alert">
-                <span>EXPORT FAILED: {captureError}</span>
-                <button type="button" className="dismiss-export" aria-label="Close recorder error" onClick={dismissFailure}>×</button>
-              </div>}
-              <div className="capture-buttons">
-                <button className="record-button" disabled={capturing||(captureFormat==='video'&&!videoSupported)}
-                  onClick={startCapture}>{capturing?'● RECORDING':'● RECORD '+captureFormat.toUpperCase()}</button>
-                {capturing&&<button className="cancel-button" onClick={()=>controllerRef.current?.abort()}>✕ CANCEL</button>}
-              </div>
-              {lastExport&&!capturing&&<div className="finished-export" role="status">
-                <div className="finished-export-top"><b>✓ EXPORT READY · {lastExport.frames} FRAMES</b>
-                  <button type="button" className="dismiss-export" aria-label="Close finished export panel" onClick={dismissExport}>×</button>
-                </div>
-                <div>
-                  <span>{lastExport.name} · {lastExport.elapsed.toFixed(1)} sec · {lastExport.distinctFrames} changing steps</span>
-                </div>
-                <div className="export-preview">
-                  {lastExport.extension==='gif'?
-                    <img src={lastExport.url} alt="Preview of exported animated GIF" />:
-                    <video src={lastExport.url} controls autoPlay muted loop playsInline preload="metadata" />}
-                </div>
-                {lastExport.distinctFrames===0&&!hideStaticWarning&&<div className="capture-warning dismissable-notice">
-                  <span>The mathematical state didn't change during recording, so every frame shows the same picture. Try NEW SEED, a different automaton, or restart from the original seed.</span>
-                  <button type="button" className="dismiss-export" aria-label="Dismiss static animation warning" onClick={()=>setHideStaticWarning(true)}>×</button>
-                </div>}
-                <button onClick={saveLastExport}>⇩ SAVE / SHARE TO FILES</button>
-              </div>}
-              <p className="module-note">
-                GIF encoding runs on a separate worker thread with actual compressed-byte size monitoring. Long GIFs are attempted instead of being rejected by a raw-pixel estimate; very large exports may finish early with a clearly labeled partial animation.
-                Video is recorded in real time and may save as MP4 or WebM depending on your browser.
-                GIF is rendered frame by frame. Recording copies your current universe without changing the live one.
-                Larger/longer recordings need more memory. Video contains no audio.
-              </p>
-            </div>
-          </section>
-          <section className="future">
-            <div className="future-header">COMING OUT OF THE INCUBATOR</div>
-            <div className="future-list">
-              <div><b>02 / CHROMA</b><span>More rule-to-art patch cables + animated palettes</span></div>
-              <div><b>03 / SKIN</b><span>Particles, contours, glitter, geometry & organic morphs</span></div>
-              <div><b>04 / RECORD</b><span>GIF + MP4/WebM recording is here! APNG & loop hunting to come.</span></div>
-              <div><b>05 / MUTATION</b><span>Breed rules, batch experiments & a local weirdness generator</span></div>
-              <div><b>06–07 / BIOLOGY</b><span>Rule parasites, territory fights, Lenia & strange topology</span></div>
-            </div>
-          </section>
+            <p className="fineprint">A recipe stores the exact living universe, so loading one brings back these very cells, not just the settings.</p>
+          </div>
           <footer className="footer">AUTOMATART / CHAOS WITH A REPRODUCIBLE SEED · <a href="https://github.com/merrypranxter/automatart" target="_blank" rel="noreferrer">GITHUB ↗</a></footer>
         </section>
-      </main>
+      </div>
       {message&&<div role="status" aria-live="polite" className="status-msg">
         <span>{message}</span>
         <button type="button" className="dismiss-export" aria-label="Dismiss status message" onClick={()=>setMessage('')}>×</button>

@@ -12,6 +12,16 @@ npm run dev
 ```
 Open the localhost URL printed by Vite. Production: `npm run build`, output in `dist/`. Netlify publish directory: `dist`.
 
+## Studio shell UI (Math Art Suite layout)
+Same shell as Fractalabart, with automatart's own controls inside:
+- **Top bar:** brand · **Automaton species** picker (the one choice that changes everything) · **↓ EXPORT**.
+- **Stage (always on screen):** canvas, PLAY / STEP +1 / RESET / NEW SEED, ⏭ +10 / +100, speed, live readouts, quick brush mode (✎ paint / ⌫ erase / ◉ invert), 📷 quick PNG, fullscreen. Recording progress, the live recording canvas and export results also appear here.
+- **Tab rail → one scrolling panel**, grouped *build · look · output*:
+  `WORLD` (canvas, grid, lattice, starting cells, seed) · `RULES` (the active species' rule, neighborhood) · `PAINT` (Alien Paintbrush) · `MUTATE` (mutation dice) │ `COLOR` (palette, chromatic misbehavior, palette JSON) · `PATCH` (signal → color, dual A/B) · `SKIN` (skins, grid, afterimages) · `PRINT` (Print Shop) │ `EXPORT` (GIF/video recorder, PNG snapshot studio, recipes).
+- Panels stay mounted while hidden, so switching tabs never loses state. Arrow keys / Home / End move between tabs; the last tab is remembered per browser.
+- Phones stack top bar → stage → horizontal tabs → panel, with no horizontal page scroll. Layout only: no engine, renderer, recipe or export behavior changed.
+- Browser smoke tests wrap the page with `scripts/ui-tabs.mjs`, which clicks a control's own tab before touching it, exactly as a person would.
+
 ## Engines
 - **Life-like:** Conway (B3/S23), HighLife (B36/S23), Seeds (B2/S), Day & Night (B3678/S34678).
 - **Generations:** Brian's Brain, with firing, refractory, and resting cells.
