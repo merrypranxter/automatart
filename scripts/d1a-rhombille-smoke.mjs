@@ -13,7 +13,8 @@ const modules=[
  ['src/engine/capture.ts','scripts/.d1a-capture.mjs'],
  ['src/engine/alien-paint.ts','scripts/.d1a-brush.mjs'],
  ['src/engine/color-signals.ts','scripts/.d1a-colors.mjs'],
- ['src/engine/mutation-automatart.ts','scripts/.d1a-mutate.mjs']
+ ['src/engine/mutation-automatart.ts','scripts/.d1a-mutate.mjs'],
+ ['src/engine/snapshot.ts','scripts/.d1a-still.mjs']
 ];
 try{
  await Promise.all(modules.map(([entry,outfile])=>build({entryPoints:[entry],outfile,
@@ -29,6 +30,7 @@ try{
  const {applyAlienStamp,INITIAL_ALIEN_BRUSH}=await mod(7);
  const {computeColorSignal}=await mod(8);
  const {requiresWorldRestart}=await mod(9);
+ const {snapshotLayout}=await mod(10);
  const w=36,h=12;
  const modn=(v,m)=>(v%m+m)%m;
  const graph=(x,y)=>neighborOffsets('rhombille',x,y,'moore');
@@ -128,6 +130,25 @@ try{
  const target=[x,y],painted=createWorld(s);
  const footprint=applyAlienStamp(painted,s,target,brush,242);
  assert(footprint.includes(index),'Symmetric paint uses diamond hit-test and same world index');
+ // Sector zero -> sector one physically points left-and-down. Packed x+1
+ // is just an address; it must NOT be interpreted as eastward movement.
+ const directional=createWorld(s);
+ directional.cells.fill(0);
+ const sectorZeroIndex=y*simW+(x-1);
+ directional.cells[index]=1; // sector 1 of this hex
+ directional.previousCells.fill(0);
+ directional.olderCells.fill(0);
+ const flow=computeColorSignal(directional,{...INITIAL_APPEARANCE,colorBy:'flow'},'flow');
+ const physicallyExpected=(Math.atan2(.75,-Math.sqrt(3)/4)+Math.PI)/(2*Math.PI);
+ assert(Math.abs(flow[sectorZeroIndex]-physicallyExpected)<.015,
+  'Flow inspector follows true lozenge centroid, not storage-column delta');
+ for(const aspect of ['current','square','portrait','landscape']){
+  const layout=snapshotLayout(s,{aspect,shortSide:720});
+  const [physicalW,physicalH]=geometryExtent('rhombille',simW,simH);
+  assert(Math.abs(layout.image.width/layout.image.height-physicalW/physicalH)<.008,
+    'PNG letterbox/crop preserves diamond geometry without stretching');
+  assert(layout.image.width<=layout.width&&layout.image.height<=layout.height);
+ }
  const cap=createCaptureCursor(next,s,10,10);
  assert.deepEqual(cap.current.cells,next.cells);
  cap.advance();
