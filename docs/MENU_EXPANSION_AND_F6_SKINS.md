@@ -75,10 +75,12 @@ Automatart remains an instrument in **MATHEMAGICAL! — a Math Art Suite**. This
 
 **Done when:** published/reference transitions, reproducible stochastic runs and replay/snapshot tests pass.
 
-### F5.5C3 — STATISTICAL/AGENT WORLDS (HONESTLY LABELED)
+### F5.5C3 — STATISTICAL/AGENT WORLDS (IMPLEMENTED IN PR — CI / MERGE PENDING)
 - **Ising-style spin world**: spin up/down, temperature, interaction strength, magnetic field, clearly specify synchronous heat-bath vs asynchronous Glauber or Metropolis update (the chosen scheme dictates its classification; don't pretend all variants are synchronous CA).
 - **Langton's Ant / Turmites**: moving agents with direction/state and grid trail; explicitly **AGENT SYSTEM**, not just another synchronous binary CA. Turn rules, direction, multiple agents where feasible, seeded initialization.
 - Ensure the new agent positions/directions and RNG are captured in recipes, undo/snapshot, and export frames; adjust inspector accordingly.
+**Implementation:** Ising is real nearest-neighbor binary spins (1=+1,0=−1), conditional checkerboard Metropolis with two nonadjacent sublattice passes per sweep on even-by-even square grids, physical Hamiltonian H=−J Σ(sᵢsⱼ)−h Σ(sᵢ), ΔE=2sᵢ(JΣsⱼ+h), T=0 downhill/neutral accept and for ΔE>0 probability exp(−ΔE/T). Counter-based seed/generation/sweep/sublattice/cell randomness is deterministic. Temperature 0–5, coupling −2…2, field −2…2, 1–4 sweeps/frame, spin UP/DOWN brush, magnetization and energy per site readouts. Turmites are agents (not synchronous classical CA): Langton RL and variable 2–12-color L/R rules, 1–12 agents, deterministic seed placements, sequential stable-index collision resolution, exact heading markers, finite bounce/periodic wrap and true track stage painting. Rule/count changes reset this engine; all agent headings/positions persist through immutable captures/undo and strict JSON snapshots. Existing skins, color inspectors and GIF/video now show active ants; square-only engine compatibility enforced. Automated build, deterministic physics and agent fixtures, browser recipe/painting/GIF/video regressions gate merge. **Physical iPhone Safari acceptance remains pending.**
+
 **Done when:** reference behavioral checks, reproducible moves, and realistic mobile device cap pass.
 
 ### F5.5C4 — LATTICE GAS AND ENGINE COMPATIBILITY PASS

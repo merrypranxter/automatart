@@ -167,11 +167,14 @@ export function applyAlienStamp(
       if(world.olderCells)world.olderCells[id]=next;
       continue;
     }
-    const value=settings.engine==='hodgepodge'?settings.hodgeBrush:
+    const value=settings.engine==='ising'?settings.isingBrush:
+      settings.engine==='turmites'?settings.turmiteBrush:
+      settings.engine==='hodgepodge'?settings.hodgeBrush:
       settings.engine==='forestfire'?settings.forestBrush:
       settings.engine==='wireworld'?settings.wireBrush:settings.engine==='cyclic'?Math.max(1,Math.floor(settings.cyclicStates/2)):
       settings.engine==='species'?Math.max(1,Math.min(settings.speciesCount,b.species)):1;
-    const next=b.mode==='erase'?0:b.mode==='invert'?(before?0:value):value;
+    const inverseOn=value===0&&(settings.engine==='ising'||settings.engine==='turmites')?1:value;
+    const next=b.mode==='erase'?0:b.mode==='invert'?(before?0:inverseOn):value;
     world.cells[id]=next;
     world.ages[id]=next?1:0;
     world.traces[id]=next?1:0;

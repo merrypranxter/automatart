@@ -23,8 +23,10 @@ export const INITIAL_MUTATION_LOCKS:MutationLocks={
   palette:false,rule:false,engine:true,seed:true
 };
 const restartKeys=(s:SimSettings)=>[
-  s.engine,s.cellCount,s.aspect,s.seed,s.pattern,s.density,
-  s.cyclicStates,s.genStates,s.exciteStates,s.speciesCount,s.hodgeStates,s.lattice
+  s.engine,s.cellCount,s.aspect,s.seed,
+  s.engine==='turmites'?null:s.pattern,
+  s.engine==='turmites'?null:s.density,
+  s.cyclicStates,s.genStates,s.exciteStates,s.speciesCount,s.hodgeStates,s.turmiteCount,s.turmiteRule,s.lattice
 ];
 export function requiresWorldRestart(before:SimSettings,after:SimSettings):boolean{
   const a=restartKeys(before),b=restartKeys(after);
@@ -32,9 +34,9 @@ export function requiresWorldRestart(before:SimSettings,after:SimSettings):boole
 }
 const validEngines:EngineId[]=[
   'life','brians','cyclic','wolfram','generations','excitable',
-  'larger','species','oriented','margolus','wireworld','sandpile','hodgepodge','forestfire'
+  'larger','species','oriented','margolus','wireworld','sandpile','hodgepodge','forestfire','ising','turmites'
 ];
-const squareOnly:EngineId[]=['wolfram','larger','oriented','margolus','wireworld','sandpile','hodgepodge','forestfire'];
+const squareOnly:EngineId[]=['wolfram','larger','oriented','margolus','wireworld','sandpile','hodgepodge','forestfire','ising','turmites'];
 
 export function mutateAutomatart(
   sourceSettings:SimSettings,
@@ -99,7 +101,7 @@ export function mutateAutomatart(
   // A RULE lock protects the live mathematical rule, not merely the name
   // in the Life-like dropdown. Every rule candidate is engine compatible.
   if(!opts.locks.rule){
-    if(s.engine!=='margolus'&&s.engine!=='wolfram'&&s.engine!=='larger'&&s.engine!=='oriented'&&s.engine!=='wireworld'&&s.engine!=='sandpile'&&s.engine!=='hodgepodge'&&s.engine!=='forestfire'){
+    if(s.engine!=='margolus'&&s.engine!=='wolfram'&&s.engine!=='larger'&&s.engine!=='oriented'&&s.engine!=='wireworld'&&s.engine!=='sandpile'&&s.engine!=='hodgepodge'&&s.engine!=='forestfire'&&s.engine!=='ising'&&s.engine!=='turmites'){
       if(s.lattice==='square'){
         offer('Neighborhood shape',()=>{
           s.neighborShape=choose(s.neighborShape,['moore','vonNeumann','square2','diamond2','directional','custom'] as const);
@@ -135,6 +137,16 @@ export function mutateAutomatart(
       offer('World edge behavior',()=>{s.wrap=!s.wrap});
     }
     switch(s.engine){
+      case 'ising':
+        offer('Temperature chaos',()=>{s.isingTemperature=floatStep(s.isingTemperature,.3,0,5,2)});
+        offer('Ferromagnetic/antiferromagnetic coupling',()=>{s.isingCoupling=floatStep(s.isingCoupling,.3,-2,2,2)});
+        offer('External magnetic field',()=>{s.isingField=floatStep(s.isingField,.3,-2,2,2)});
+        offer('Metropolis sweeps/frame',()=>{s.isingSweeps=intStep(s.isingSweeps,1,4,1)});
+        offer('Paint spin orientation',()=>{s.isingBrush=s.isingBrush===1?0:1});
+        break;
+      case 'turmites':
+        offer('Track pigment stage',()=>{s.turmiteBrush=intStep(s.turmiteBrush,0,s.turmiteRule.length-1,1)});
+        break;
       case 'hodgepodge':
         offer('Recovery wave velocity',()=>{s.hodgeGrowth=intStep(s.hodgeGrowth,1,40,4)});
         offer('Ill cell infection divisor',()=>{s.hodgeK1=intStep(s.hodgeK1,1,8,2)});
@@ -231,8 +243,10 @@ export function mutateAutomatart(
     }
     if(!opts.locks.seed){
       offer('Change universe seed',()=>{s.seed=(s.seed+rng.int(1,0x7fffffff))>>>0});
-      offer('Mutate starting pattern',()=>{s.pattern=choose(s.pattern,['noise','center','rings','stripes','checker','spiral','web'] as const)});
-      offer('Starting cell density',()=>{s.density=floatStep(s.density,.17,0.02,.95)});
+      if(s.engine!=='turmites'){
+        offer('Mutate starting pattern',()=>{s.pattern=choose(s.pattern,['noise','center','rings','stripes','checker','spiral','web'] as const)});
+        offer('Starting cell density',()=>{s.density=floatStep(s.density,.17,0.02,.95)});
+      }
     }
     if(!opts.locks.rule){
       if(s.engine==='cyclic')offer('Cyclic species count',()=>{s.cyclicStates=intStep(s.cyclicStates,3,24,3)});

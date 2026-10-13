@@ -47,6 +47,8 @@ jobs:
         run: node scripts/c1-circuits-smoke.mjs
       - name: Verify C2 Hodgepodge waves, seeded forest fires and export replay
         run: node scripts/c2-reaction-smoke.mjs
+      - name: Verify C3 Ising energy, Turmite agent trajectories and snapshot replay
+        run: node scripts/c3-spins-turmites-smoke.mjs
       - name: Verify A2 dual-source mathematical color mixing and exports
         run: node scripts/a2-dual-color-smoke.mjs
       - name: Verify Print Shop effects, compositing and recipe migration
@@ -56,7 +58,7 @@ jobs:
 
       - name: Install Chromium and browser automation for recorder UI test
         run: |
-          npm install --no-save --no-audit --no-fund playwright
+          npm install --no-save --no-audit --no-fund playwright gifuct-js
           npx playwright install --with-deps chromium
       - name: Record GIF through actual browser Worker and verify UI
         run: node scripts/recorder-browser-smoke.mjs

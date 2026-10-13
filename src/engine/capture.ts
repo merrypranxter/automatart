@@ -48,7 +48,8 @@ export function recommendedDimensions(s:SimSettings,size:ExportResolution):[numb
 export function cloneWorld(w:World):World{
   // Preserve every rule graph field, including directional mask. This clone
   // powers first-frame GIF/video capture before any simulated steps occur.
-  return {...w,cells:w.cells.slice(),grains:w.grains?.slice(),ages:w.ages.slice(),neighbors:w.neighbors.slice(),
+  return {...w,cells:w.cells.slice(),grains:w.grains?.slice(),
+    turmiteAgents:w.turmiteAgents?.map(a=>({...a})),ages:w.ages.slice(),neighbors:w.neighbors.slice(),
     events:w.events.slice(),traces:w.traces.slice(),
     previousCells:w.previousCells?.slice(),olderCells:w.olderCells?.slice(),
     fossils:w.fossils?.slice()};
@@ -92,6 +93,7 @@ export function createCaptureCursor(source:World,s:SimSettings,fps:number,stepsP
       for(let i=0;i<count;i++){
         const next=stepWorld(current,s);
         const same=equalCells(current.cells,next.cells)&&
+          (s.engine!=='turmites'||JSON.stringify(current.turmiteAgents)===JSON.stringify(next.turmiteAgents))&&
           (!next.grains||!!current.grains&&equalGrains(current.grains,next.grains));
         unchanged=same?unchanged+1:0;
         if(!same)changed=true;
@@ -104,7 +106,10 @@ export function createCaptureCursor(source:World,s:SimSettings,fps:number,stepsP
       const randomFuture=s.engine==='forestfire'&&(
         (s.forestGrowth>0&&current.cells.includes(0))||
         (s.forestLightning>0&&current.cells.includes(1)));
-      return {settled:unchanged>=3&&!randomFuture,changed};
+      // Metropolis at T>0 remains genuinely stochastic even if three whole
+      // checkerboard sweeps happened not to flip a single spin.
+      const thermalFuture=s.engine==='ising'&&s.isingTemperature>0;
+      return {settled:unchanged>=3&&!randomFuture&&!thermalFuture,changed};
     }
   };
   return cursor;

@@ -1,6 +1,8 @@
 import type {SimSettings,World} from './types';
 import {worldDimensions} from './types';
 import {createWorld} from './sim';
+import {validTurmiteRule} from './spins-turmites';
+import type {TurmiteAgent} from './spins-turmites';
 
 interface PackedWorld {
   kind:'automatart-world-v1';
@@ -9,6 +11,7 @@ interface PackedWorld {
   width:number;
   height:number;
   generation:number;
+  turmiteAgents?:TurmiteAgent[];
   arrays:Record<'cells'|'ages'|'neighbors'|'events'|'traces'|'previousCells'|'olderCells'|'fossils',string> & {grains?:string};
 }
 function pack(data:Uint8Array):string{
@@ -29,6 +32,7 @@ export function snapshotWorld(world:World):PackedWorld{
   return {
     kind:'automatart-world-v1',engine:world.engine,lattice:world.lattice,
     width:world.width,height:world.height,generation:world.generation,
+    ...(world.engine==='turmites'?{turmiteAgents:world.turmiteAgents?.map(a=>({...a}))}:{}),
     arrays:{
       cells:pack(world.cells),ages:pack(bytes(world.ages)),
       neighbors:pack(world.neighbors),events:pack(world.events),
@@ -63,6 +67,25 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
     previousCells:get('previousCells',n),olderCells:get('olderCells',n),
     fossils:getF32('fossils'),
     grains:settings.engine==='sandpile'?new Uint32Array(get('grains',n*4).buffer):undefined};
+  if(settings.engine==='ising'){
+    for(let i=0;i<n;i++)if(world.cells[i]>1)throw new Error('Invalid Ising spin state');
+  }
+  if(settings.engine==='turmites'){
+    if(!validTurmiteRule(settings.turmiteRule)||!Array.isArray(s.turmiteAgents)||
+       s.turmiteAgents.length!==settings.turmiteCount)
+      throw new Error('Invalid saved Turmite agent count');
+    const agents=s.turmiteAgents as TurmiteAgent[];
+    for(const agent of agents){
+      if(!agent||!Number.isInteger(agent.x)||!Number.isInteger(agent.y)||
+         !Number.isInteger(agent.heading)||agent.x<0||agent.x>=width||
+         agent.y<0||agent.y>=height||agent.heading<0||agent.heading>3)
+        throw new Error('Invalid saved Turmite coordinate');
+    }
+    for(let i=0;i<n;i++)if(world.cells[i]>=settings.turmiteRule.length)
+      throw new Error('Invalid Turmite track state');
+    world.turmiteAgents=agents.map(a=>({x:a.x,y:a.y,heading:a.heading}));
+    world.turmiteRule=settings.turmiteRule;
+  }
   if(settings.engine==='forestfire'){
     for(let i=0;i<n;i++)if(world.cells[i]>2)
       throw new Error('Forest fire snapshot contains an invalid state');

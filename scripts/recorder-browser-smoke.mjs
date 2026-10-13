@@ -373,6 +373,125 @@ try{
   assert.equal(await page.locator('#engine').inputValue(),'forestfire','Invalid forest snapshot rejected');
   await page.locator('#engine').selectOption('life');
   console.log('PASS: C2 real Hodgepodge sliders, seeded fire climate, exact recipe replay and corrupt-state rejection');
+  // C3: physical Ising spins, Turmite heading agents and saved custom L/R rules.
+  await page.locator('#engine').selectOption('ising');
+  assert(await page.locator('#ising-temp').isVisible(),'Ising temperature slider exists');
+  assert(await page.locator('#lattice').isDisabled(),'Ising requires square grid');
+  await page.locator('#ising-temp').fill('110');
+  await page.locator('#ising-coupling').fill('-100');
+  await page.locator('#ising-field').fill('40');
+  await page.locator('#ising-brush-down').click();
+  assert.equal(await page.locator('#ising-brush-down').getAttribute('aria-pressed'),'true');
+  const [isingFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const isingJson=JSON.parse(await readFile(await isingFile.path(),'utf8'));
+  assert.equal(isingJson.settings.isingTemperature,1.1);
+  assert.equal(isingJson.settings.isingCoupling,-1);
+  assert.equal(isingJson.settings.isingField,.4);
+  assert.equal(isingJson.settings.isingBrush,0);
+  await page.locator('#engine').selectOption('turmites');
+  assert(await page.locator('#turmite-count').isVisible(),'Turmite population setting exists');
+  assert(await page.locator('#density').isDisabled(),'No destructive dummy density knob for Turmites');
+  assert(await page.locator('#seed-pattern').isDisabled(),'No destructive dummy pattern knob for Turmites');
+  await page.locator('#turmite-count').fill('3');
+  await page.locator('#turmite-rule').fill('RLLR');
+  await page.getByRole('button',{name:'USE RULE'}).click();
+  await page.locator('#turmite-brush').fill('2');
+  const [turmiteFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const turmiteJson=JSON.parse(await readFile(await turmiteFile.path(),'utf8'));
+  assert.equal(turmiteJson.settings.engine,'turmites');
+  assert.equal(turmiteJson.settings.turmiteRule,'RLLR');
+  assert.equal(turmiteJson.settings.turmiteCount,3);
+  assert.equal(turmiteJson.settings.turmiteBrush,2);
+  assert.equal(turmiteJson.world.turmiteAgents.length,3);
+  const initialAgents=turmiteJson.world.turmiteAgents;
+  // Remain on the Turmite page while changing the committed rule. Reloading
+  // a recipe must synchronize the editable turn sequence without remounting.
+  await page.getByRole('button',{name:"LANGTON'S ANT"}).click();
+  assert.equal(await page.locator('#turmite-rule').inputValue(),'RL');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'c3-turmites.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(turmiteJson))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-rule')?.value==='RLLR');
+  assert.equal(await page.locator('#turmite-rule').inputValue(),'RLLR',
+    'Rule editor syncs the committed turning sequence after same-engine recipe restore');
+  const [agentRoundtrip]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const loadedAgents=JSON.parse(await readFile(await agentRoundtrip.path(),'utf8'));
+  assert.deepEqual(loadedAgents.world.turmiteAgents,initialAgents,
+   'All agent coordinates and headings survive import/export');
+  await page.locator('#turmite-rule').fill('LLRR'); // deliberately uncommitted
+  await page.locator('#turmite-brush').fill('1');
+  assert.equal(await page.locator('#turmite-rule').inputValue(),'LLRR',
+   'Changing track brush does not destroy uncommitted turn-rule text');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'c3-same-rule-reload.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(turmiteJson))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-rule')?.value==='RLLR');
+  assert.equal(await page.locator('#turmite-rule').inputValue(),'RLLR',
+   'Same-rule import resets stale draft rather than silently replacing saved agents');
+  const corrupt=structuredClone(turmiteJson);corrupt.world.turmiteAgents[0].x=99999;
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'invalid-agent.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(corrupt))
+  });
+  await page.waitForFunction(()=>(document.querySelector('.status-msg')?.textContent||'').includes('Could not load recipe'));
+  assert.equal(await page.locator('#engine').inputValue(),'turmites',
+   'Invalid agents do not corrupt live world');
+  // Actual animated-GIF regression: ant marker at its saved location survives
+  // canvas rendering, palette quantization and the real browser GIF Worker.
+  const gridBeforeAntGif=await page.locator('#resolution').inputValue();
+  await page.locator('#turmite-count').fill('1');
+  await page.locator('#resolution').fill('32');
+  await page.locator('#skin').selectOption('pixels');
+  await page.locator('#source').selectOption('state');
+  if(await page.locator('#print-master').isChecked())
+   await page.locator('#print-master').uncheck();
+  if(await page.locator('#dual-enabled').isChecked())
+   await page.locator('#dual-enabled').uncheck();
+  const [antRecipe]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const antData=JSON.parse(await readFile(await antRecipe.path(),'utf8'));
+  const antPos=antData.world.turmiteAgents[0];
+  const antW=antData.world.width,antH=antData.world.height;
+  await page.locator('#duration-preset').selectOption('custom');
+  await page.locator('#custom-seconds').fill('1');
+  await page.locator('#export-fps').selectOption('10');
+  await page.locator('.record-button').click();
+  await page.locator('.stage-capture-success').waitFor({state:'visible',timeout:60000});
+  const antGifBase64=await page.evaluate(async()=>{
+   const img=document.querySelector('.export-preview img');
+   if(!img?.src)throw Error('Missing Turmite GIF export preview');
+   const bytes=new Uint8Array(await (await fetch(img.src)).arrayBuffer());
+   let binary='';for(let i=0;i<bytes.length;i+=8192)
+    binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
+   return btoa(binary);
+  });
+  const {parseGIF,decompressFrames}=await import('gifuct-js');
+  const parsedAnt=parseGIF(Buffer.from(antGifBase64,'base64'));
+  const antFrames=decompressFrames(parsedAnt,true);
+  assert(antFrames.length>=2,'Real Turmite GIF has multiple animation frames');
+  const firstAnt=antFrames[0],fw=parsedAnt.lsd.width,fh=parsedAnt.lsd.height;
+  // Offset diagonally from the heading stroke while remaining inside
+  // the yellow agent disk (the center line itself is dark).
+  const xx=Math.floor((antPos.x+.68)/antW*fw)-firstAnt.dims.left;
+  const yy=Math.floor((antPos.y+.68)/antH*fh)-firstAnt.dims.top;
+  assert(xx>=0&&yy>=0&&xx<firstAnt.dims.width&&yy<firstAnt.dims.height);
+  const k=(yy*firstAnt.dims.width+xx)*4,rgba=firstAnt.patch.slice(k,k+4);
+  assert(rgba[0]>160&&rgba[1]>160,
+   'Encoded Turmite GIF actually retains a bright yellow agent at its saved grid coordinate: '+rgba.join(','));
+  await page.locator('.stage-capture-success .dismiss-export').click();
+  console.log('PASS: C3 real animated GIF encodes a visible ant marker at its saved coordinate');
+  await page.locator('#engine').selectOption('life');
+  await page.locator('#resolution').fill(gridBeforeAntGif);
+  console.log('PASS: C3 actual Ising and Turmite controls, L/R rules, agent snapshot and invalid load');
   // Exercise custom birth/survival rule editor, then return to cyclic for GIF.
   await page.locator('#engine').selectOption('life');
   await page.locator('#life').selectOption('custom');
@@ -395,6 +514,10 @@ try{
   assert(await page.locator('.rewind-button').isVisible(),'Exact cell-state rewind available');
   assert(await page.locator('#lattice').isDisabled(),'Margolus cannot use triangular / hexagonal partitions');
   await page.locator('#engine').selectOption('cyclic');
+  // A deterministic, populated baseline is required to distinguish all
+  // seven visual skins; don't depend on the sparse seed left by prior tests.
+  await page.locator('#seed-pattern').selectOption('noise');
+  await page.locator('#density').fill('48');
   await page.locator('.transport .primary').click(); // pause for deterministic skin comparison
   const lattices=[];
   for(const shape of ['square','hex','triangle']){
