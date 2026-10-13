@@ -921,7 +921,7 @@ export default function App(){
             </>}
             {(settings.engine==='wireworld'||settings.engine==='sandpile')&&
               <CircuitControls settings={settings} setSettings={setSettings}
-                grains={worldRef.current.grains}/>}
+                grains={worldRef.current.grains} inspectedCell={inspectedCell} width={worldRef.current.width}/>}
             {settings.engine==='brians'&&<p className="module-note">Three-state Brain: OFF → FIRING → REFRACTORY → OFF. Exactly two firing neighbors cause ignition.</p>}
             {settings.engine==='cyclic'&&<>
               <label className="input-label" htmlFor="states">Color species <em>{settings.cyclicStates}</em></label>

@@ -5,8 +5,10 @@ interface Props{
  settings:SimSettings;
  setSettings:Dispatch<SetStateAction<SimSettings>>;
  grains?:Uint32Array;
+ inspectedCell:[number,number]|null;
+ width:number;
 }
-export default function CircuitControls({settings:s,setSettings,grains}:Props){
+export default function CircuitControls({settings:s,setSettings,grains,inspectedCell,width}:Props){
  const change=<K extends keyof SimSettings>(key:K,value:SimSettings[K])=>
   setSettings(prev=>({...prev,[key]:value}));
  if(s.engine==='wireworld')return <section className="c1-lab" aria-label="Wireworld circuit controls">
@@ -31,6 +33,7 @@ export default function CircuitControls({settings:s,setSettings,grains}:Props){
    <div className="c1-head"><strong>⚡ C1 · ABELIAN SANDPILE</strong><span>INTEGER GRAIN CA</span></div>
    <p className="module-note">Every pile with at least four grains topples once per parallel round, giving one grain to each N/E/S/W neighbor. With finite edges grains fall off into the sink; with wrapping, total grain mass is conserved unless you feed or paint.</p>
    <div className="c1-grain-count"><b>{total.toLocaleString('en-US')}</b><span>ACTUAL GRAINS (32-BIT)</span></div>
+   {inspectedCell&&grains&&<p className="neighborhood-note" aria-label="Selected exact grain height">CELL ({inspectedCell[0]},{inspectedCell[1]}) · <strong>{grains[inspectedCell[1]*width+inspectedCell[0]].toLocaleString('en-US')} GRAINS</strong></p>
    <label className="input-label" htmlFor="sand-feed">Grains added each generation <em>{s.sandFeed}</em></label>
    <input id="sand-feed" type="range" min="0" max="64" step="1" value={s.sandFeed}
     onChange={e=>change('sandFeed',Number(e.target.value))}/>

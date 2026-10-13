@@ -82,9 +82,8 @@ try{
   if([...parallel].every(v=>v<4))break;
   parallel=stepSandpile(parallel,7,7,false,0,8,0,i,'center').grains;
  }
- assert.deepEqual([...parallel],serial(Uint32Array.from([0,0,0,0,0,0,0,
-  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,320,0,0,0,0,0,0,0,0,0,
-  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]),7,7),
+ const serialStart=new Uint32Array(49);serialStart[24]=320;
+ assert.deepEqual([...parallel],serial(serialStart,7,7),
   'Finite Abelian stabilization independent of legal toppling order');
  const s={...INITIAL_SETTINGS,engine:'sandpile',lattice:'square',cellCount:32,
   sandFeed:0,sandRounds:4,sandBrush:12,seed:1992,density:.2};

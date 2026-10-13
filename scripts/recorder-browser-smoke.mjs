@@ -273,6 +273,49 @@ try{
   await page.locator('#lattice').selectOption('square');
   await page.locator('#neighbor-shape').selectOption('moore');
   console.log('PASS: B2 interactive 5x5/3x3 painting, transforms, save/load, invalid center and graph gating');
+  // C1: Both new engines expose real states, exact snapshot data and compatible rules.
+  await page.locator('#engine').selectOption('wireworld');
+  assert(await page.locator('#wire-brush-2').isVisible(),'Wireworld head brush visible');
+  await page.locator('#wire-brush-2').click();
+  assert.equal(await page.locator('#wire-brush-2').getAttribute('aria-pressed'),'true');
+  assert(await page.locator('#lattice').isDisabled(),'Wireworld is square-only');
+  assert.equal(await page.locator('#neighbor-shape').count(),0,'Wireworld uses fixed Moore rules');
+  await page.locator('#engine').selectOption('sandpile');
+  assert(await page.locator('#sand-feed').isVisible(),'Sandpile feed visible');
+  await page.locator('#sand-feed').fill('0');
+  await page.locator('#sand-rounds').fill('4');
+  await page.locator('#sand-brush').fill('24');
+  await page.locator('#sand-source').selectOption('random');
+  assert(await page.locator('.c1-grain-count').isVisible(),'Exact grain count displayed');
+  const [c1File]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const c1Recipe=JSON.parse(await readFile(await c1File.path(),'utf8'));
+  assert.equal(c1Recipe.settings.engine,'sandpile');
+  assert.equal(c1Recipe.settings.sandFeed,0);
+  assert.equal(c1Recipe.settings.sandBrush,24);
+  assert(typeof c1Recipe.world.arrays.grains==='string','Full Uint32 grain snapshot included');
+  await page.locator('#engine').selectOption('life');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'sandpile-integers.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(c1Recipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='sandpile');
+  assert.equal(await page.locator('#sand-rounds').inputValue(),'4');
+  const [c1Again]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const c1Roundtrip=JSON.parse(await readFile(await c1Again.path(),'utf8'));
+  assert.equal(c1Roundtrip.world.arrays.grains,c1Recipe.world.arrays.grains,
+   'Full grain-height bytes preserved through save/import/export');
+  const broken=structuredClone(c1Recipe);broken.world.arrays.grains='AQ==';
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'bad-grain-data.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(broken))
+  });
+  await page.waitForFunction(()=>(document.querySelector('.status-msg')?.textContent||'').includes('Could not load recipe'));
+  assert.equal(await page.locator('#engine').inputValue(),'sandpile','Invalid grain snapshot rejected');
+  console.log('PASS: browser Wireworld brush, sandpile feed, exact Uint32 recipe and bad-file rejection');
   // Exercise custom birth/survival rule editor, then return to cyclic for GIF.
   await page.locator('#engine').selectOption('life');
   await page.locator('#life').selectOption('custom');
