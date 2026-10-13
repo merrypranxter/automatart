@@ -125,6 +125,13 @@ try{
  const stableCursor=createCaptureCursor(stableWorld,trulyStatic,10,10);
  for(let i=0;i<2;i++)assert.equal(stableCursor.advance().settled,false);
  assert.equal(stableCursor.advance().settled,true,'Genuinely stable forests can settle');
+ const fullyGrown={...forest,forestGrowth:.2,forestLightning:0};
+ const allTrees=createWorld(fullyGrown);
+ allTrees.cells.fill(1);
+ const fullCursor=createCaptureCursor(allTrees,fullyGrown,10,10);
+ for(let i=0;i<2;i++)assert.equal(fullCursor.advance().settled,false);
+ assert.equal(fullCursor.advance().settled,true,
+  'Nonzero growth cannot change an all-tree forest without empty sites');
  const forestSignals=computeColorSignal(fw,{...INITIAL_APPEARANCE,colorBy:'entropy'},'entropy');
  assert(forestSignals.every(v=>Number.isFinite(v)&&v>=0&&v<=1.00001));
  const bad=structuredClone(snap);
