@@ -49,9 +49,9 @@ export default function WireLogicControls({world,settings,inspectedCell,monitor,
   <div className="wire-logic-truth-table">
    <strong className="input-label">MEASURED BOOLEAN TRUTH TABLE</strong>
    <table aria-label="Real Wireworld four-state simulation logic truth table" style={{width:'100%',borderCollapse:'collapse',fontSize:'.85rem'}}>
-    <thead><tr><th>A</th>{kind==='or'&&<th>B</th>}<th>{kind==='or'?'OUT · A∨B':kind==='xor'?'OUT · A⊕B':'OUT 1'}</th>{kind==='fanout'&&<th>OUT 2</th>}<th>FIRST HEAD</th><th>TEST</th></tr></thead>
+    <thead><tr><th>A</th>{(kind==='or'||kind==='xor')&&<th>B</th>}<th>{kind==='or'?'OUT · A∨B':kind==='xor'?'OUT · A⊕B':'OUT 1'}</th>{kind==='fanout'&&<th>OUT 2</th>}<th>FIRST HEAD</th><th>TEST</th></tr></thead>
     <tbody>{bench.cases.map(({a:bitA,b:bitB,hits,firstTick,pass})=><tr key={''+bitA+bitB}>
-     <td>{bitA}</td>{kind==='or'&&<td>{bitB}</td>}
+     <td>{bitA}</td>{(kind==='or'||kind==='xor')&&<td>{bitB}</td>}
      {hits.map((hit,i)=><td key={i}>{hit?'1':'0'}</td>)}
      <td>{firstTick.map(t=>t===null?'—':'T'+t).join(' / ')}</td>
      <td>{pass?'✓':'✕'}</td>
