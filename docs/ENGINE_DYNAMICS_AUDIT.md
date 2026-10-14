@@ -35,6 +35,96 @@ new mathematical variant or external forcing.
 | **Turmites / Langton Ant** | 2–12-symbol L/R turning law, 1–12 agents, paint underlying track color, boundary mode | Active agent motion exists, but controls over *where and how* the agents start are underdeveloped | Multi-agent formations, spawn placement, initial heading, offset clocks/turn scripts, configurable track seed; preserve sequential interactions |
 | **HPP Lattice Gas** | Particle bitmask N/E/S/W, reflecting wall geometry, material paint and boundary mode | Original collision/streaming physics is fixed; user can manipulate initial gas and obstacles but has no continual inflow | Time-scheduled external particle injection and source/sink boundaries, collision visual inspector, momentum/density probes; keep conservation truthful when sources are off |
 
+## Empirical 17-engine baseline: production rules, real cell transitions
+
+**Method:** 3 seeded worlds per scenario (seeds 82641, 12345, 989898), 48-wide square lattice,
+36% nominal NOISE fill, periodic edges, 80 synchronous generations. Unlike CSS animation,
+the metric is actual percentage of cells whose canonical state changed. Sandpile uses
+true uint32 grain-height deltas. Numbers average across the 3 seeds.
+
+| Engine | Changed cells: ticks 1–10 | Changed cells: ticks 61–80 | Fully quiet in final 10 ticks | Ticks with any change (mean) |
+|---|---:|---:|---:|---:|
+| life | 27.44% | 7.86% | 0/3 | 80/80 |
+| brians | 38.76% | 9.61% | 0/3 | 80/80 |
+| cyclic | 40.72% | 0.00% | 3/3 | 17/80 |
+| wolfram | 6.47% | 50.30% | 0/3 | 80/80 |
+| generations | 44.11% | 0.00% | 3/3 | 45/80 |
+| excitable | 75.23% | 0.00% | 3/3 | 13/80 |
+| larger | 28.83% | 37.06% | 0/3 | 80/80 |
+| species | 13.25% | 0.00% | 3/3 | 13/80 |
+| oriented | 3.76% | 0.03% | 2/3 | 33/80 |
+| margolus | 45.81% | 45.81% | 0/3 | 80/80 |
+| wireworld | 11.08% | 21.25% | 0/3 | 80/80 |
+| sandpile | 88.73% | 95.30% | 0/3 | 80/80 |
+| hodgepodge | 80.57% | 91.21% | 0/3 | 80/80 |
+| forestfire | 1.60% | 2.44% | 0/3 | 80/80 |
+| ising | 30.11% | 19.31% | 0/3 | 80/80 |
+| turmites | 0.04% | 0.04% | 0/3 | 80/80 |
+| hpp | 91.73% | 91.32% | 0/3 | 80/80 |
+
+### Critical parameter comparisons (same seeds, initial fill and sample period)
+
+| Engine / modified settings | Changed cells: ticks 1–10 | Changed cells: ticks 61–80 | Quiet final 10 ticks | Ticks with change |
+|---|---:|---:|---:|---:|
+| cyclic/legacy 12 phases / chase 2 | 5.32% | 11.12% | 0/3 | 80/80 |
+| cyclic/legacy chase 1 | 29.64% | 0.00% | 3/3 | 29/80 |
+| cyclic/legacy chase 2 + reach 3 | 39.25% | 0.00% | 3/3 | 27/80 |
+| brians/4-neighbor brain | 12.49% | 0.00% | 3/3 | 6/80 |
+| brians/24-neighbor brain | 23.40% | 38.36% | 0/3 | 80/80 |
+| excitable/threshold 1 | 75.28% | 0.00% | 3/3 | 11/80 |
+| excitable/threshold 3 | 45.73% | 0.00% | 3/3 | 10/80 |
+| excitable/fast refractory 3 | 58.99% | 100.00% | 0/3 | 80/80 |
+| generations/refractory 3 | 25.77% | 1.06% | 1/3 | 71/80 |
+| species/birth 3 / survive 2 | 13.20% | 0.00% | 3/3 | 17/80 |
+| larger/radius 3 old absolute bounds | 23.93% | 35.04% | 0/3 | 80/80 |
+| larger/radius 3 scaled windows | 15.60% | 0.00% | 3/3 | 22/80 |
+| wireworld/very dense conductor | 57.90% | 68.08% | 0/3 | 80/80 |
+| sandpile/no feeder | 88.80% | 98.95% | 0/3 | 80/80 |
+| forestfire/no growth/lightning | 0.57% | 0.00% | 3/3 | 12/80 |
+| forestfire/active fire climate | 5.26% | 6.76% | 0/3 | 80/80 |
+| ising/absolute zero | 10.44% | 0.00% | 3/3 | 12/80 |
+| ising/thermal disorder | 62.47% | 63.29% | 0/3 | 80/80 |
+| wolfram/rule 0 | 1.59% | 0.00% | 3/3 | 48/80 |
+| wolfram/rule 110 | 4.92% | 42.05% | 0/3 | 80/80 |
+
+**Interpretation—not automatic bug classification:**
+- Default **Cyclic, Afterlife, Excitable, Species War** are quiet across all
+  three seeds by the end; **Directional Life** in 2/3. These are first-priority
+  practical operating-range targets.
+- Cyclic P1 expanded the control space but **did not guarantee a long-running
+  startup**: its 8-phase/threshold-1 default ceased changing on all three
+  48-wide seeds. The old 12-phase/threshold-2 setting happened to remain active
+  in these small wrapped tests! Actual viability is nonlinear in N, threshold,
+  reach, density, size and lattice. Test presets, do not assert monotonic
+  sustained activity from high initial activation.
+- **Excitable refractory length of 3** remained changing across all 80 ticks
+  at this density whereas refractory 8 extinguished. That is concrete evidence
+  for making recovery timing a prominent *live* control and adding measured presets.
+  High change rate alone is not proof of richly structured motion; periodic
+  oscillation may be visually simple.
+- **Brian's Brain on 4 neighbors** extinguished all three; 24-neighbor Brain
+  kept changing. Its existing neighborhood controls are extremely important
+  and deserve accessible live presets—not only a new stochastic mechanism.
+- Margolus, HPP, Hodgepodge, Sandpile and other systems have plenty of measured
+  state changes; **Margolus** has little rule variety despite high activity.
+  **Turmites** change only a tiny proportion of sites per tick because one agent
+  writes one tile, but its visible head moves: a global percent is not a universal
+  test of interesting behavior.
+- The one naive Larger Than Life radius-3 "scaled" window tried here extinguished;
+  another radius-3 window stayed active. **Simply multiplying thresholds by
+  degree is not a valid solution**. Sweep useful rule windows and offer
+  *validated* parameter-relative presets.
+- At thermal zero Ising converged and stopped, while high temperature kept
+  changing; both are physically expected regimes. Forest Fire without ignition
+  and regrowth is eventually inert as expected. Wolfram rule 0 is another
+  intentionally absorbing case. None is automatically a bug.
+
+**Limitation:** 48-wide 80-tick snapshots are triage, not a proof of long-term
+periodicity or of similar behavior on mobile 96-wide, alternate lattices or
+art-directed initial patterns. Follow-up presets should be tested across
+more grid sizes, multiple densities, 100–300 generations, and pattern families.
+The population metric is NOT a perceptual-motion score.
+
 ## Priority by actionable deficit
 
 - **P2 Brain + Excitable:** users need actual sustained wave control. Offer
