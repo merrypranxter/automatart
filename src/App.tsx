@@ -1155,8 +1155,9 @@ export default function App(){
             world={worldRef.current} stamp={wireStamp} setStamp={setWireStamp}
             stampArmed={wireStampArmed} setStampArmed={setWireStampArmed}
             onCenter={()=>placeWireCircuit([Math.floor(worldRef.current.width/2),Math.floor(worldRef.current.height/2)])}/>}
-          {settings.engine==='wireworld'&&<WireLogicControls world={worldRef.current}
-            monitor={wireLogicMonitor} onInstall={installVerifiedLogic}/>}
+          {settings.engine==='wireworld'&&<WireLogicControls world={worldRef.current} settings={settings}
+            inspectedCell={inspectedCell} monitor={wireLogicMonitor}
+            onInstall={installVerifiedLogic}/>}
           {(settings.engine==='hodgepodge'||settings.engine==='forestfire')&&
             <ReactionControls settings={settings} setSettings={setSettings}/>}
           {settings.engine==='hpp'&&<LatticeGasControls settings={settings}
