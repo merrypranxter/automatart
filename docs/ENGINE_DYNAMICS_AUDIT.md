@@ -125,23 +125,57 @@ art-directed initial patterns. Follow-up presets should be tested across
 more grid sizes, multiple densities, 100–300 generations, and pattern families.
 The population metric is NOT a perceptual-motion score.
 
-## Priority by actionable deficit
+## Work phases, re-ordered from empirical viability evidence
 
-- **P2 Brain + Excitable:** users need actual sustained wave control. Offer
-  opt-in driven variants, never silently change canonical algorithms.
-- **P3 Wireworld + Margolus:** currently too few rule/input controls. Build
-  useful genuine circuits and reversible pattern-permutation choices.
-- **P4 Larger Than Life + Species War:** match thresholds and viable regimes
-  to neighborhood degree and actual local occupancy, not static 1–120 integers.
-- **P5 Wolfram + Afterlife + Directional Life + Life:** small rule composers,
-  viability presets and real match/firing counters. Keep B/S and classic rules.
-- **P6 Sandpile + Hodgepodge + Forest Fire + Ising + Turmites + HPP:** these
-  already move under genuine settings; expose more meaningful experiment
-  controls, mathematical probes, calibrated presets and sources where justified.
-- **P7 cross-engine dynamics dashboard:** actual changed-state % averaged over
-  10/50/100 generations, no-change streak, population/phase histograms,
-  match frequency and fixed-point vs driven lull status. An engine's natural
-  cycle or static attractor is *not* automatically broken.
+**A — rescue early absorbing states without hiding the mathematics.**
+- **A1 Cyclic P1b:** measured current P1 default also stops under some seeds.
+  Calibrate joint density/phase-count/reach/threshold presets for 32/96/192 grids;
+  offer *pure* sustained regimes when available, alongside opt-in seeded drive.
+  Do not promise any one threshold alone produces infinite motion.
+- **A2 Excitable + Afterlife:** put refractory length and birth/activation
+  parameters near the stage, with measured *wave, pulse, persistence,
+  quench* presets. Add optional clearly labeled periodic stimulus/pacemakers
+  for excitation that genuinely ran out. Keep unforced rules exact.
+- **A3 Species War + Directional Life:** preview invasion/defense and
+  oriented-birth match rates on the current neighborhood; presets chosen to
+  avoid trivial full conquest or no births when the goal is sustained change.
+
+**B — unlock real rule choices in engines with too few controls.**
+- **B1 Brian's Brain:** make already-supported 4/8/12/24 neighborhoods highly
+  visible. Measured 4 died, 24 remained active. Then offer optional distinct
+  driven Brian variant with pacemaker locations and interval.
+- **B2 Margolus:** more genuinely invertible 2×2 block permutations and
+  reverse-safe rule sequences; plain rotation stays available.
+- **B3 Wireworld:** proper conductor circuit templates and external timed
+  sources, not random material fields masquerading as powered circuits.
+- **B4 Turmites:** agent placement, initial heading, formations and run-time
+  interpretation of the L/R rule; no invented free-form particle physics.
+
+**C — fix parameter scaling, not merely increase maxima.**
+- **C1 Larger Than Life:** search viable B/S windows over each radius and
+  density, show neighborhood-count fractions as an *additional* representation,
+  and give tested regimes. One naive scaled-window sample failed in our sweep.
+- **C2 Life, Wolfram:** neighborhood-relative birth/survival suggestions,
+  eight-bit Wolfram truth table, source row tooling and cycle diagnostics.
+
+**D — deepen already responsive instruments.**
+- **D1 Ising + Forest Fire:** finer critical-temperature and rare-ignition
+  control, cooling/quench and firebreak experiments, true parameter schedules.
+- **D2 Hodgepodge + Sandpile:** infection response previews, multiple
+  physically real feeders, avalanche severity and wavefront diagnostics.
+- **D3 HPP:** localized boundary injection, wall chambers, source/sink
+  accounting and flux visualization with conservation truths explicit.
+
+**E — universal Dynamics Inspector.** Always show honest last-step and
+rolling 10/50/100-tick changed-cell %, relevant sources, state diversity,
+local match/neighbor histograms, and distinction between an absorbing
+fixed point, a driven stochastic lull, and periodic motion. Default
+presets should be tested at multiple resolutions/densities/lattices.
+No merely decorative sliders in the Dynamics group.
+
+**Release order:** work in independent PRs, run numerical replay + current
+Chromium GIF/video smoke, keep old recipes exact, do not assume production
+iPhone Safari performance is proven by desktop Chromium.
 
 ## UI behavior contract
 
