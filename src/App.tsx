@@ -1075,7 +1075,17 @@ export default function App(){
           {settings.engine==='brians'&&<p className="module-note">Three-state Brain: OFF → FIRING → REFRACTORY → OFF. Exactly two firing neighbors cause ignition.</p>}
           {settings.engine==='cyclic'&&
             <CyclicDynamicsControls settings={settings} setSettings={setSettings}
-              world={worldRef.current} neighborMax={neighborMax}/>}
+              world={worldRef.current} neighborMax={neighborMax}
+              busy={capturing||batchProgress!==null}
+              onStartProfile={preset=>{
+                cancelBatch();
+                setSettings(current=>({...current,pattern:'noise',
+                  density:preset.density,cyclicStates:preset.states,
+                  cyclicThreshold:preset.threshold,cyclicReach:preset.reach,
+                  cyclicDrive:preset.drive}));
+                // Force a new world even when the profile matches all settings.
+                setResetNumber(n=>n+1);
+              }}/>}
           <MutantControls settings={settings} setSettings={setSettings} paintSpecies={paintSpecies} setPaintSpecies={setPaintSpecies}/>
           {settings.engine==='wolfram'&&<div className="group">
             <h3 className="group-head">ELEMENTARY RULE</h3>

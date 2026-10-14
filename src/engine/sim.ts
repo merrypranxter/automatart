@@ -5,7 +5,7 @@ import {stepWireworld,stepSandpile,sandVisualState} from './circuits';
 import {stepHodgepodge,stepForestFire} from './reaction-worlds';
 import {stepIsing,stepTurmites,seedTurmites} from './spins-turmites';
 import {stepHpp,paintHpp,hppCount} from './lattice-gas';
-import {chaseNeighbor,cyclicAdvance} from './cyclic-dynamics';
+import {chaseNeighbor,cyclicAdvance,cyclicStructuralChange} from './cyclic-dynamics';
 
 function seededRandom(seed:number):()=>number{
   let a=seed>>>0;
@@ -279,9 +279,11 @@ export function stepWorld(prev:World,s:SimSettings):World{
       :(old!==0&&now===0?1:old!==now?0.12:0);
     nextFossils[i]=Math.max(deposit,(prev.fossils?.[i]??0)*0.986);
   }
+  const stepStructural=s.engine==='cyclic'?cyclicStructuralChange(
+    cells,next,w,h,s.cyclicStates,s.wrap,s):undefined;
   return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
-    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,stepChanged,
+    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,stepChanged,stepStructural,
     cells:next,grains:nextGrains,hppWalls:prev.hppWalls?.slice(),turmiteAgents:nextAgents?.map(a=>({...a})),
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,
     ages:nextAges,neighbors,events,traces:nextTraces,

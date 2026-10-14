@@ -44,6 +44,46 @@ transitions under lower threshold/wider reach, and proper non-settling
 GIF cursor under stochastic drive. Browser tests: mobile control visibility,
 live edits without resets, presets, save/load, legacy fields defaulting.
 
+## A1 Cyclic real spatial viability (completed in PR #22, merge pending)
+
+The original "activity %" can lie about artistic movement: on certain
+8-phase / reach-3 settings **100%** of cells advance every generation
+but every neighboring pair maintains the same relative phase, so the
+image merely cycles colors. A1 therefore measures the fraction of true
+spatial *phase-difference edges* that change, not just pixels/cells.
+
+Calibrated with the production CCA on NOISE seeds at 48/96 widths,
+two seeds per width, 120 generations; measured real phase-edge changes
+over ticks 91–120, excluding pure global phase cycling. Five honest
+starter worlds all had sustained nonzero structural transitions across
+the four tested runs:
+
+- **FILAMENT ENGINE** — pure CCA, 16 phases, threshold 2, reach 1,
+  36% starting fill. Worst of four late-phase edge-change rates 10.55%.
+- **SLOW SPORES** — pure CCA, 12 phases, threshold 2, reach 1,
+  20% fill. Worst late edge-change 6.41%.
+- **PRISMATIC DRIFT** — pure CCA, 16 phases, threshold 3, reach 3,
+  36% fill. Worst late edge-change 1.45%.
+- **SEEDED BLOOM** — seeded stochastic variant, 12 phases,
+  threshold 2, reach 1, 36% fill, stimulus 0.0005. Worst 5.52%.
+- **SLOW STIMULUS** — seeded variant, 12 phases, threshold 2,
+  reach 2, 36% fill, stimulus 0.001. Worst 7.24%.
+
+The fresh default is now FILAMENT ENGINE's *pure* 16/2/1 structure.
+The old rule and older JSON recipes keep their exact semantics.
+Separate sections in RULES clarify that "LIVE behavior" changes the
+existing universe whereas "START A CALIBRATED WORLD" deliberately resets
+the world to a corresponding seeded NOISE field, without silently
+changing seed, palette, grid size or lattice. The dual activity meters
+show **cells advancing** and **neighbor phase edges changing** so
+a repetitive global cycle no longer pretends to be shape evolution.
+
+No 120-generation sample proves endless or seed-independent motion;
+the expected result on rhombille/hex/triangle or 192/256 widths may
+differ, and the UI explains that. This is a calibrated exploration aid,
+not mathematical guarantee. New tester gates verify all five presets,
+actual phase-relative dynamics, genuine restart, save/reload and exports.
+
 ## Follow-on phases (separate PRs after P1 and D1 merge)
 
 **P2 — Excitable Flesh and Brian's Brain stimulus laboratory.**

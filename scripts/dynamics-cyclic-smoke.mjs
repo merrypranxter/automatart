@@ -22,8 +22,8 @@ try{
  const {createCaptureCursor}=await load(3);
  const {mutateAutomatart,requiresWorldRestart}=await load(4);
  const {applyAlienStamp,INITIAL_ALIEN_BRUSH}=await load(5);
- assert.equal(INITIAL_SETTINGS.cyclicThreshold,1,'Default threshold is inside an active range');
- assert(INITIAL_SETTINGS.cyclicStates<=8,'Default state count leaves reachable chase matches');
+ assert.equal(INITIAL_SETTINGS.cyclicThreshold,2,'Measured viable pure default uses a 2-neighbor chase');
+ assert.equal(INITIAL_SETTINGS.cyclicStates,16,'Default state count was calibrated for structural evolution');
  assert.equal(INITIAL_SETTINGS.cyclicDrive,0,'Pure classic CA remains the startup default');
  assert.equal(chaseNeighbor(1,0,12,1),true);
  assert.equal(chaseNeighbor(2,0,12,1),false);

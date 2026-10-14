@@ -1,12 +1,15 @@
 import type {Dispatch,SetStateAction} from 'react';
 import type {SimSettings,World} from '../engine/types';
 import {estimateInitialChase} from '../engine/cyclic-dynamics';
+import {CYCLIC_STARTER_PRESETS,type CyclicWorldPreset} from '../engine/cyclic-viability-presets';
 
 interface Props {
  settings:SimSettings;
  setSettings:Dispatch<SetStateAction<SimSettings>>;
  world:World;
  neighborMax:number;
+ busy:boolean;
+ onStartProfile:(p:CyclicWorldPreset)=>void;
 }
 const controlPresets=[
  {name:'CLASSIC · PURE CA',threshold:1,reach:1,drive:0,
@@ -18,12 +21,13 @@ const controlPresets=[
  {name:'SLOW PLAGUE',threshold:2,reach:2,drive:.0012,
    hint:'Narrower pursuit and occasional cells that advance independently.'}
 ] as const;
-export default function CyclicDynamicsControls({settings:s,setSettings,world,neighborMax}:Props){
+export default function CyclicDynamicsControls({settings:s,setSettings,world,neighborMax,busy,onStartProfile}:Props){
  const reach=Math.max(1,Math.min(s.cyclicStates-1,s.cyclicReach??1));
  const drive=s.cyclicDrive??0;
  const hasStep=world.engine==='cyclic'&&typeof world.stepChanged==='number';
  const activity=hasStep&&world.cells.length>0?
   100*world.stepChanged!/world.cells.length:0;
+ const structure=hasStep&&world.stepStructural!==undefined?100*world.stepStructural:0;
  const predicted=estimateInitialChase(s.cyclicStates,reach,s.cyclicThreshold,
   neighborMax,s.density,drive)*100;
  const change=<K extends keyof SimSettings>(key:K,value:SimSettings[K])=>
@@ -36,8 +40,12 @@ export default function CyclicDynamicsControls({settings:s,setSettings,world,nei
   <p className="module-note">Every cell is an integer state on a color cycle. It advances exactly one step if enough neighbors are in phases ahead. These settings change the next generation, not just the palette.</p>
   <div className="cyclic-dynamics-meters">
    <div><b>{hasStep?activity.toFixed(activity<1?2:1)+'%':'—'}</b><span>CELLS CHANGED LAST STEP</span></div>
+   <div><b>{hasStep?structure.toFixed(structure<1?2:1)+'%':'—'}</b><span>NEIGHBOR RELATIONSHIPS CHANGED</span></div>
    <div><b>{s.pattern==='noise'?predicted.toFixed(1)+'%':'—'}</b><span>EST. INITIAL NOISE ACTIVITY</span></div>
   </div>
+  {hasStep&&activity>0&&structure===0&&<p className="cyclic-dynamics-status">
+    Every changing cell may be cycling without reshaping the pattern. Try FILAMENT ENGINE or a narrower chase field.
+   </p>}
   {hasStep&&world.generation>0&&activity===0&&
    <p className="cyclic-dynamics-status" role="status">
     No cells changed in the last step. {drive>0?
@@ -72,6 +80,19 @@ export default function CyclicDynamicsControls({settings:s,setSettings,world,nei
       cyclicThreshold:Math.min(p.threshold,neighborMax),
       cyclicReach:Math.min(p.reach,v.cyclicStates-1),cyclicDrive:p.drive}))}>
     {p.name}</button>)}
+  </div>
+  <div className="cyclic-world-section">
+   <strong>START A CALIBRATED WORLD · RESETS CURRENT CELLS</strong>
+   <p className="neighborhood-note">These reset the universe to a new NOISE field, preserving your seed, lattice, grid size and colors. They set both the initial population and the actual chase mathematics. Save your current recipe first if you want to keep it.</p>
+   <div className="cyclic-world-presets" role="group" aria-label="Calibrated Cyclic starting worlds">
+    {CYCLIC_STARTER_PRESETS.map(p=><button key={p.id} type="button" id={"cyclic-world-"+p.id}
+     disabled={busy} onClick={()=>onStartProfile(p)} title={p.description}>
+      <b>{p.label}</b>
+      <span>{p.drive===0?"PURE AUTOMATON":"SEEDED EXCITATION"} · {p.states} PHASES</span>
+      <small>{p.description}</small>
+    </button>)}
+   </div>
+   <p className="neighborhood-note">Screened at two grid sizes and two seeds for 120 generations, including changing neighbor-phase relationships. No setting guarantees endless complexity or identical behavior on rhombille, hex, or custom neighborhoods.</p>
   </div>
   <p className="neighborhood-note">The estimate describes only the initial independent NOISE seed; it is not a promise of motion forever. You can also change the population density in WORLD and the actual neighborhood shape below. State count and seed density changes restart; pursuit and spontaneous excitation change the existing world live.</p>
  </section>;
