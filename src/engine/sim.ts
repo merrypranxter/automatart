@@ -6,6 +6,7 @@ import {stepHodgepodge,stepForestFire} from './reaction-worlds';
 import {stepIsing,stepTurmites,seedTurmites} from './spins-turmites';
 import {stepHpp,paintHpp,hppCount} from './lattice-gas';
 import {chaseNeighbor,cyclicAdvance,cyclicStructuralChange} from './cyclic-dynamics';
+import {waveStimulusAt} from './wave-dynamics';
 
 function seededRandom(seed:number):()=>number{
   let a=seed>>>0;
@@ -87,6 +88,10 @@ export function stepWorld(prev:World,s:SimSettings):World{
   const neighbors=new Uint8Array(n),events=new Uint8Array(n),nextTraces=new Float32Array(n);
   const nextFossils=new Float32Array(n);
   let nextAgents=prev.turmiteAgents;
+  let waveStimulusCount=0;
+  const waveParams={mode:s.waveStimulus??'off',source:s.waveClockSource??'center',
+    rate:s.waveSparkRate??0,period:s.waveClockPeriod??12,
+    seed:s.seed,generation:prev.generation};
   if(s.engine==='hpp'){
     if(!prev.hppWalls)throw new Error('Missing canonical HPP obstacle array');
     next.set(stepHpp(cells,w,h,s.wrap,prev.hppWalls));
@@ -221,17 +226,29 @@ export function stepWorld(prev:World,s:SimSettings):World{
           next[p]=cyclicAdvance(old,count,s.cyclicThreshold,s.cyclicDrive??0,
             s.seed,prev.generation,p,s.cyclicStates);
           break;
-        case 'generations':
-          // B/S/C: 0 rest, 1 alive, 2..C-1 refractory; only 1 votes.
-          next[p]=old===0?(s.genBirth.includes(count)?1:0)
-            :old===1?(s.genSurvive.includes(count)?1:2)
+        case 'generations':{
+          // Exact B/S/C when waveStimulus='off'. External sources can only
+          // inject life into genuinely resting sites that did not naturally birth.
+          if(old===0){
+            const birth=s.genBirth.includes(count);
+            const inject=!birth&&waveStimulusAt(old,x,y,w,h,waveParams);
+            if(inject)waveStimulusCount++;
+            next[p]=birth||inject?1:0;
+          }else next[p]=old===1?(s.genSurvive.includes(count)?1:2)
             :(old+1>=s.genStates?0:old+1);
           break;
-        case 'excitable':
-          // Greenberg–Hastings-style local excitation and fixed refractory march.
-          next[p]=old===0?(count>=s.exciteThreshold?1:0)
-            :(old+1>=s.exciteStates?0:old+1);
+        }
+        case 'excitable':{
+          // Original Greenberg–Hastings recovery stays exact. Any optional
+          // seeded/clocked stimulus fires a state-0 CELL, not its color layer.
+          if(old===0){
+            const naturally=count>=s.exciteThreshold;
+            const inject=!naturally&&waveStimulusAt(old,x,y,w,h,waveParams);
+            if(inject)waveStimulusCount++;
+            next[p]=naturally||inject?1:0;
+          }else next[p]=old+1>=s.exciteStates?0:old+1;
           break;
+        }
         case 'larger':
           next[p]=old?(count>=s.largeSurviveMin&&count<=s.largeSurviveMax?1:0)
             :(count>=s.largeBirthMin&&count<=s.largeBirthMax?1:0);
@@ -283,7 +300,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
     cells,next,w,h,s.cyclicStates,s.wrap,s):undefined;
   return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
-    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,stepChanged,stepStructural,
+    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,stepChanged,stepStructural,waveStimulusCount,
     cells:next,grains:nextGrains,hppWalls:prev.hppWalls?.slice(),turmiteAgents:nextAgents?.map(a=>({...a})),
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,
     ages:nextAges,neighbors,events,traces:nextTraces,
