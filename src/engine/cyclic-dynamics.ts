@@ -11,6 +11,28 @@ export function chaseNeighbor(neighbor:number,old:number,states:number,reach:num
  const ahead=(neighbor-old+states)%states;
  return ahead>=1&&ahead<=reach;
 }
+/** Fraction of spatial phase-difference edges changed between generations.
+ * A global +1 of every cell gives exactly ZERO: the image may cycle colors,
+ * but its relative local structure has not evolved. Includes right/down edges
+ * only, with optional periodic seams. */
+export function cyclicStructuralChange(before:Uint8Array,after:Uint8Array,
+ width:number,height:number,states:number,wrap:boolean):number{
+ if(before.length!==width*height||after.length!==before.length||
+ !Number.isInteger(states)||states<2)throw new Error('Invalid cyclic structural comparison');
+ let changed=0,edges=0;
+ for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+  const i=y*width+x;
+  const visit=(j:number)=>{
+   const old=(before[j]-before[i]+states)%states;
+   const now=(after[j]-after[i]+states)%states;
+   if(old!==now)changed++;
+   edges++;
+  };
+  if(x+1<width)visit(i+1);else if(wrap)visit(y*width);
+  if(y+1<height)visit(i+width);else if(wrap)visit(x);
+ }
+ return edges?changed/edges:0;
+}
 export function cyclicAdvance(old:number,matches:number,threshold:number,
  drive:number,seed:number,generation:number,index:number,states:number):number{
  if(matches>=threshold || (drive>0&&random01(seed,generation,index,61)<drive))

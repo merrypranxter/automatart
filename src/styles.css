@@ -744,7 +744,7 @@ body.art-viewer-open{overflow:hidden}
  gap:8px;flex-wrap:wrap}
 .cyclic-dynamics-heading strong{color:#f3ff73;font:900 13px 'Chakra Petch',monospace}
 .cyclic-dynamics-heading span{color:#60fff3;font:800 10px 'Chakra Petch',monospace}
-.cyclic-dynamics-meters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.cyclic-dynamics-meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .cyclic-dynamics-meters>div{background:#141b35;border:1px solid #94528b;
  border-radius:9px;padding:9px;display:flex;flex-direction:column;gap:4px}
 .cyclic-dynamics-meters b{color:#ffff87;font:900 23px 'Chakra Petch',monospace}
@@ -760,3 +760,22 @@ body.art-viewer-open{overflow:hidden}
 @media(max-width:425px){.cyclic-dynamics-lab{padding:10px 8px}
  .cyclic-dynamics-meters b{font-size:18px}
  .cyclic-dynamics-presets button{font-size:9px}}
+
+/* Dynamically measured Cyclic starting universes. Explicit RESEED action. */
+.cyclic-world-section{display:flex;flex-direction:column;gap:9px;padding:12px;
+ border:1px dashed #68ffe2;border-radius:10px;background:rgba(3,36,55,.65)}
+.cyclic-world-section>strong{font:900 12px 'Chakra Petch',monospace;color:#fcff8b}
+.cyclic-world-presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.cyclic-world-presets button{display:flex;flex-direction:column;text-align:left;gap:5px;
+ min-width:0;min-height:101px;padding:10px;border-radius:8px;
+ background:#24264e;color:#fff0fc;border:1px solid #5f7fac}
+.cyclic-world-presets button b{font:900 11px 'Chakra Petch',monospace;color:#fff68b}
+.cyclic-world-presets button span{font:800 9px 'Chakra Petch',monospace;color:#69fbe1}
+.cyclic-world-presets button small{font-size:11px;line-height:1.35}
+.cyclic-world-presets button:hover{border-color:#fb6dd4;background:#3c245b}
+.cyclic-world-presets button:focus-visible{outline:3px solid #55ffe8}
+.cyclic-world-presets button:disabled{opacity:.48;cursor:not-allowed}
+@media(max-width:600px){.cyclic-dynamics-meters{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .cyclic-dynamics-meters>div:last-child{grid-column:span 2}}
+@media(max-width:385px){.cyclic-world-presets{grid-template-columns:1fr}
+ .cyclic-world-presets button{min-height:70px}}
