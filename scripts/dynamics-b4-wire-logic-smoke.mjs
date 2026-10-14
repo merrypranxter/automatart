@@ -88,8 +88,8 @@ try{
    /artboard edge/);
  assert.deepEqual(clipped.cells,safe,'Invalid stamp fails atomically');
  assert.throws(()=>wireLogicLayout({kind:'or',radius:4,rotation:0,a:1,b:1}),/Invalid/);
- assert.throws(()=>wireLogicLayout({kind:'xor',radius:9,rotation:0,a:1,b:1}),/Invalid/,
-  'Unverified AND/XOR cannot masquerade as devices');
+ assert.throws(()=>wireLogicLayout({kind:'and',radius:9,rotation:0,a:1,b:1}),/Invalid/,
+  'Unverified AND cannot masquerade as a certified gate');
  // Background stimulation is NOT assumed off in arbitrary user artwork.
  // Bench verification is canonical and isolated only; working stage devices
  // may be modified by paint, nearby crossing wires, or alternative physics.
@@ -100,7 +100,7 @@ try{
  assert.equal(cursor.current.generation,8);
  console.log('PASS B4: '+count+' real-world rotated truth-table cases exactly match production stepWorld bit-for-bit');
  console.log('PASS B4: OR 00/01/10/11 and dual-output fanout; all 7–12 radius settings, true head waveforms');
- console.log('PASS B4: atomic stamps, original four states, unforced CA, exact recipe/GIF replay and no fake XOR or AND');
+ console.log('PASS B4: atomic stamps, original four states, unforced CA, exact recipe/GIF replay and no fake AND');
 }finally{
  await Promise.all(files.map(([,path])=>unlink(resolve(path)).catch(()=>{})));
 }
