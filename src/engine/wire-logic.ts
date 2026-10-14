@@ -5,7 +5,7 @@
  */
 import {stepWireworld} from './circuits';
 import type {World} from './types';
-export type WireLogicKind='or'|'fanout'|'xor';
+export type WireLogicKind='or'|'fanout'|'xor'|'nand'|'not';
 export type WireLogicBit=0|1;
 export type LogicPoint=readonly [number,number];
 export interface WireLogicOptions {
@@ -37,11 +37,19 @@ function vertical(x:number,from:number,to:number,pts:LogicPoint[]){
 }
 export function wireLogicLayout(opts:WireLogicOptions):WireLogicLayout{
  const {kind,radius:r,rotation:k,a,b}=opts;
- if(!['or','fanout','xor'].includes(kind)||!Number.isInteger(r)||r<7||r>12||
+ if(!['or','fanout','xor','nand','not'].includes(kind)||!Number.isInteger(r)||r<7||r>12||
     ![0,1,2,3].includes(k)||![0,1].includes(a)||![0,1].includes(b))
   throw Error('Invalid verified wire logic configuration');
  const conductors:LogicPoint[]=[];
- if(kind==='xor'){
+ if(kind==='nand'||kind==='not'){
+  // Canonical inhibition gates. A central conductor sees a permanently
+  // initialized bias of 1 HEAD (NAND) or 2 HEADS (NOT). Optional input
+  // HEAD contacts increase the Moore neighbor count. Exactly 1 or 2 heads
+  // trigger; 3 suppress. The diagonal output starts two cells from ALL
+  // emitter positions so heads cannot skip the central detector.
+  for(let i=0;i<=r;i++)conductors.push([i,-i]);
+  conductors.push([-1,0],[-1,1],[0,1]);
+ }else if(kind==='xor'){
   // Certified XOR: two simultaneous contact heads per asserted Boolean bit.
   // The central conductor sees 2 neighboring HEADS for either input alone,
   // but 4 heads for A+B, suppressing ignition under the canonical 1..2 rule.
@@ -58,8 +66,13 @@ export function wireLogicLayout(opts:WireLogicOptions):WireLogicLayout{
   const key=x+','+y;if(seen.has(key))return false;seen.add(key);return true;
  });
  const heads:LogicPoint[]=[],tails:LogicPoint[]=[];
- const outputPoints:LogicPoint[]=kind==='xor'?[[r,-r]]:kind==='or'?[[r,0]]:[[r,0],[0,-r]];
- if(kind==='xor'){
+ const outputPoints:LogicPoint[]=(kind==='xor'||kind==='nand'||kind==='not')?[[r,-r]]:kind==='or'?[[r,0]]:[[r,0],[0,-r]];
+ if(kind==='nand'||kind==='not'){
+  heads.push([-1,0]); // NAND always has 1 real seed HEAD; NOT has 2.
+  if(kind==='not')heads.push([-1,1]);
+  if(a)heads.push(kind==='nand'?[-1,1]:[0,1]);
+  if(kind==='nand'&&b)heads.push([0,1]);
+ }else if(kind==='xor'){
   // Dual-contact pulse encoding: each asserted Boolean bit writes two real
   // electron HEAD states. No hidden Boolean exception in the CA stepper.
   if(a)heads.push([-1,0],[-1,1]);
@@ -73,8 +86,9 @@ export function wireLogicLayout(opts:WireLogicOptions):WireLogicLayout{
   heads:heads.map(p=>rot(p,k)),
   tails:tails.map(p=>rot(p,k)),
   ports:{
-   inputA:rot(kind==='xor'?[-1,0]:[-r+1,0],k),
-   ...((kind==='or'||kind==='xor')?{inputB:rot(kind==='xor'?[0,1]:[0,r-1],k)}:{}),
+   inputA:rot(kind==='nand'?[-1,1]:kind==='not'?[0,1]:kind==='xor'?[-1,0]:[-r+1,0],k),
+   ...((kind==='or'||kind==='xor'||kind==='nand')?
+    {inputB:rot(kind==='xor'||kind==='nand'?[0,1]:[0,r-1],k)}:{}),
    outputs:outputPoints.map(p=>rot(p,k))
   }
  };
@@ -101,7 +115,7 @@ export interface LogicBench {
  */
 export function runWireLogicBench(kind:WireLogicKind,radius:number):LogicBench{
  const cases:LogicWave[]=[];
- const choices:WireLogicBit[][]=kind==='fanout'?[[0,0],[1,0]]:[[0,0],[0,1],[1,0],[1,1]];
+ const choices:WireLogicBit[][]=(kind==='fanout'||kind==='not')?[[0,0],[1,0]]:[[0,0],[0,1],[1,0],[1,1]];
  for(const [a,b] of choices){
   const layout=wireLogicLayout({kind,radius,rotation:0,a,b});
   const dim=2*radius+18,center=Math.floor(dim/2);
@@ -118,7 +132,7 @@ export function runWireLogicBench(kind:WireLogicKind,radius:number):LogicBench{
   }
   const firstTick=waveforms.map(w=>{const at=w.indexOf(true);return at<0?null:at;});
   const hits=firstTick.map(v=>v!==null);
-  const expected=kind==='or'?Boolean(a||b):kind==='xor'?Boolean(a!==b):Boolean(a);
+  const expected=kind==='or'?Boolean(a||b):kind==='xor'?Boolean(a!==b):kind==='nand'?!(a&&b):kind==='not'?!a:Boolean(a);
   const pass=hits.every(v=>v===expected);
   cases.push({a,b,hits,firstTick,waveforms,pass});
  }
