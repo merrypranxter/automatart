@@ -1,5 +1,6 @@
 import type {Appearance,EngineId,LifeRule,SimSettings} from './types';
 import {LIFE_RULES,PALETTES} from './types';
+import {MARGOLUS_RULES} from './margolus-rules';
 import {maxNeighborCount,supportsNeighborhood,normalizeActiveVotes} from './neighborhood';
 import {rotateStencil,mirrorStencil,seededStencil,toggleStencil,allowedStencilMask,resizeStencil} from './stencil';
 import {randomColors,rotatedColors,shuffledColors} from './funhouse';
@@ -170,6 +171,12 @@ export function mutateAutomatart(
         offer('Toppling rounds per frame',()=>{s.sandRounds=intStep(s.sandRounds,1,8,2)});
         offer('Grain feed location',()=>{s.sandSource=s.sandSource==='center'?'random':'center'});
         offer('Sand brush grain count',()=>{s.sandBrush=intStep(s.sandBrush,1,64,8)});
+        break;
+      case 'margolus':
+        offer('Invertible block rule A',()=>{s.margolusRuleA=choose(s.margolusRuleA,MARGOLUS_RULES.map(v=>v.id))});
+        offer('Invertible block rule B',()=>{s.margolusRuleB=choose(s.margolusRuleB,MARGOLUS_RULES.map(v=>v.id))});
+        offer('Alternate block rules',()=>{s.margolusMode=s.margolusMode==='alternate'?'single':'alternate'});
+        offer('Reversible schedule period',()=>{s.margolusPeriod=intStep(s.margolusPeriod,1,120,3)});
         break;
       case 'life':
         offer('Life rule roulette',()=>{s.lifeRule=choose(s.lifeRule,Object.keys(LIFE_RULES) as LifeRule[])});
