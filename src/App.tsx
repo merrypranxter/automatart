@@ -755,6 +755,13 @@ export default function App(){
       s.speciesSurvive=bounded(s.speciesSurvive,0,savedRuleCap,1);
       s.speciesAttackBias=bounded(s.speciesAttackBias,0,savedRuleCap,1);
       s.wireBrush=bounded(s.wireBrush,1,3,1) as 1|2|3;
+      s.wireExciteMin=bounded(s.wireExciteMin,1,8,1);
+      s.wireExciteMax=bounded(s.wireExciteMax,s.wireExciteMin,8,2);
+      if(!['off','clock','sparks'].includes(s.wireDrive))throw Error('Invalid wire source mode');
+      if(!['center','quad'].includes(s.wireSource))throw Error('Invalid wire source location');
+      s.wirePeriod=bounded(s.wirePeriod,1,120,12);
+      if(!Number.isFinite(Number(s.wireSparkRate)))throw Error('Invalid wire spark probability');
+      s.wireSparkRate=Math.max(0,Math.min(.01,Number(s.wireSparkRate)));
       s.sandFeed=bounded(s.sandFeed,0,64,6);
       s.sandRounds=bounded(s.sandRounds,1,8,3);
       s.sandBrush=bounded(s.sandBrush,1,64,8);
