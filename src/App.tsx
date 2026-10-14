@@ -1135,7 +1135,7 @@ export default function App(){
           </div>}
           {(settings.engine==='wireworld'||settings.engine==='sandpile')&&
             <CircuitControls settings={settings} setSettings={setSettings}
-              grains={worldRef.current.grains} inspectedCell={inspectedCell} width={worldRef.current.width}/>}}
+              grains={worldRef.current.grains} inspectedCell={inspectedCell} width={worldRef.current.width}/>}
           {settings.engine==='wireworld'&&<WireDynamicsControls settings={settings} setSettings={setSettings}
             world={worldRef.current} stamp={wireStamp} setStamp={setWireStamp}
             stampArmed={wireStampArmed} setStampArmed={setWireStampArmed}
