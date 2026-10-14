@@ -41,7 +41,7 @@ export function recommendedDimensions(s:SimSettings,size:ExportResolution):[numb
   const [w,h]=worldDimensions(s);
   // Preserve the ACTUAL cell grid ratio. The rendering canvas must never resize
   // after captureStream() has been called or some browsers lose the video track.
-  let width=s.aspect==='landscape' ? Math.round(size*16/9) : size;
+  let width=['landscape','landscape43','landscape54','landscape32'].includes(s.aspect) ? Math.round(size*(w/h)) : size;
   if(width%2)width++;
   const [gx,gy]=geometryExtent(s.lattice,w,h);
   let height=Math.round(width*(s.lattice==='rhombille'?gy/gx:h/w));
