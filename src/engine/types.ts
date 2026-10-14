@@ -126,7 +126,7 @@ export interface World {
   generation: number;
   /** True changed-cell count from the most recent simulation step (not painting). */
   stepChanged?:number;
-  /** Fraction of cardinal edges whose relative Cyclic phase difference changed. */
+  /** Fraction of actual Cyclic rule-neighbor relationships changing relative phase. */
   stepStructural?:number;
   lattice?: LatticeId;
   wrap?:boolean;

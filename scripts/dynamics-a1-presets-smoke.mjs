@@ -56,7 +56,7 @@ try{
    one=stepWorld(one,s);two=stepWorld(two,s);
    assert.deepEqual(one.cells,two.cells,'All stochastic/pure profiles replay exactly by generation');
    assert.equal(one.stepStructural,cyclicStructuralChange(previous.cells,one.cells,
-    one.width,one.height,p.states,true),
+    one.width,one.height,p.states,true,s),
     'Real-time activity meter matches the physical phase-difference graph');
    if(one.stepStructural>0)sawStructure=true;
   }
@@ -66,6 +66,13 @@ try{
   assert.deepEqual(stepWorld(restored,s).cells,stepWorld(one,s).cells,
     'The exported preset is an actual reproducible cellular state');
   assert(sawStructure,'Chosen preset must reorganize at least some neighbor relations');
+  if(p.id==='filament-engine'){
+   const rhombille={...s,lattice:'rhombille',cellCount:32};
+   const diamond=createWorld(rhombille),grown=stepWorld(diamond,rhombille);
+   assert.equal(grown.stepStructural,cyclicStructuralChange(diamond.cells,grown.cells,
+    diamond.width,diamond.height,p.states,true,rhombille),
+    'Dynamics inspector must use real rhombille lozenge edges, not packed storage indices');
+  }
  }
  console.log('PASS A1: every calibrated Cyclic starter has exact seed replay and valid rule bounds');
  console.log('PASS A1: all-state phase cycling scores zero but genuine local reorganization is measured');

@@ -7,6 +7,8 @@
  * At reach=1 and drive=0 this exactly preserves the pre-Dynamics rule.
  */
 import {random01} from './reaction-worlds';
+import {neighborOffsets} from './topology';
+import type {SimSettings} from './types';
 export function chaseNeighbor(neighbor:number,old:number,states:number,reach:number):boolean{
  const ahead=(neighbor-old+states)%states;
  return ahead>=1&&ahead<=reach;
@@ -16,7 +18,8 @@ export function chaseNeighbor(neighbor:number,old:number,states:number,reach:num
  * but its relative local structure has not evolved. Includes right/down edges
  * only, with optional periodic seams. */
 export function cyclicStructuralChange(before:Uint8Array,after:Uint8Array,
- width:number,height:number,states:number,wrap:boolean):number{
+ width:number,height:number,states:number,wrap:boolean,
+ graph?:Pick<SimSettings,'lattice'|'neighborShape'|'neighborMask'|'customStencilMask'|'customStencilSize'>):number{
  if(before.length!==width*height||after.length!==before.length||
  !Number.isInteger(states)||states<2)throw new Error('Invalid cyclic structural comparison');
  let changed=0,edges=0;
@@ -28,8 +31,22 @@ export function cyclicStructuralChange(before:Uint8Array,after:Uint8Array,
    if(old!==now)changed++;
    edges++;
   };
-  if(x+1<width)visit(i+1);else if(wrap)visit(y*width);
-  if(y+1<height)visit(i+width);else if(wrap)visit(x);
+  if(graph){
+   // On rhombille, hex, triangle and custom stencils, STORAGE columns are
+   // not physical neighbors. Measure the ACTUAL transition graph.
+   const offsets=neighborOffsets(graph.lattice,x,y,graph.neighborShape,
+    graph.neighborMask,graph.customStencilMask,graph.customStencilSize);
+   for(const [dx,dy] of offsets){
+    let xx=x+dx,yy=y+dy;
+    if(!wrap&&(xx<0||xx>=width||yy<0||yy>=height))continue;
+    if(wrap){xx=(xx%width+width)%width;yy=(yy%height+height)%height;}
+    visit(yy*width+xx);
+   }
+  }else{
+   // A small calibration probe: cardinal grid edges in a square Moore world.
+   if(x+1<width)visit(i+1);else if(wrap)visit(y*width);
+   if(y+1<height)visit(i+width);else if(wrap)visit(x);
+  }
  }
  return edges?changed/edges:0;
 }

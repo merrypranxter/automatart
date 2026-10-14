@@ -280,7 +280,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
     nextFossils[i]=Math.max(deposit,(prev.fossils?.[i]??0)*0.986);
   }
   const stepStructural=s.engine==='cyclic'?cyclicStructuralChange(
-    cells,next,w,h,s.cyclicStates,s.wrap):undefined;
+    cells,next,w,h,s.cyclicStates,s.wrap,s):undefined;
   return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,stepChanged,stepStructural,
