@@ -72,12 +72,14 @@ try{
   }
   return {
    initial:1-zero(states)/states.length,
-   first10:change.slice(0,10).reduce((a,b)=>a+b,0)*10,
-   last20:change.slice(-20).reduce((a,b)=>a+b,0)*5,
+   first10:change.slice(0,10).reduce((a,b)=>a+b,0)/10,
+   last20:change.slice(-20).reduce((a,b)=>a+b,0)/20,
    last10zero:change.slice(-10).every(x=>x===0),
    quiet20:change.slice(-20).filter(x=>x===0).length,
    endOccupancy:occupancy.at(-1),
-   activeSteps:change.filter(x=>x>0).length
+   activeSteps:change.filter(x=>x>0).length,
+   lastChangedTick:change.findLastIndex(x=>x>0)+1,
+   distinctStates:new Set(world.cells).size
   };
  }
  const round=x=>(100*x).toFixed(2);
@@ -89,7 +91,9 @@ try{
    scenario:scenario.name,first:round(avg('first10')),
    last:round(avg('last20')),last10Frozen:metrics.filter(x=>x.last10zero).length,
    zeroTail:avg('quiet20').toFixed(1),occupancy:round(avg('endOccupancy')),
-   activeSteps:avg('activeSteps').toFixed(0)
+   activeSteps:avg('activeSteps').toFixed(0),
+   lastChangedTick:avg('lastChangedTick').toFixed(0),
+   distinctStates:avg('distinctStates').toFixed(1)
   };
   out.push(row);
  }
@@ -99,11 +103,11 @@ try{
  console.log('ALL 17 ENGINES — identical 48-wide square-grid NOISE density 36%, 3 seeds, 80 generations');
  console.log('Changed-cell rates in first 10 and last 20 generations; *NOT* visual palette motion.');
  console.log('Legacy engines and fixed points are not automatically classified as defects.');
- console.log('| Engine / scenario | first 10 % | last 20 % | frozen seeds (of 3) | zero ticks in tail /20 | occupied % |');
+ console.log('| Engine / scenario | first 10 % | last 20 % | frozen seeds (of 3) | last changed tick (avg) | distinct states at end |');
  console.log('|---|---:|---:|---:|---:|---:|');
  for(const r of out)console.log(
   '| '+r.scenario+' | '+r.first+' | '+r.last+' | '+r.last10Frozen+
-  ' | '+r.zeroTail+' | '+r.occupancy+' |');
+  ' | '+r.lastChangedTick+' | '+r.distinctStates+' |');
  console.log('AUDIT_JSON='+JSON.stringify(out));
 }finally{
  await Promise.all(chunks.map(([,f])=>unlink(resolve(f)).catch(()=>{})));
