@@ -2,6 +2,7 @@ import { LIFE_RULES, worldDimensions } from './types';
 import type { SimSettings, World } from './types';
 import { neighborOffsets, orientedMatch, ORIENTED_DIRECTIONS, rotateBlocks } from './topology';
 import {stepWireworld,stepSandpile,sandVisualState} from './circuits';
+import {injectWireSignals} from './wire-electricity';
 import {stepHodgepodge,stepForestFire} from './reaction-worlds';
 import {stepIsing,stepTurmites,seedTurmites} from './spins-turmites';
 import {stepHpp,paintHpp,hppCount} from './lattice-gas';
@@ -146,7 +147,8 @@ export function stepWorld(prev:World,s:SimSettings):World{
         if(valueAt(cells,w,h,x+dx,y+dy,s.wrap)===2)neighbors[p]++;
     }
   }else if(s.engine==='wireworld'){
-    next.set(stepWireworld(cells,w,h,s.wrap));
+    next.set(stepWireworld(cells,w,h,s.wrap,s.wireExciteMin??1,s.wireExciteMax??2));
+    waveStimulusCount=injectWireSignals(cells,next,w,h,s,prev.generation);
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
       const p=y*w+x;
       for(const [dx,dy] of neighborOffsets('square',x,y,'moore')){
