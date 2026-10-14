@@ -3,7 +3,7 @@ import {renderWorld} from './render';
 import {worldDimensions} from './types';
 import {geometryExtent} from './topology';
 
-export type SnapshotAspect='current'|'square'|'portrait'|'landscape';
+export type SnapshotAspect='current'|'square'|'portrait'|'landscape'|'portrait34'|'landscape43'|'portrait45'|'landscape54'|'portrait23'|'landscape32';
 export type SnapshotSize=720|1080|1440|2160;
 export interface SnapshotOptions {aspect:SnapshotAspect;shortSide:SnapshotSize}
 export const INITIAL_SNAPSHOT_OPTIONS:SnapshotOptions={aspect:'current',shortSide:1080};
@@ -24,6 +24,12 @@ export function snapshotLayout(s:SimSettings,options:SnapshotOptions):SnapshotLa
     case 'square':width=short;height=short;break;
     case 'portrait':width=short;height=even(short*16/9);break;
     case 'landscape':width=even(short*16/9);height=short;break;
+    case 'portrait34':width=short;height=even(short*4/3);break;
+    case 'landscape43':width=even(short*4/3);height=short;break;
+    case 'portrait45':width=short;height=even(short*5/4);break;
+    case 'landscape54':width=even(short*5/4);height=short;break;
+    case 'portrait23':width=short;height=even(short*3/2);break;
+    case 'landscape32':width=even(short*3/2);height=short;break;
     case 'current':
     default:
       width=artW>=artH?even(short*artW/artH):short;

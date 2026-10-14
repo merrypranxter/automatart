@@ -67,7 +67,13 @@ const ENGINES: {id:EngineId;name:string;hint:string}[] = [
 const ASPECTS: {value:AspectId;name:string}[]=[
   {value:'square',name:'1:1 SQUARE'},
   {value:'portrait',name:'9:16 VERTICAL'},
-  {value:'landscape',name:'16:9 WIDE'}
+  {value:'landscape',name:'16:9 WIDE'},
+  {value:'portrait34',name:'3:4 PORTRAIT'},
+  {value:'landscape43',name:'4:3 LANDSCAPE'},
+  {value:'portrait45',name:'4:5 PORTRAIT'},
+  {value:'landscape54',name:'5:4 LANDSCAPE'},
+  {value:'portrait23',name:'2:3 PORTRAIT'},
+  {value:'landscape32',name:'3:2 LANDSCAPE'}
 ];
 const PATTERNS: {value:PatternId;name:string}[]=[
   {value:'noise',name:'Random soup'},
@@ -660,7 +666,7 @@ export default function App(){
       if(data.kind!=='automatart-recipe-v1'||!data.settings||!data.appearance)throw new Error('Not an Automatart recipe');
       const s:SimSettings={...INITIAL_SETTINGS,...data.settings};
       if(!ENGINES.some(v=>v.id===s.engine))throw new Error('Unknown engine');
-      if(!['square','portrait','landscape'].includes(s.aspect))throw new Error('Invalid aspect');
+      if(!['square','portrait','landscape','portrait34','landscape43','portrait45','landscape54','portrait23','landscape32'].includes(s.aspect))throw new Error('Invalid aspect');
       if(!['noise','center','rings','stripes','checker','spiral','web'].includes(s.pattern))throw new Error('Invalid seed pattern');
       if(!Object.hasOwn(LIFE_RULES,s.lifeRule))throw new Error('Invalid life rule');
       if(!Number.isInteger(s.cellCount)||s.cellCount<32||s.cellCount>256)throw new Error('Invalid grid size');
@@ -1355,7 +1361,7 @@ export default function App(){
             {capturing&&captureProgress&&<div className="capture-progress" role="status">
               <div><b>{captureProgress.phase}</b><span>{Math.floor(captureProgress.seconds)}s · {captureProgress.frames} frames</span></div>
               <progress max="1" value={captureProgress.fraction}/>
-              <p>Keep this tab open while recording. Video exports run in real time. The live recording preview is under the canvas.</p>
+              <p>Keep this tab open while recording. Video uses frame-perfect offline WebM when supported (slow rendering may take longer than the finished clip). Otherwise browser-native recording can still stutter. The preview remains under the canvas.</p>
             </div>}
             {captureError&&!capturing&&<div className="capture-warning dismissable-notice" role="alert">
               <span>EXPORT FAILED: {captureError}</span>
@@ -1386,7 +1392,7 @@ export default function App(){
             </div>}
             <p className="fineprint">
               GIF encoding runs on a separate worker thread with actual compressed-byte size monitoring. Long GIFs are attempted instead of being rejected by a raw-pixel estimate; very large exports may finish early with a clearly labeled partial animation.
-              Video is recorded in real time and may save as MP4 or WebM depending on your browser.
+              Video prefers frame-perfect offline WebM with fixed timestamps; MP4/WebM real-time capture is only a fallback when unavailable.
               Recording copies your current universe without changing the live one. Video contains no audio.
             </p>
           </div>
@@ -1399,7 +1405,7 @@ export default function App(){
                   <option value="current">MATCH UNIVERSE · NO MATTE</option>
                   <option value="square">1:1 · SQUARE</option>
                   <option value="portrait">9:16 · PORTRAIT</option>
-                  <option value="landscape">16:9 · LANDSCAPE</option>
+                  <option value="landscape">16:9 · LANDSCAPE</option>\n                   <option value="portrait34">3:4 · PORTRAIT</option>\n                   <option value="landscape43">4:3 · LANDSCAPE</option>\n                   <option value="portrait45">4:5 · PORTRAIT</option>\n                   <option value="landscape54">5:4 · LANDSCAPE</option>\n                   <option value="portrait23">2:3 · PORTRAIT</option>\n                   <option value="landscape32">3:2 · LANDSCAPE</option>
                 </select>
               </label>
               <label htmlFor="snapshot-size">Short side resolution
