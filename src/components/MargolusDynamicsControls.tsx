@@ -1,6 +1,6 @@
 import type {Dispatch,SetStateAction} from 'react';
 import type {MargolusRule} from '../engine/margolus-rules';
-import {MARGOLUS_RULES,activeMargolusRule,lastEpochFor,margolusSpec} from '../engine/margolus-rules';
+import {MARGOLUS_RULES,activeMargolusRule,lastEpochFor} from '../engine/margolus-rules';
 import type {SimSettings,World} from '../engine/types';
 
 type Props={
