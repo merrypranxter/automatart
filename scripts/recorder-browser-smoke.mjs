@@ -795,7 +795,7 @@ try{
   await page.locator('#oriented-symmetry').selectOption('dihedral');
   assert(await page.locator('.direction-grid button').count()===8,'Eight independently configurable neighbors');
   await page.locator('#engine').selectOption('margolus');
-  assert(await page.locator('.rewind-button').isVisible(),'Exact cell-state rewind available');
+  assert(await page.locator('#margolus-back-one').isVisible(),'Exact cell-state rewind available');
   assert(await page.locator('#lattice').isDisabled(),'Margolus cannot use triangular / hexagonal partitions');
   await page.locator('#engine').selectOption('cyclic');
   // A deterministic, populated baseline is required to distinguish all
