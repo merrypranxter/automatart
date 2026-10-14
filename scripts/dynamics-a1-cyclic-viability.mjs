@@ -1,7 +1,7 @@
 /** Search viable Cyclic CA parameter regimes using the production stepper.
  * This is NOT an assertion that sustained movement is guaranteed forever.
  * Logs independent width/seed results (120 generations) and conservatively
- * ranks candidates by observed late activity and local phase boundaries.
+ * ranks candidates by observed late activity and actual changing relative phases.
  */
 import {build} from 'esbuild';
 import {unlink} from 'node:fs/promises';
@@ -23,7 +23,11 @@ const conf=[
  [12,3,2,.55,0],[12,3,2,.75,0],
  [10,2,1,.55,0],[16,3,2,.55,0],
  [8,1,1,.36,.0005],[8,2,3,.36,.001],
- [12,2,1,.36,.0005],[12,2,2,.36,.001]
+ [12,2,1,.36,.0005],[12,2,2,.36,.001],
+ // The three LIVE-rule mood buttons remain diagnostic (not guaranteed),
+ // on both the older eight-phase and fresh sixteen-phase worlds.
+ [8,1,3,.36,.001],[8,2,4,.36,.004],[8,2,2,.36,.0012],
+ [16,1,3,.36,.001],[16,2,4,.36,.004],[16,2,2,.36,.0012]
 ];
 const widths=[48,96],seeds=[82641,989898],steps=120;
 try{
@@ -75,7 +79,10 @@ try{
     structure:lateStructure/30,structureSteps,
     boundary:edges/(2*w*h),present});
   }
-  const good=samples.filter(x=>x.late>.005&&x.structure>.003&&x.boundary>.02&&x.present>=3);
+  // A single burst near t91 is not longer-lived evolution: require
+  // changes of actual relative neighbor phases on >=20 of the last 30 ticks.
+  const good=samples.filter(x=>x.late>.005&&x.structure>.003&&
+   x.structureSteps>=20&&x.activeLate>=20&&x.boundary>.02&&x.present>=3);
   results.push({states,threshold,reach,density,drive,
    alive:good.length,total:samples.length,
    minLate:Math.min(...samples.map(x=>x.late)),
