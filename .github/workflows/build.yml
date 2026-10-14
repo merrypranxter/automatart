@@ -75,6 +75,8 @@ jobs:
         run: node scripts/dynamics-b4-wire-logic-smoke.mjs
       - name: Verify B5 canonical XOR dual-contact cancellation and exact non-destructive signal scope
         run: node scripts/dynamics-b5-xor-scope-smoke.mjs
+      - name: Verify B6 real Wireworld routing, dual lanes, pulse trains and stage timing scope
+        run: node scripts/dynamics-b6-wire-timing-smoke.mjs
       - name: Verify A2 dual-source mathematical color mixing and exports
         run: node scripts/a2-dual-color-smoke.mjs
       - name: Verify Print Shop effects, compositing and recipe migration
