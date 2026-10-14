@@ -1,6 +1,6 @@
 import {useMemo,useState} from 'react';
 import type {World,SimSettings} from '../engine/types';
-import {runWireTimingBench,expectedTimingTicks,type WireTimingOptions,type WireTimingKind} from '../engine/wire-timing';
+import {runWireTimingBench,type WireTimingOptions,type WireTimingKind} from '../engine/wire-timing';
 import {forecastWireSignals,type WireSignalForecast} from '../engine/wire-signal-scope';
 import type {WireLogicBit} from '../engine/wire-logic';
 
