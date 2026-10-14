@@ -15,7 +15,10 @@ function idx(x:number,y:number,w:number,h:number,wrap:boolean):number{
  if(wrap)return ((y+h)%h)*w+(x+w)%w;
  return x<0||x>=w||y<0||y>=h?-1:y*w+x;
 }
-export function stepWireworld(cells:Uint8Array,w:number,h:number,wrap:boolean):Uint8Array{
+export function stepWireworld(cells:Uint8Array,w:number,h:number,wrap:boolean,
+ minHeads=1,maxHeads=2):Uint8Array{
+ if(!Number.isInteger(minHeads)||!Number.isInteger(maxHeads)||minHeads<1||maxHeads>8||maxHeads<minHeads)
+  throw Error('Invalid Wireworld excitation range');
  if(cells.length!==w*h)throw Error('Wireworld cell dimensions disagree');
  const next=new Uint8Array(cells.length);
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
@@ -30,7 +33,7 @@ export function stepWireworld(cells:Uint8Array,w:number,h:number,wrap:boolean):U
    const q=idx(x+dx,y+dy,w,h,wrap);
    if(q>=0&&cells[q]===WIRE_HEAD)heads++;
   }
-  next[p]=heads===1||heads===2?WIRE_HEAD:WIRE_CONDUCTOR;
+  next[p]=heads>=minHeads&&heads<=maxHeads?WIRE_HEAD:WIRE_CONDUCTOR;
  }
  return next;
 }
