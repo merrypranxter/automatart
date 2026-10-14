@@ -195,9 +195,14 @@ export function mutateAutomatart(
       case 'generations':
         offer('Afterlife birth counts',()=>{s.genBirth=listMove(s.genBirth)});
         offer('Afterlife survival counts',()=>{s.genSurvive=listMove(s.genSurvive)});
+        offer('Wave clock period',()=>{s.waveClockPeriod=intStep(s.waveClockPeriod??12,1,60,4)});
+        offer('External wave source',()=>{s.waveStimulus=choose(s.waveStimulus??'off',['off','clock','sparks'] as const)});
         break;
       case 'excitable':
-        offer('Excitation threshold',()=>{s.exciteThreshold=intStep(s.exciteThreshold,1,s.lattice==='hex'?6:s.lattice==='triangle'?3:maxNeighborCount(s))});
+        offer('Excitation threshold',()=>{s.exciteThreshold=intStep(s.exciteThreshold,1,maxNeighborCount(s))});
+        offer('Recovery stages',()=>{s.exciteStates=intStep(s.exciteStates,3,24,2)});
+        offer('Wave clock period',()=>{s.waveClockPeriod=intStep(s.waveClockPeriod??12,1,60,4)});
+        offer('External wave source',()=>{s.waveStimulus=choose(s.waveStimulus??'off',['off','clock','sparks'] as const)});
         break;
       case 'larger':{
         const max=(2*s.largeRadius+1)**2-1;

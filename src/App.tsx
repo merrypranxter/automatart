@@ -26,6 +26,7 @@ import CircuitControls from './components/CircuitControls';
 import ReactionControls from './components/ReactionControls';
 import SpinTurmiteControls from './components/SpinTurmiteControls';
 import CyclicDynamicsControls from './components/CyclicDynamicsControls';
+import WaveDynamicsControls from './components/WaveDynamicsControls';
 import LatticeGasControls from './components/LatticeGasControls';
 import {validateDualColor} from './engine/dual-color';
 import {validatePrintShop} from './engine/printshop';
@@ -703,6 +704,12 @@ export default function App(){
       s.genStates=bounded(s.genStates,3,24,8);
       s.exciteStates=bounded(s.exciteStates,3,24,8);
       s.exciteThreshold=bounded(s.exciteThreshold,1,savedRuleCap,2);
+      if(!['off','sparks','clock'].includes(s.waveStimulus))throw new Error('Invalid wave stimulus mode');
+      if(!['center','quad','ring'].includes(s.waveClockSource))throw new Error('Invalid wave source');
+      s.waveClockPeriod=bounded(s.waveClockPeriod,1,120,12);
+      const waveRate=Number(s.waveSparkRate);
+      if(!Number.isFinite(waveRate))throw new Error('Invalid wave spark probability');
+      s.waveSparkRate=Math.min(.01,Math.max(0,waveRate));
       s.largeRadius=bounded(s.largeRadius,1,5,2);
       const maxNear=(2*s.largeRadius+1)**2-1;
       s.largeBirthMin=bounded(s.largeBirthMin,0,maxNear,6);
@@ -1087,6 +1094,9 @@ export default function App(){
                 setResetNumber(n=>n+1);
               }}/>}
           <MutantControls settings={settings} setSettings={setSettings} paintSpecies={paintSpecies} setPaintSpecies={setPaintSpecies}/>
+          {(settings.engine==='generations'||settings.engine==='excitable')&&
+            <WaveDynamicsControls settings={settings} setSettings={setSettings}
+              world={worldRef.current} neighborMax={neighborMax}/>}
           {settings.engine==='wolfram'&&<div className="group">
             <h3 className="group-head">ELEMENTARY RULE</h3>
             <label className="input-label" htmlFor="rule">Wolfram rule number (0–255)</label>

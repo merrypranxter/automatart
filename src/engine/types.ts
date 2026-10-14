@@ -53,6 +53,11 @@ export interface SimSettings {
   genSurvive: number[];
   exciteStates: number;
   exciteThreshold: number;
+  /** External forcing; off retains original autonomous B/S/C or excitable CA. */
+  waveStimulus:'off'|'sparks'|'clock';
+  waveSparkRate:number;
+  waveClockPeriod:number;
+  waveClockSource:'center'|'quad'|'ring';
   largeRadius: number;
   largeBirthMin: number;
   largeBirthMax: number;
@@ -126,6 +131,8 @@ export interface World {
   generation: number;
   /** True changed-cell count from the most recent simulation step (not painting). */
   stepChanged?:number;
+  /** True number of external ignitions during the most recent step. */
+  waveStimulusCount?:number;
   /** Fraction of actual Cyclic rule-neighbor relationships changing relative phase. */
   stepStructural?:number;
   lattice?: LatticeId;
@@ -172,6 +179,7 @@ export const INITIAL_SETTINGS: SimSettings = {
   cyclicStates:16,cyclicThreshold:2,cyclicReach:1,cyclicDrive:0,
   wolframRule:30,
   genStates:8,genBirth:[3],genSurvive:[2,3],exciteStates:8,exciteThreshold:2,
+  waveStimulus:'off',waveSparkRate:.001,waveClockPeriod:12,waveClockSource:'center',
   largeRadius:2,largeBirthMin:6,largeBirthMax:9,largeSurviveMin:5,largeSurviveMax:12,
   speciesCount:3,speciesBirth:2,speciesSurvive:1,speciesAttackBias:1,
   wireBrush:1,sandFeed:6,sandRounds:3,sandSource:'center',sandBrush:8,

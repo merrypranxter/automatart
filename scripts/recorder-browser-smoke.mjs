@@ -146,6 +146,58 @@ try{
   assert.equal(await page.locator('#cyclic-drive').inputValue(),'5');
   await openTab(page,'world');
   console.log('PASS: A1 calibrated Cyclic pure/driven new worlds, explicit reset, structure meter and recipe roundtrip');
+  // Dynamics A2: real opt-in forcing for Excitable and Afterlife, never
+  // just a color shimmer; saved recipe reflects exact live math controls.
+  await page.locator('#engine').selectOption('excitable');
+  await openTab(page,'rules');
+  assert(await page.locator('#wave-mode-off').isVisible(),'Excitable has a real wave lab');
+  assert.equal(await page.locator('#wave-mode-off').getAttribute('aria-pressed'),'true');
+  const eStart=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  await page.locator('#wave-mode-clock').click();
+  await page.locator('#wave-period').fill('7');
+  await page.locator('#wave-source-quad').click();
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),eStart,
+    'External source parameters affect running cells without restarting');
+  const [waveRecipeFile]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const waveRecipe=JSON.parse(await readFile(await waveRecipeFile.path(),'utf8'));
+  assert.equal(waveRecipe.settings.waveStimulus,'clock');
+  assert.equal(waveRecipe.settings.waveClockSource,'quad');
+  assert.equal(waveRecipe.settings.waveClockPeriod,7);
+  await page.locator('#engine').selectOption('generations');
+  assert(await page.locator('#wave-mode-clock').isVisible(),'Afterlife shares honest source controls');
+  await page.locator('#wave-preset-sparse-noise').click();
+  assert.equal(await page.locator('#wave-spark-rate').inputValue(),'5');
+  const [afterRecipeFile]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const afterRecipe=JSON.parse(await readFile(await afterRecipeFile.path(),'utf8'));
+  assert.equal(afterRecipe.settings.engine,'generations');
+  assert.equal(afterRecipe.settings.waveSparkRate,.0005);
+  assert.equal(afterRecipe.settings.waveStimulus,'sparks');
+  await page.locator('#engine').selectOption('life');
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'a2-afterlife-sparks.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(afterRecipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='generations');
+  assert.equal(await page.locator('#wave-spark-rate').inputValue(),'5');
+  const legacyWave=structuredClone(waveRecipe);
+  delete legacyWave.settings.waveStimulus;
+  delete legacyWave.settings.waveSparkRate;
+  delete legacyWave.settings.waveClockPeriod;
+  delete legacyWave.settings.waveClockSource;
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'a2-pure-legacy.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(legacyWave))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='excitable');
+  assert.equal(await page.locator('#wave-mode-off').getAttribute('aria-pressed'),'true',
+    'Older recipes restore original autonomous dynamics, never opt into forced waves');
+  await page.locator('#engine').selectOption('cyclic');
+  await openTab(page,'world');
+  console.log('PASS: A2 true wave modes, clock sources, live edits, seeded sparks and legacy recipe import');
   // Funhouse F1 regression: precise stepping, authentic B/S roulette, and two
   // unmistakably different random color buttons.
   await page.waitForTimeout(100);

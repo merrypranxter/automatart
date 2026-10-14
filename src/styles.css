@@ -779,3 +779,28 @@ body.art-viewer-open{overflow:hidden}
  .cyclic-dynamics-meters>div:last-child{grid-column:span 2}}
 @media(max-width:385px){.cyclic-world-presets{grid-template-columns:1fr}
  .cyclic-world-presets button{min-height:70px}}
+
+/* Dynamics A2 · real excitable/afterlife source, not palette motion */
+.wave-dynamics-lab{display:flex;flex-direction:column;gap:10px;margin:12px 0;padding:12px;
+ border:1px solid #ed66cf;border-radius:12px;
+ background:linear-gradient(143deg,#321643,#163345 95%)}
+.wave-dynamics-heading{display:flex;flex-wrap:wrap;justify-content:space-between;
+ align-items:center;gap:7px}
+.wave-dynamics-heading strong{color:#f5ff79;font:900 13px 'Chakra Petch',monospace}
+.wave-dynamics-heading span{color:#62ffe6;font:800 10px 'Chakra Petch',monospace}
+.wave-dynamics-meters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.wave-dynamics-meters>div{display:flex;flex-direction:column;gap:4px;padding:9px;
+ background:#161c38;border:1px solid #905f9a;border-radius:8px;min-width:0}
+.wave-dynamics-meters b{color:#f9ff8d;font:900 22px 'Chakra Petch',monospace}
+.wave-dynamics-meters span{font:800 9px 'Chakra Petch',monospace;color:#88ffed}
+.wave-modes,.wave-sources,.wave-presets{display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.wave-modes button,.wave-sources button,.wave-presets button{
+ padding:8px 5px;min-height:42px;border:1px solid #9760b6;border-radius:8px;
+ background:#3e204d;color:#f5e6ff;font:800 10px 'Chakra Petch',monospace}
+.wave-modes button.selected,.wave-sources button.selected{
+ border-color:#f3ff8a;background:#722e71;color:#f8ffb0}
+.wave-modes button:focus-visible,.wave-sources button:focus-visible,
+.wave-presets button:focus-visible{outline:3px solid #4affeb}
+@media(max-width:420px){.wave-dynamics-lab{padding:10px 8px}
+.wave-dynamics-meters b{font-size:18px}.wave-presets button{font-size:9px}}
