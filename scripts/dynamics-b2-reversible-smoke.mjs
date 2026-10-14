@@ -51,7 +51,6 @@ try{
    assert.deepEqual(a.cells,b.cells,'Seeded originals must replay identically');
    assert.equal(a.cells.reduce((acc,x)=>acc+x,0),initial,'Occupancy conserved every forward step');
   }
-  for(let i=0;i<80;i--){} // Reversibility is tested below without synthetic frame reversal.
   for(let i=0;i<80;i++)a=rewindWorld(a,s);
   assert.equal(a.generation,0);
   assert.deepEqual(a.cells,original,'80 steps of exact reversing on '+aspect+'/'+rule.id);
