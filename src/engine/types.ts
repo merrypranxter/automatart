@@ -126,6 +126,8 @@ export interface World {
   generation: number;
   /** True changed-cell count from the most recent simulation step (not painting). */
   stepChanged?:number;
+  /** Fraction of cardinal edges whose relative Cyclic phase difference changed. */
+  stepStructural?:number;
   lattice?: LatticeId;
   wrap?:boolean;
   neighborShape?:NeighborShape;
@@ -167,7 +169,7 @@ export const INITIAL_SETTINGS: SimSettings = {
   orientedMask:34,orientedSymmetry:'rotations',orientedMatch:'exact',
   orientedSurviveMin:2,orientedSurviveMax:3,
   customBirth:[3],customSurvive:[2,3],trailDecay:0.89,
-  cyclicStates:8,cyclicThreshold:1,cyclicReach:1,cyclicDrive:0,
+  cyclicStates:16,cyclicThreshold:2,cyclicReach:1,cyclicDrive:0,
   wolframRule:30,
   genStates:8,genBirth:[3],genSurvive:[2,3],exciteStates:8,exciteThreshold:2,
   largeRadius:2,largeBirthMin:6,largeBirthMax:9,largeSurviveMin:5,largeSurviveMax:12,

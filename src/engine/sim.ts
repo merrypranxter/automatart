@@ -66,6 +66,27 @@ export function createWorld(s:SimSettings):World{
     if(cells[p]>0||s.engine==='cyclic'){ages[p]=1;traces[p]=1;}
   }
   const turmiteAgents=s.engine==='turmites'?seedTurmites(width,height,s.turmiteCount,s.seed):undefined;
+  // Evolving the relative phase field is genuine spatial dynamics.
+  // Whole-grid +1 cycles change all cells yet preserve every phase edge.
+  let stepStructural:number|undefined;
+  if(s.engine==='cyclic'){
+    const phase=s.cyclicStates;
+    let shifted=0,edges=0;
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const i=y*w+x;
+      const check=(j:number)=>{
+        const before=(cells[j]-cells[i]+phase)%phase;
+        const after=(next[j]-next[i]+phase)%phase;
+        if(before!==after)shifted++;
+        edges++;
+      };
+      if(x+1<w)check(i+1);
+      else if(s.wrap)check(y*w);
+      if(y+1<h)check(i+w);
+      else if(s.wrap)check(x);
+    }
+    stepStructural=edges?shifted/edges:0;
+  }
   return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,hppWalls,turmiteAgents,
@@ -281,7 +302,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
   }
   return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
-    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,stepChanged,
+    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,stepChanged,stepStructural,
     cells:next,grains:nextGrains,hppWalls:prev.hppWalls?.slice(),turmiteAgents:nextAgents?.map(a=>({...a})),
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,
     ages:nextAges,neighbors,events,traces:nextTraces,
