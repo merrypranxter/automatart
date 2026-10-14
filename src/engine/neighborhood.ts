@@ -39,6 +39,7 @@ export function maxNeighborCount(s:Pick<SimSettings,'engine'|'lattice'|'neighbor
 export function normalizeActiveVotes(s:SimSettings):SimSettings{
  const cap=Math.max(1,maxNeighborCount(s));
  if(s.engine==='cyclic')return {...s,cyclicThreshold:Math.min(s.cyclicThreshold,cap)};
+ if(s.engine==='brians')return {...s,brainBirthCount:Math.max(1,Math.min(s.brainBirthCount??2,cap))};
  if(s.engine==='excitable')return {...s,exciteThreshold:Math.min(s.exciteThreshold,cap)};
  if(s.engine==='species')return {...s,speciesBirth:Math.min(s.speciesBirth,cap),
   speciesSurvive:Math.min(s.speciesSurvive,cap),
