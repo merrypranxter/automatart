@@ -483,9 +483,53 @@ try{
    buffer:Buffer.from(JSON.stringify(b6Saved))
   });
   await page.waitForFunction(()=>document.querySelector('#engine')?.value==='wireworld');
+  // B7: physics-certified NAND/NOT, actual Moore-neighbor heads, recipe.
+  await page.locator('#logic-device').selectOption('nand');
+  assert.equal(await page.locator('.wire-logic-lab .wire-logic-truth-table tbody tr').count(),4);
+  assert.match(await page.locator('#logic-certification').innerText(),/ALL CASES VERIFIED/);
+  assert.match(await page.locator('#wire-inhibition-certified').innerText(),/PASS/);
+  assert.equal(await page.locator('.wire-inhibition-inspector tbody tr').count(),4);
+  assert.match(await page.locator('.wire-inhibition-inspector tbody').innerText(),/3/);
+  await page.locator('#logic-radius').fill('12');
+  await page.locator('#logic-rotation').selectOption('2');
+  await page.locator('#logic-input-a').check();
+  await page.locator('#logic-input-b').check();
+  const b7Start=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  await page.locator('#logic-install').click();
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),b7Start,
+    'Real NAND gate cannot reset a living artwork');
+  assert(await page.locator('#wire-logic-live-probe').isVisible());
+  await page.locator('#wire-scope-horizon-32').click();
+  await page.locator('#wire-scope-scan').click();
+  assert.match(await page.locator('#wire-scope-result').innerText(),
+    /No electron HEAD reached this site within the measured horizon/,
+    'NAND A=1 B=1 suppression must produce zero output HEADS');
+  await page.locator('#logic-input-b').uncheck();
+  await page.locator('#logic-install').click();
+  await page.locator('#wire-scope-scan').click();
+  assert.match(await page.locator('#wire-scope-result').innerText(),/HEAD on tick\\(s\\) 13/,
+    'NAND A-only must create exactly one genuine electron HEAD at tick 13');
+  await page.locator('#logic-device').selectOption('not');
+  assert.equal(await page.locator('.wire-logic-lab .wire-logic-truth-table tbody tr').count(),2);
+  assert.equal(await page.locator('.wire-inhibition-inspector tbody tr').count(),2);
+  await page.locator('#logic-input-a').uncheck();
+  await page.locator('#logic-install').click();
+  await page.locator('#wire-scope-scan').click();
+  assert.match(await page.locator('#wire-scope-result').innerText(),/HEAD on tick\\(s\\) 13/,
+    'NOT input 0 emits exactly one genuine HEAD with fixed two-head bias');
+  const [b7Download]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const b7Saved=JSON.parse(await readFile(await b7Download.path(),'utf8'));
+  assert.equal(b7Saved.world.kind,'automatart-world-v1');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'b7-real-inhibition-gate.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(b7Saved))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='wireworld');
   await page.locator('#engine').selectOption('cyclic');
   await openTab(page,'world');
-  console.log('PASS B4/B5/B6: verified logic, two-lane skew, distinct timed pulses, untouched scope source and recipe');
+  console.log('PASS B7: physical NAND/NOT suppression, actual head census, real-world scope, and exact circuit recipe');
 
   // Funhouse F1 regression: precise stepping, authentic B/S roulette, and two
   // unmistakably different random color buttons.
