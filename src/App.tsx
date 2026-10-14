@@ -27,6 +27,7 @@ import ReactionControls from './components/ReactionControls';
 import SpinTurmiteControls from './components/SpinTurmiteControls';
 import CyclicDynamicsControls from './components/CyclicDynamicsControls';
 import WaveDynamicsControls from './components/WaveDynamicsControls';
+import TerritoryDynamicsControls from './components/TerritoryDynamicsControls';
 import LatticeGasControls from './components/LatticeGasControls';
 import {validateDualColor} from './engine/dual-color';
 import {validatePrintShop} from './engine/printshop';
@@ -1094,6 +1095,9 @@ export default function App(){
                 setResetNumber(n=>n+1);
               }}/>}
           <MutantControls settings={settings} setSettings={setSettings} paintSpecies={paintSpecies} setPaintSpecies={setPaintSpecies}/>
+          {(settings.engine==='species'||settings.engine==='oriented')&&
+            <TerritoryDynamicsControls settings={settings} setSettings={setSettings}
+              world={worldRef.current} neighborMax={neighborMax}/>}
           {(settings.engine==='generations'||settings.engine==='excitable')&&
             <WaveDynamicsControls settings={settings} setSettings={setSettings}
               world={worldRef.current} neighborMax={neighborMax}/>}
