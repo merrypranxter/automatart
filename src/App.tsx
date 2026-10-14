@@ -27,6 +27,7 @@ import ReactionControls from './components/ReactionControls';
 import SpinTurmiteControls from './components/SpinTurmiteControls';
 import CyclicDynamicsControls from './components/CyclicDynamicsControls';
 import WaveDynamicsControls from './components/WaveDynamicsControls';
+import BrainDynamicsControls from './components/BrainDynamicsControls';
 import TerritoryDynamicsControls from './components/TerritoryDynamicsControls';
 import LatticeGasControls from './components/LatticeGasControls';
 import {validateDualColor} from './engine/dual-color';
@@ -730,6 +731,13 @@ export default function App(){
       s.genStates=bounded(s.genStates,3,24,8);
       s.exciteStates=bounded(s.exciteStates,3,24,8);
       s.exciteThreshold=bounded(s.exciteThreshold,1,savedRuleCap,2);
+      s.brainBirthCount=bounded(s.brainBirthCount,1,savedRuleCap,2);
+      if(!['exact','atLeast'].includes(s.brainBirthMatch))throw new Error('Invalid Brian firing comparator');
+      if(!['off','clock','sparks'].includes(s.brainStimulus))throw new Error('Invalid Brain stimulus mode');
+      if(!['center','quad','ring'].includes(s.brainClockSource))throw new Error('Invalid Brain electrode arrangement');
+      s.brainClockPeriod=bounded(s.brainClockPeriod,1,120,12);
+      if(!Number.isFinite(Number(s.brainSparkRate)))throw new Error('Invalid Brain spark probability');
+      s.brainSparkRate=Math.max(0,Math.min(.01,Number(s.brainSparkRate)));
       if(!['off','sparks','clock'].includes(s.waveStimulus))throw new Error('Invalid wave stimulus mode');
       if(!['center','quad','ring'].includes(s.waveClockSource))throw new Error('Invalid wave source');
       s.waveClockPeriod=bounded(s.waveClockPeriod,1,120,12);
@@ -1105,7 +1113,8 @@ export default function App(){
           {(settings.engine==='ising'||settings.engine==='turmites')&&
             <SpinTurmiteControls settings={settings} setSettings={setSettings}
               world={worldRef.current} resetNumber={resetNumber}/>}
-          {settings.engine==='brians'&&<p className="module-note">Three-state Brain: OFF → FIRING → REFRACTORY → OFF. Exactly two firing neighbors cause ignition.</p>}
+          {settings.engine==='brians'&&<BrainDynamicsControls settings={settings}
+            setSettings={setSettings} world={worldRef.current} neighborMax={neighborMax}/>}
           {settings.engine==='cyclic'&&
             <CyclicDynamicsControls settings={settings} setSettings={setSettings}
               world={worldRef.current} neighborMax={neighborMax}

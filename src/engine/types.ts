@@ -54,6 +54,13 @@ export interface SimSettings {
   genSurvive: number[];
   exciteStates: number;
   exciteThreshold: number;
+  /** B1 Brain-only live rule (defaults preserve canonical exactly-two rule). */
+  brainBirthCount:number;
+  brainBirthMatch:'exact'|'atLeast';
+  brainStimulus:'off'|'clock'|'sparks';
+  brainClockSource:'center'|'quad'|'ring';
+  brainClockPeriod:number;
+  brainSparkRate:number;
   /** External forcing; off retains original autonomous B/S/C or excitable CA. */
   waveStimulus:'off'|'sparks'|'clock';
   waveSparkRate:number;
@@ -187,6 +194,8 @@ export const INITIAL_SETTINGS: SimSettings = {
   cyclicStates:16,cyclicThreshold:2,cyclicReach:1,cyclicDrive:0,
   wolframRule:30,
   genStates:8,genBirth:[3],genSurvive:[2,3],exciteStates:8,exciteThreshold:2,
+  brainBirthCount:2,brainBirthMatch:'exact',brainStimulus:'off',
+  brainClockSource:'center',brainClockPeriod:12,brainSparkRate:.001,
   waveStimulus:'off',waveSparkRate:.001,waveClockPeriod:12,waveClockSource:'center',
   margolusMode:'single',margolusRuleA:'cw',margolusRuleB:'ccw',margolusPeriod:4,
   largeRadius:2,largeBirthMin:6,largeBirthMax:9,largeSurviveMin:5,largeSurviveMax:12,

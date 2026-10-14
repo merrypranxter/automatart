@@ -9,6 +9,7 @@ import {chaseNeighbor,cyclicAdvance,cyclicStructuralChange} from './cyclic-dynam
 import {waveStimulusAt} from './wave-dynamics';
 import {applyMargolusMap,recordMargolusEpoch,lastEpochFor,activeMargolusRule} from './margolus-rules';
 import type {MargolusEpoch} from './margolus-rules';
+import {brainNaturalBirth,brainStimulusAt} from './brain-dynamics';
 
 function seededRandom(seed:number):()=>number{
   let a=seed>>>0;
@@ -93,6 +94,9 @@ export function stepWorld(prev:World,s:SimSettings):World{
   let nextAgents=prev.turmiteAgents;
   let waveStimulusCount=0;
   let margolusEpochs:MargolusEpoch[]|undefined=prev.margolusEpochs;
+  const brainParams={mode:s.brainStimulus??'off',source:s.brainClockSource??'center',
+    rate:s.brainSparkRate??0,period:s.brainClockPeriod??12,
+    seed:s.seed,generation:prev.generation};
   const waveParams={mode:s.waveStimulus??'off',source:s.waveClockSource??'center',
     rate:s.waveSparkRate??0,period:s.waveClockPeriod??12,
     seed:s.seed,generation:prev.generation};
@@ -227,9 +231,17 @@ export function stepWorld(prev:World,s:SimSettings):World{
             ?(count>=s.orientedSurviveMin&&count<=s.orientedSurviveMax?1:0)
             :(orientedMatch(orientedBits,s.orientedMask,s.orientedSymmetry,s.orientedMatch)?1:0);
           break;
-        case 'brians':
-          next[p]=old===1?2:old===2?0:count===2?1:0;
+        case 'brians':{
+          // Pure default remains exactly original Brian's Brain. Optional
+          // driven/generalized variants act on actual state-0 sites only.
+          if(old===0){
+            const natural=brainNaturalBirth(count,s);
+            const inject=!natural&&brainStimulusAt(old,x,y,w,h,brainParams);
+            if(inject)waveStimulusCount++;
+            next[p]=natural||inject?1:0;
+          }else next[p]=old===1?2:0;
           break;
+        }
         case 'cyclic':
           next[p]=cyclicAdvance(old,count,s.cyclicThreshold,s.cyclicDrive??0,
             s.seed,prev.generation,p,s.cyclicStates);

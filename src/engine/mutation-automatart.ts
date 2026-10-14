@@ -191,6 +191,13 @@ export function mutateAutomatart(
           s.lifeRule='custom';
         });
         break;
+      case 'brians':
+        offer('Brain firing votes',()=>{s.brainBirthCount=intStep(s.brainBirthCount??2,1,maxNeighborCount(s))});
+        offer('Brain firing comparator',()=>{s.brainBirthMatch=s.brainBirthMatch==='exact'?'atLeast':'exact'});
+        offer('Paired-electrode stimulus',()=>{s.brainStimulus=choose(s.brainStimulus??'off',['off','clock','sparks'] as const)});
+        offer('Brain pulse interval',()=>{s.brainClockPeriod=intStep(s.brainClockPeriod??12,1,120,6)});
+        offer('Brain spark frequency',()=>{s.brainSparkRate=floatStep(s.brainSparkRate??0,.001,0,.01,4)});
+        break;
       case 'cyclic':
         offer('Chase threshold',()=>{s.cyclicThreshold=intStep(s.cyclicThreshold,1,maxNeighborCount(s))});
         offer('Forward chase field',()=>{s.cyclicReach=intStep(s.cyclicReach??1,1,Math.min(6,s.cyclicStates-1),2)});
