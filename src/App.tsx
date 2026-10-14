@@ -24,6 +24,8 @@ import {NEW_COLOR_SIGNALS,isNewColorSignal,signalOptions} from './engine/color-s
 import DualColorControls from './components/DualColorControls';
 import CircuitControls from './components/CircuitControls';
 import WireDynamicsControls from './components/WireDynamicsControls';
+import WireLogicControls,{type WireLogicMonitor} from './components/WireLogicControls';
+import {stampWireLogic,type WireLogicOptions} from './engine/wire-logic';
 import {stampWireCircuit,wireStampFootprint,type WireStampOptions} from './engine/wire-circuit-lab';
 import ReactionControls from './components/ReactionControls';
 import SpinTurmiteControls from './components/SpinTurmiteControls';
@@ -162,7 +164,8 @@ export default function App(){
   const [paintSpecies,setPaintSpecies]=useState(1);
   const [wireStamp,setWireStamp]=useState<WireStampOptions>({template:'loop',radius:9,rotation:0,excite:true,clear:true});
   const [wireStampArmed,setWireStampArmed]=useState(false);
-  useEffect(()=>{setWireStampArmed(false);},[settings.engine]);
+  const [wireLogicMonitor,setWireLogicMonitor]=useState<WireLogicMonitor|null>(null);
+  useEffect(()=>{setWireStampArmed(false);setWireLogicMonitor(null);},[settings.engine]);
   const [inspectedCell,setInspectedCell]=useState<[number,number]|null>(null);
   const [mutationStrength,setMutationStrength]=useState<MutationStrength>('weird');
   const [mutationLocks,setMutationLocks]=useState<MutationLocks>({...INITIAL_MUTATION_LOCKS});
@@ -571,6 +574,18 @@ export default function App(){
     setPopulation(stat(worldRef.current));
     draw();
     drawStampPreview(point);
+  }
+  function installVerifiedLogic(opts:WireLogicOptions){
+    if(settings.engine!=='wireworld'||recordingRef.current)return;
+    cancelBatch();setPlaying(false);setWireStampArmed(false);
+    const anchor:[number,number]=[Math.floor(worldRef.current.width/2),Math.floor(worldRef.current.height/2)];
+    try{
+      const result=stampWireLogic(worldRef.current,anchor,opts);
+      setWireLogicMonitor({kind:opts.kind,ports:result.ports,installedAt:worldRef.current.generation});
+      setInspectedCell(anchor);setPopulation(stat(worldRef.current));
+      setMessage('Installed verified '+opts.kind.toUpperCase()+' · '+result.touched.length+' true lattice-cell updates.');
+      draw();
+    }catch(error){setMessage('Logic placement rejected: '+(error instanceof Error?error.message:String(error)));}
   }
   function placeWireCircuit(anchor:[number,number]){
     if(recordingRef.current||settings.engine!=='wireworld')return;
@@ -1140,6 +1155,8 @@ export default function App(){
             world={worldRef.current} stamp={wireStamp} setStamp={setWireStamp}
             stampArmed={wireStampArmed} setStampArmed={setWireStampArmed}
             onCenter={()=>placeWireCircuit([Math.floor(worldRef.current.width/2),Math.floor(worldRef.current.height/2)])}/>}
+          {settings.engine==='wireworld'&&<WireLogicControls world={worldRef.current}
+            monitor={wireLogicMonitor} onInstall={installVerifiedLogic}/>}
           {(settings.engine==='hodgepodge'||settings.engine==='forestfire')&&
             <ReactionControls settings={settings} setSettings={setSettings}/>}
           {settings.engine==='hpp'&&<LatticeGasControls settings={settings}

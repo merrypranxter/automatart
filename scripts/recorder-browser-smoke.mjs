@@ -363,6 +363,50 @@ try{
   await openTab(page,'world');
   console.log('PASS B3: live math, circuit stamps, tap-preview, source controls and pure legacy recipes');
 
+  // B4: mathematical four-state OR and fanout, actual signal traces,
+  // stage installation without reset, and saved snapshot fidelity.
+  await page.locator('#engine').selectOption('wireworld');
+  await openTab(page,'rules');
+  assert(await page.locator('#logic-certification').isVisible(),
+    'B4 real Wireworld logic bench must be available');
+  assert.match(await page.locator('#logic-certification').innerText(),
+    /ALL CASES VERIFIED/,'Truth table certifies four real OR cases');
+  assert.equal(await page.locator('.wire-logic-truth-table tbody tr').count(),4);
+  await page.locator('#logic-radius').fill('12');
+  assert.match(await page.locator('#logic-certification').innerText(),/ALL CASES VERIFIED/);
+  await page.locator('#logic-rotation').selectOption('3');
+  await page.locator('#logic-input-a').uncheck();
+  await page.locator('#logic-input-b').check();
+  const logicBefore=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  await page.locator('#logic-install').click();
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),logicBefore,
+    'Installing the real logic device cannot restart the current universe');
+  assert(await page.locator('#wire-logic-live-probe').isVisible(),
+    'Read actual current-world output port states');
+  assert.equal(await page.locator('#wire-logic-live-probe').getByText('CONDUCTOR',{exact:false}).count()>0,true);
+  const [b4File]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const b4Recipe=JSON.parse(await readFile(await b4File.path(),'utf8'));
+  assert.equal(b4Recipe.world.kind,'automatart-world-v1');
+  assert(b4Recipe.world.arrays.cells.length>100,'A real conductor device is serialized');
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'b4-canonical-or-stamped.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(b4Recipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='wireworld');
+  await page.locator('#logic-device').selectOption('fanout');
+  assert.equal(await page.locator('.wire-logic-truth-table tbody tr').count(),2);
+  assert.match(await page.locator('#logic-certification').innerText(),/ALL CASES VERIFIED/);
+  await page.locator('#logic-radius').fill('7');
+  await page.locator('#logic-input-a').check();
+  await page.locator('#logic-install').click();
+  assert(await page.locator('#wire-logic-live-probe').getByText('OUT 2',{exact:false}).isVisible(),
+    'Fanout monitors two actually simulated remote output cells');
+  await page.locator('#engine').selectOption('cyclic');
+  await openTab(page,'world');
+  console.log('PASS B4: original physical OR/fanout truth tables, waveforms, stamp, two output probes and saved recipe');
+
   // Funhouse F1 regression: precise stepping, authentic B/S roulette, and two
   // unmistakably different random color buttons.
   await page.waitForTimeout(100);
