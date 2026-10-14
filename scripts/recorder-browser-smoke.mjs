@@ -403,9 +403,50 @@ try{
   await page.locator('#logic-install').click();
   assert(await page.locator('#wire-logic-live-probe').getByText('OUT 2',{exact:false}).isVisible(),
     'Fanout monitors two actually simulated remote output cells');
+  // B5: real XOR four-case truth table plus live-world future scope.
+  await page.locator('#logic-device').selectOption('xor');
+  assert.equal(await page.locator('.wire-logic-truth-table tbody tr').count(),4);
+  assert.match(await page.locator('#logic-certification').innerText(),/ALL CASES VERIFIED/,
+   'XOR cannot appear as a certified device unless real 00/01/10/11 physics passes');
+  await page.locator('#logic-input-b').uncheck();
+  await page.locator('#logic-radius').fill('9');
+  await page.locator('#logic-rotation').selectOption('0');
+  const xorGen=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  await page.locator('#logic-install').click();
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),xorGen,
+   'XOR geometry stamps must not advance the artwork');
+  const xorPixels=await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL());
+  assert(await page.locator('#wire-logic-live-probe').isVisible());
+  await page.locator('#wire-scope-horizon-16').click();
+  await page.locator('#wire-scope-scan').click();
+  assert.match(await page.locator('#wire-scope-result').innerText(),/HEAD on tick\(s\) 10/,
+   'Real-world XOR port, with only A asserted, must fire exactly 10 ticks later');
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),xorGen,
+   'Future electrical scope cannot advance the canonical artwork');
+  const scopedPixels=await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL());
+  assert.equal(scopedPixels,xorPixels,'Diagnostic scope must not paint or mutate underlying cells');
+  await page.locator('#wire-scope-horizon-32').click();
+  await page.locator('#wire-scope-scan').click();
+  assert.match(await page.locator('#wire-scope-result').innerText(),/32 ticks/);
+  await page.locator('#logic-input-b').check();
+  await page.locator('#logic-install').click();
+  await page.locator('#wire-scope-scan').click();
+  assert.match(await page.locator('#wire-scope-result').innerText(),
+    /No electron HEAD reached this site within the measured horizon/,
+    'The two asserted XOR inputs must inhibit output using canonical 4-head suppression');
+  const [b5File]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const b5Recipe=JSON.parse(await readFile(await b5File.path(),'utf8'));
+  assert.equal(b5Recipe.world.kind,'automatart-world-v1');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'b5-canonical-xor-circuit.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(b5Recipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='wireworld');
   await page.locator('#engine').selectOption('cyclic');
   await openTab(page,'world');
-  console.log('PASS B4: original physical OR/fanout truth tables, waveforms, stamp, two output probes and saved recipe');
+  console.log('PASS B4/B5: OR/fanout/XOR physical truth tables, live probes, exact non-destructive signal scope, saved recipe');
 
   // Funhouse F1 regression: precise stepping, authentic B/S roulette, and two
   // unmistakably different random color buttons.
