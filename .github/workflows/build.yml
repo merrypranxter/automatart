@@ -55,6 +55,8 @@ jobs:
         run: node scripts/d1a-rhombille-smoke.mjs
       - name: Verify Dynamics P1 classic cyclic rule, chase sensitivity and seeded activity
         run: node scripts/dynamics-cyclic-smoke.mjs
+      - name: One-time 17-engine dynamics survey (remove after sampling)
+        run: node scripts/dynamics-atlas.mjs
       - name: Verify A2 dual-source mathematical color mixing and exports
         run: node scripts/a2-dual-color-smoke.mjs
       - name: Verify Print Shop effects, compositing and recipe migration
