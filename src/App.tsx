@@ -32,6 +32,7 @@ import TerritoryDynamicsControls from './components/TerritoryDynamicsControls';
 import LatticeGasControls from './components/LatticeGasControls';
 import {validateDualColor} from './engine/dual-color';
 import {validatePrintShop} from './engine/printshop';
+import {validMargolusRule} from './engine/margolus-rules';
 import StrangeControls, { SQUARE_ONLY_ENGINES } from './components/StrangeControls';
 import {
   captureAnimation, chooseVideoMime, recommendedDimensions, CaptureCancelled
@@ -125,7 +126,8 @@ function cloneWorld(world:World):World{
     turmiteAgents:world.turmiteAgents?.map(a=>({...a})),ages:world.ages.slice(),
     neighbors:world.neighbors.slice(),events:world.events.slice(),
     traces:world.traces.slice(),previousCells:world.previousCells?.slice(),
-    olderCells:world.olderCells?.slice(),fossils:world.fossils?.slice()};
+    olderCells:world.olderCells?.slice(),fossils:world.fossils?.slice(),
+    margolusEpochs:world.margolusEpochs?.map(epoch=>({...epoch}))};
 }
 function stat(world:World):number{
   let living=0;for(let i=0;i<world.cells.length;i++)if(world.cells[i]!==0)living++;
@@ -144,6 +146,8 @@ export default function App(){
   const [settings,setSettings]=useState<SimSettings>(INITIAL_SETTINGS);
   const [appearance,setAppearance]=useState<Appearance>(INITIAL_APPEARANCE);
   const [playing,setPlaying]=useState(true);
+  const [margolusDirection,setMargolusDirection]=useState<1|-1>(1);
+  useEffect(()=>{setMargolusDirection(1);},[settings.engine]);
   const [batchProgress,setBatchProgress]=useState<{done:number;total:number}|null>(null);
   const batchTokenRef=useRef(0);
   const [speed,setSpeed]=useState(18);
@@ -457,7 +461,11 @@ export default function App(){
       const stepMilliseconds=1000/speed;
       let steps=0;
       while(accumulator>=stepMilliseconds&&steps<4){
-        worldRef.current=stepWorld(worldRef.current,settings);
+        if(settings.engine==='margolus'&&margolusDirection===-1){
+          if(worldRef.current.generation===0){setPlaying(false);break;}
+          worldRef.current=rewindWorld(worldRef.current,settings);
+          if(worldRef.current.generation===0)setPlaying(false);
+        }else worldRef.current=stepWorld(worldRef.current,settings);
         accumulator-=stepMilliseconds;
         steps++;
       }
@@ -470,9 +478,10 @@ export default function App(){
     };
     frame=requestAnimationFrame(tick);
     return ()=>cancelAnimationFrame(frame);
-  },[playing,speed,settings,draw]);
+  },[playing,speed,settings,draw,margolusDirection]);
 
   function oneStep(){
+    setMargolusDirection(1);
     cancelBatch();
     setPlaying(false);
     worldRef.current=stepWorld(worldRef.current,settings);
@@ -507,14 +516,20 @@ export default function App(){
       setMessage('Advanced precisely '+done+' generations without changing the universe seed.');
     }
   }
-  function rewindStep(){
+  function rewindStep(count=1){
     cancelBatch();
     if(settings.engine!=='margolus'||worldRef.current.generation===0)return;
-    setPlaying(false);
-    worldRef.current=rewindWorld(worldRef.current,settings);
+    setPlaying(false);setMargolusDirection(-1);
+    for(let i=0;i<Math.max(1,Math.min(10,count))&&worldRef.current.generation>0;i++)
+      worldRef.current=rewindWorld(worldRef.current,settings);
     setGeneration(worldRef.current.generation);
     setPopulation(stat(worldRef.current));
     draw();
+  }
+  function playMargolusDirection(direction:1|-1){
+    if(recordingRef.current||batchProgress!==null||settings.engine!=='margolus')return;
+    if(direction===-1&&worldRef.current.generation===0)return;
+    setMargolusDirection(direction);setPlaying(true);
   }
   function restart(){
     cancelBatch();
@@ -699,6 +714,10 @@ export default function App(){
       s.cyclicReach=validatedCyclicReach(data.settings.cyclicReach,s.cyclicStates);
       s.cyclicDrive=validatedCyclicDrive(data.settings.cyclicDrive);
       s.wolframRule=Math.max(0,Math.min(255,Math.floor(s.wolframRule)||30));
+      if(!['single','alternate'].includes(s.margolusMode))throw new Error('Invalid reversible schedule mode');
+      if(!validMargolusRule(s.margolusRuleA)||!validMargolusRule(s.margolusRuleB))
+        throw new Error('Invalid reversible Margolus block rule');
+      s.margolusPeriod=Math.max(1,Math.min(120,Math.floor(Number(s.margolusPeriod))||4));
 
       for(const k of ['customBirth','customSurvive'] as const){
         if(!Array.isArray(s[k]))s[k]=k==='customBirth'?[3]:[2,3];
@@ -1122,7 +1141,9 @@ export default function App(){
             <input id="rule" type="number" min="0" max="255" value={settings.wolframRule} onChange={e=>updateSetting('wolframRule',Math.max(0,Math.min(255,Number(e.target.value)||0)))}/>
             <div className="chip-row">{[30,90,110,184].map(n=><button className={'chip'+(settings.wolframRule===n?' selected':'')} key={n} onClick={()=>updateSetting('wolframRule',n)}>R{n}</button>)}</div>
           </div>}
-          <StrangeControls part="rules" settings={settings} setSettings={setSettings} onRewind={rewindStep} generation={generation}/>
+          <StrangeControls part="rules" settings={settings} setSettings={setSettings}
+            onRewind={rewindStep} generation={generation} world={worldRef.current}
+            direction={margolusDirection} onPlayDirection={playMargolusDirection}/>
           {supportsNeighborhood(settings.engine,settings.lattice)&&
             <NeighborhoodControls settings={settings} setSettings={setSettings}/>}
           {!supportsNeighborhood(settings.engine,settings.lattice)&&

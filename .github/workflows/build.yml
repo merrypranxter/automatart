@@ -65,6 +65,8 @@ jobs:
         run: node scripts/dynamics-a2-waves-smoke.mjs
       - name: Verify A3 territorial births, invasions and directional matches against production stepper
         run: node scripts/dynamics-a3-territory-smoke.mjs
+      - name: Verify B2 16-state bijective Margolus maps, live-rule rewind, legacy saves and recording
+        run: node scripts/dynamics-b2-reversible-smoke.mjs
       - name: Verify Dynamics B1 canonical Brian's Brain, electrodes, recording and recipe replay
         run: node scripts/dynamics-b1-brain-smoke.mjs
       - name: Verify A2 dual-source mathematical color mixing and exports

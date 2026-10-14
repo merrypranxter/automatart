@@ -7,6 +7,8 @@ import {stepIsing,stepTurmites,seedTurmites} from './spins-turmites';
 import {stepHpp,paintHpp,hppCount} from './lattice-gas';
 import {chaseNeighbor,cyclicAdvance,cyclicStructuralChange} from './cyclic-dynamics';
 import {waveStimulusAt} from './wave-dynamics';
+import {applyMargolusMap,recordMargolusEpoch,lastEpochFor,activeMargolusRule} from './margolus-rules';
+import type {MargolusEpoch} from './margolus-rules';
 import {brainNaturalBirth,brainStimulusAt} from './brain-dynamics';
 
 function seededRandom(seed:number):()=>number{
@@ -73,7 +75,8 @@ export function createWorld(s:SimSettings):World{
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,hppWalls,turmiteAgents,
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,ages,
     neighbors:new Uint8Array(n),events:new Uint8Array(n),traces,
-    previousCells:cells.slice(),olderCells:cells.slice(),fossils:new Float32Array(n)};
+    previousCells:cells.slice(),olderCells:cells.slice(),fossils:new Float32Array(n),
+    margolusEpochs:s.engine==='margolus'?[]:undefined};
 }
 
 function valueAt(cells:Uint8Array|Uint32Array,w:number,h:number,x:number,y:number,wrap:boolean):number{
@@ -90,6 +93,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
   const nextFossils=new Float32Array(n);
   let nextAgents=prev.turmiteAgents;
   let waveStimulusCount=0;
+  let margolusEpochs:MargolusEpoch[]|undefined=prev.margolusEpochs;
   const brainParams={mode:s.brainStimulus??'off',source:s.brainClockSource??'center',
     rate:s.brainSparkRate??0,period:s.brainClockPeriod??12,
     seed:s.seed,generation:prev.generation};
@@ -164,8 +168,12 @@ export function stepWorld(prev:World,s:SimSettings):World{
         if(valueAt(prev.grains,w,h,x+dx,y+dy,s.wrap)>0)neighbors[p]++;
     }
   }else if(s.engine==='margolus'){
-    // Staggered 2x2 partitions and an invertible local clockwise permutation.
-    next.set(rotateBlocks(cells,w,h,(prev.generation%2) as 0|1));
+    // Exactly reversible local 2x2 binary permutations; the full transition
+    // schedule is logged as compact epochs, so live knob edits rewind truly.
+    margolusEpochs=recordMargolusEpoch(prev.margolusEpochs,prev.generation,s);
+    const epoch=margolusEpochs[margolusEpochs.length-1];
+    next.set(applyMargolusMap(cells,w,h,(prev.generation%2) as 0|1,
+      activeMargolusRule(epoch,prev.generation)));
   }else if(s.engine==='wolfram'){
     // History scrolls one row upward. New state comes from the previous bottom row.
     next.set(cells.subarray(w),0);
@@ -312,7 +320,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
     cells,next,w,h,s.cyclicStates,s.wrap,s):undefined;
   return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
-    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,stepChanged,stepStructural,waveStimulusCount,
+    customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,stepChanged,stepStructural,waveStimulusCount,margolusEpochs,
     cells:next,grains:nextGrains,hppWalls:prev.hppWalls?.slice(),turmiteAgents:nextAgents?.map(a=>({...a})),
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,
     ages:nextAges,neighbors,events,traces:nextTraces,
@@ -327,8 +335,14 @@ export function rewindWorld(prev:World,s:SimSettings):World{
   if(s.engine!=='margolus')throw new Error('Rewind is only valid for Margolus');
   if(prev.generation===0)return prev;
   const {width:w,height:h,cells}=prev;
-  const phase=((prev.generation-1)%2) as 0|1;
-  const earlier=rotateBlocks(cells,w,h,phase,true);
+  const tick=prev.generation-1,phase=(tick%2) as 0|1;
+  const history=prev.margolusEpochs??[{start:0,mode:'single' as const,a:'cw' as const,
+    b:'cw' as const,period:1}];
+  const epoch=lastEpochFor(history,tick);
+  const earlier=applyMargolusMap(cells,w,h,phase,activeMargolusRule(epoch,tick),true);
+  // Undo the final transition and prune branches of future rule history.
+  // Existing earlier epochs remain exact even if the live current rule changed.
+  const margolusEpochs=history.filter(record=>record.start<tick);
   const n=w*h,ages=new Uint16Array(n),traces=new Float32Array(n);
   const events=new Uint8Array(n);
   for(let i=0;i<n;i++){
@@ -339,7 +353,7 @@ export function rewindWorld(prev:World,s:SimSettings):World{
   }
   return {engine:'margolus',lattice:'square',wrap:s.wrap,neighborShape:s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,
-    generation:prev.generation-1,cells:earlier,ages,traces,events,
+    generation:prev.generation-1,cells:earlier,ages,traces,events,margolusEpochs,
     neighbors:new Uint8Array(n),previousCells:earlier.slice(),
     olderCells:earlier.slice(),fossils:new Float32Array(n)};
 }

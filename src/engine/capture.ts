@@ -55,7 +55,7 @@ export function cloneWorld(w:World):World{
     turmiteAgents:w.turmiteAgents?.map(a=>({...a})),ages:w.ages.slice(),neighbors:w.neighbors.slice(),
     events:w.events.slice(),traces:w.traces.slice(),
     previousCells:w.previousCells?.slice(),olderCells:w.olderCells?.slice(),
-    fossils:w.fossils?.slice()};
+    fossils:w.fossils?.slice(),margolusEpochs:w.margolusEpochs?.map(epoch=>({...epoch}))};
 }
 export function equalGrains(a:Uint32Array,b:Uint32Array):boolean{
   if(a.length!==b.length)return false;

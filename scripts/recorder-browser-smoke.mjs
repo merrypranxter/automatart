@@ -251,6 +251,58 @@ try{
   await page.locator('#engine').selectOption('cyclic');
   await openTab(page,'world');
   console.log('PASS: A2 true wave modes, clock sources, live edits, seeded sparks and legacy recipe import');
+  // B2: real 2x2 reversible block law selection, historical inverses, and recipes.
+  await page.locator('#engine').selectOption('margolus');
+  await openTab(page,'rules');
+  assert(await page.locator('#margolus-a').isVisible(),'Reversible laws have full live controls');
+  await page.locator('#margolus-preset-braid').click();
+  assert.equal(await page.locator('#margolus-a').inputValue(),'braid');
+  assert.equal(await page.locator('#margolus-b').inputValue(),'vortex');
+  assert.equal(await page.locator('#margolus-period').inputValue(),'6');
+  const b2Start=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  await page.getByRole('button',{name:'STEP +1'}).click();
+  await page.getByRole('button',{name:'STEP +1'}).click();
+  await page.getByRole('button',{name:'STEP +1'}).click();
+  const b2Three=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  assert.equal(b2Three,b2Start+3,'Three genuine forward block transitions');
+  await page.locator('#margolus-a').selectOption('collision');
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),b2Three,
+   'Live rule edits must NOT clear existing cells');
+  await page.getByRole('button',{name:'STEP +1'}).click();
+  await page.locator('#margolus-back-one').click();
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),b2Three,
+   'Exact inverse walks back through a live law edit');
+  await page.locator('#margolus-back-ten').click();
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),0);
+  await page.getByRole('button',{name:'STEP +1'}).click();
+  const [margolusB2Download]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const b2Recipe=JSON.parse(await readFile(await margolusB2Download.path(),'utf8'));
+  assert.equal(b2Recipe.settings.margolusRuleA,'collision');
+  assert.equal(b2Recipe.settings.margolusMode,'alternate');
+  assert(b2Recipe.world.margolusEpochs.length>=1,'Saved world must include exact epoch records');
+  await page.locator('#margolus-preset-original').click();
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'b2-history-replay.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(b2Recipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#margolus-a')?.value==='collision');
+  assert.equal(await page.locator('#margolus-mode-alternate').getAttribute('aria-pressed'),'true');
+  const legacyB2=structuredClone(b2Recipe);
+  for(const key of ['margolusRuleA','margolusRuleB','margolusMode','margolusPeriod'])
+   delete legacyB2.settings[key];
+  delete legacyB2.world.margolusEpochs;
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'b2-old-classic.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(legacyB2))
+  });
+  await page.waitForFunction(()=>document.querySelector('#margolus-a')?.value==='cw');
+  assert.equal(await page.locator('#margolus-mode-single').getAttribute('aria-pressed'),'true');
+  await page.locator('#engine').selectOption('cyclic');
+  await openTab(page,'world');
+  console.log('PASS B2: reversible block presets, real backward stepping, live edits and historical recipe compatibility');
+
   // Funhouse F1 regression: precise stepping, authentic B/S roulette, and two
   // unmistakably different random color buttons.
   await page.waitForTimeout(100);
@@ -796,7 +848,7 @@ try{
   await page.locator('#oriented-symmetry').selectOption('dihedral');
   assert(await page.locator('.direction-grid button').count()===8,'Eight independently configurable neighbors');
   await page.locator('#engine').selectOption('margolus');
-  assert(await page.locator('.rewind-button').isVisible(),'Exact cell-state rewind available');
+  assert(await page.locator('#margolus-back-one').isVisible(),'Exact cell-state rewind available');
   assert(await page.locator('#lattice').isDisabled(),'Margolus cannot use triangular / hexagonal partitions');
   await page.locator('#engine').selectOption('cyclic');
   // A deterministic, populated baseline is required to distinguish all
