@@ -70,7 +70,7 @@ try{
     let reloaded=restoreWorldSnapshot(snapshotWorld(world),s);
     assert.deepEqual(reloaded.cells,world.cells);
     const path=stamp.ports.outputs[0],p=indices(path,world.width);
-    const actual:number[]=[];
+    const actual=[];
     const duration=2*radius+60;
     for(let tick=0;tick<duration;tick++){
      if(world.cells[p]===2)actual.push(tick);
