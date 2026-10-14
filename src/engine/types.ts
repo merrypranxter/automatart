@@ -16,6 +16,7 @@ export type NeighborShape = 'moore' | 'vonNeumann' | 'square2' | 'diamond2' | 'd
 export type LatticeId = 'square' | 'hex' | 'triangle' | 'rhombille';
 export type OrientedSymmetry = 'fixed' | 'rotations' | 'dihedral';
 export type OrientedMatch = 'exact' | 'contains';
+import type {MargolusEpoch,MargolusRule,MargolusMode} from './margolus-rules';
 
 export interface SimSettings {
   engine: EngineId;
@@ -58,6 +59,11 @@ export interface SimSettings {
   waveSparkRate:number;
   waveClockPeriod:number;
   waveClockSource:'center'|'quad'|'ring';
+  /** B2 reversible block rule schedule, recording changes in canonical world history. */
+  margolusMode:MargolusMode;
+  margolusRuleA:MargolusRule;
+  margolusRuleB:MargolusRule;
+  margolusPeriod:number;
   largeRadius: number;
   largeBirthMin: number;
   largeBirthMax: number;
@@ -146,6 +152,8 @@ export interface World {
   grains?:Uint32Array;
   /** Persistent solid obstacles separate from 4-bit particle channels. */
   hppWalls?:Uint8Array;
+  /** Compact active reversible schedule history; recorded rule edits survive JSON. */
+  margolusEpochs?:MargolusEpoch[];
   /** Maximum Hodgepodge severity stage (8..64) for exact skin scaling. */
   hodgeStates?:number;
   /** Saved agent coordinates and headings are part of the Turmite world. */
@@ -180,6 +188,7 @@ export const INITIAL_SETTINGS: SimSettings = {
   wolframRule:30,
   genStates:8,genBirth:[3],genSurvive:[2,3],exciteStates:8,exciteThreshold:2,
   waveStimulus:'off',waveSparkRate:.001,waveClockPeriod:12,waveClockSource:'center',
+  margolusMode:'single',margolusRuleA:'cw',margolusRuleB:'ccw',margolusPeriod:4,
   largeRadius:2,largeBirthMin:6,largeBirthMax:9,largeSurviveMin:5,largeSurviveMax:12,
   speciesCount:3,speciesBirth:2,speciesSurvive:1,speciesAttackBias:1,
   wireBrush:1,sandFeed:6,sandRounds:3,sandSource:'center',sandBrush:8,
