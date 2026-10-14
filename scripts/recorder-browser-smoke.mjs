@@ -222,10 +222,10 @@ try{
   await page.locator('#margolus-back-ten').click();
   assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),0);
   await page.getByRole('button',{name:'STEP +1'}).click();
-  const [b2Download]=await Promise.all([
+  const [margolusB2Download]=await Promise.all([
    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
   ]);
-  const b2Recipe=JSON.parse(await readFile(await b2Download.path(),'utf8'));
+  const b2Recipe=JSON.parse(await readFile(await margolusB2Download.path(),'utf8'));
   assert.equal(b2Recipe.settings.margolusRuleA,'collision');
   assert.equal(b2Recipe.settings.margolusMode,'alternate');
   assert(b2Recipe.world.margolusEpochs.length>=1,'Saved world must include exact epoch records');
