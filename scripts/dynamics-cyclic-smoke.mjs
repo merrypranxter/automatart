@@ -8,7 +8,8 @@ const modules=[
  ['src/engine/sim.ts','scripts/.dynamics-sim.mjs'],
  ['src/engine/types.ts','scripts/.dynamics-types.mjs'],
  ['src/engine/capture.ts','scripts/.dynamics-capture.mjs'],
- ['src/engine/mutation-automatart.ts','scripts/.dynamics-mutate.mjs']
+ ['src/engine/mutation-automatart.ts','scripts/.dynamics-mutate.mjs'],
+ ['src/engine/alien-paint.ts','scripts/.dynamics-paint.mjs']
 ];
 try{
  await Promise.all(modules.map(([entry,outfile])=>build({
@@ -20,6 +21,7 @@ try{
  const {INITIAL_SETTINGS,INITIAL_APPEARANCE}=await load(2);
  const {createCaptureCursor}=await load(3);
  const {mutateAutomatart,requiresWorldRestart}=await load(4);
+ const {applyAlienStamp,INITIAL_ALIEN_BRUSH}=await load(5);
  assert.equal(INITIAL_SETTINGS.cyclicThreshold,1,'Default threshold is inside an active range');
  assert(INITIAL_SETTINGS.cyclicStates<=8,'Default state count leaves reachable chase matches');
  assert.equal(INITIAL_SETTINGS.cyclicDrive,0,'Pure classic CA remains the startup default');
@@ -52,6 +54,7 @@ try{
  const wide=stepWorld(initial,{...base,cyclicReach:4});
  const kick=stepWorld(initial,{...base,cyclicDrive:.01});
  const count=(w)=>w.events.reduce((n,v)=>n+(v===3?1:0),0);
+ assert.equal(ones.stepChanged,count(ones),'True last-step changes match source engine');
  assert(count(ones)>=count(classic),
   'Lower chase threshold cannot reduce the number of cell transitions');
  assert(count(wide)>=count(classic),
@@ -59,6 +62,11 @@ try{
  assert(count(kick)>=count(classic),
   'Seeded independent excitation adds to, never blocks, classical transitions');
  assert(count(wide)>count(classic),'Chase field substantially wakes up a stalled default');
+ const countBeforePaint=ones.stepChanged;
+ applyAlienStamp(ones,{...base,cyclicThreshold:1},[7,7],
+  {...INITIAL_ALIEN_BRUSH,stamp:'brush',size:0,mode:'invert'},331);
+ assert.equal(ones.stepChanged,countBeforePaint,
+  'Finger painting cannot be counted as a change in the last simulation step');
  const seedWorld={...base,cyclicReach:3,cyclicDrive:.004};
  let a=createWorld(seedWorld),b=createWorld(seedWorld),changed=0;
  for(let n=0;n<50;n++){
@@ -67,6 +75,11 @@ try{
   changed+=count(a);
  }
  assert(changed>100,'Driven mode is actually making many physical state transitions');
+ const finite={...base,wrap:false,cyclicStates:5,cyclicReach:2,cyclicThreshold:1};
+ const edgeWorld=createWorld(finite);edgeWorld.cells.fill(1);
+ edgeWorld.cells[0]=3; // targets 4 and 0, but absent cells aren't real zero-state neighbors
+ assert.equal(stepWorld(edgeWorld,finite).cells[0],3,
+  'Finite corners never chase nonexistent zero-valued neighbors');
  const allStill=createWorld(base);allStill.cells.fill(0);
  const quietRule={...base,cyclicThreshold:8,cyclicReach:1,cyclicDrive:0};
  const staticCursor=createCaptureCursor(allStill,quietRule,10,10);
@@ -92,6 +105,15 @@ try{
  },411);
  assert.equal(locked.settings.cyclicReach,1);
  assert.equal(locked.settings.cyclicDrive,0);
+ const phaseShrink={...base,cyclicReach:6,cyclicStates:10};
+ for(let i=1;i<=30;i++){
+  const next=mutateAutomatart(phaseShrink,INITIAL_APPEARANCE,{
+   strength:'wtf',locks:{palette:true,rule:false,engine:true,seed:true},allowRestart:true
+  },i);
+  assert(next.settings.cyclicReach>=1);
+  assert(next.settings.cyclicReach<=Math.min(6,next.settings.cyclicStates-1),
+   'Multi-action mutation cannot hide an invalid chase-window rule');
+ }
  console.log('PASS: default moves, classic CCA bit-exact compatibility, wrap, chase field and true seeded impulses');
  console.log('PASS: 50-generation seeded stochastic replay, actual growth in transitions, non-settled recorder');
  console.log('PASS: live controls do not restart, legacy mathematical rule and rule locks retained');
