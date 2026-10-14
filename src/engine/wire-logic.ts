@@ -5,7 +5,7 @@
  */
 import {stepWireworld} from './circuits';
 import type {World} from './types';
-export type WireLogicKind='or'|'fanout';
+export type WireLogicKind='or'|'fanout'|'xor';
 export type WireLogicBit=0|1;
 export type LogicPoint=readonly [number,number];
 export interface WireLogicOptions {
@@ -37,28 +37,44 @@ function vertical(x:number,from:number,to:number,pts:LogicPoint[]){
 }
 export function wireLogicLayout(opts:WireLogicOptions):WireLogicLayout{
  const {kind,radius:r,rotation:k,a,b}=opts;
- if(!['or','fanout'].includes(kind)||!Number.isInteger(r)||r<7||r>12||
+ if(!['or','fanout','xor'].includes(kind)||!Number.isInteger(r)||r<7||r>12||
     ![0,1,2,3].includes(k)||![0,1].includes(a)||![0,1].includes(b))
   throw Error('Invalid verified wire logic configuration');
  const conductors:LogicPoint[]=[];
- horizontal(0,-r,r,conductors);
- if(kind==='or')vertical(0,0,r,conductors);
- else vertical(0,-r,0,conductors);
+ if(kind==='xor'){
+  // Certified XOR: two simultaneous contact heads per asserted Boolean bit.
+  // The central conductor sees 2 neighboring HEADS for either input alone,
+  // but 4 heads for A+B, suppressing ignition under the canonical 1..2 rule.
+  // The first diagonally-outbound cell avoids direct emitter adjacency.
+  for(let i=0;i<=r;i++)conductors.push([i,-i]);
+  conductors.push([-1,0],[-1,1],[0,1],[1,1]);
+ }else{
+  horizontal(0,-r,r,conductors);
+  if(kind==='or')vertical(0,0,r,conductors);
+  else vertical(0,-r,0,conductors);
+ }
  const seen=new Set<string>();
  const unique=conductors.filter(([x,y])=>{
   const key=x+','+y;if(seen.has(key))return false;seen.add(key);return true;
  });
  const heads:LogicPoint[]=[],tails:LogicPoint[]=[];
- const outputPoints:LogicPoint[]=kind==='or'?[[r,0]]:[[r,0],[0,-r]];
- if(a){heads.push([-r+1,0]);tails.push([-r,0]);}
- if(kind==='or'&&b){heads.push([0,r-1]);tails.push([0,r]);}
+ const outputPoints:LogicPoint[]=kind==='xor'?[[r,-r]]:kind==='or'?[[r,0]]:[[r,0],[0,-r]];
+ if(kind==='xor'){
+  // Dual-contact pulse encoding: each asserted Boolean bit writes two real
+  // electron HEAD states. No hidden Boolean exception in the CA stepper.
+  if(a)heads.push([-1,0],[-1,1]);
+  if(b)heads.push([0,1],[1,1]);
+ }else{
+  if(a){heads.push([-r+1,0]);tails.push([-r,0]);}
+  if(kind==='or'&&b){heads.push([0,r-1]);tails.push([0,r]);}
+ }
  return {
   conductors:unique.map(p=>rot(p,k)),
   heads:heads.map(p=>rot(p,k)),
   tails:tails.map(p=>rot(p,k)),
   ports:{
-   inputA:rot([-r+1,0],k),
-   ...(kind==='or'?{inputB:rot([0,r-1],k)}:{}),
+   inputA:rot(kind==='xor'?[-1,0]:[-r+1,0],k),
+   ...((kind==='or'||kind==='xor')?{inputB:rot(kind==='xor'?[0,1]:[0,r-1],k)}:{}),
    outputs:outputPoints.map(p=>rot(p,k))
   }
  };
@@ -85,7 +101,7 @@ export interface LogicBench {
  */
 export function runWireLogicBench(kind:WireLogicKind,radius:number):LogicBench{
  const cases:LogicWave[]=[];
- const choices:WireLogicBit[][]=kind==='or'?[[0,0],[0,1],[1,0],[1,1]]:[[0,0],[1,0]];
+ const choices:WireLogicBit[][]=kind==='fanout'?[[0,0],[1,0]]:[[0,0],[0,1],[1,0],[1,1]];
  for(const [a,b] of choices){
   const layout=wireLogicLayout({kind,radius,rotation:0,a,b});
   const dim=2*radius+18,center=Math.floor(dim/2);
@@ -102,7 +118,7 @@ export function runWireLogicBench(kind:WireLogicKind,radius:number):LogicBench{
   }
   const firstTick=waveforms.map(w=>{const at=w.indexOf(true);return at<0?null:at;});
   const hits=firstTick.map(v=>v!==null);
-  const expected=kind==='or'?Boolean(a||b):Boolean(a);
+  const expected=kind==='or'?Boolean(a||b):kind==='xor'?Boolean(a!==b):Boolean(a);
   const pass=hits.every(v=>v===expected);
   cases.push({a,b,hits,firstTick,waveforms,pass});
  }
