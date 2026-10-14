@@ -192,6 +192,11 @@ try{
   await page.locator('#brain-preset-filament').click();
   assert.equal(await page.locator('#brain-stimulus-sparks').getAttribute('aria-pressed'),'true');
   assert.equal(await page.locator('#brain-spark-rate').inputValue(),'10');
+  // Restore the original eight-neighbor Brain before later tests switch engines.
+  // Otherwise the legacy Conway glider fixture inherits the 12-voter stencil
+  // and quite correctly refuses an incompatible classic glider stamp.
+  await page.locator('#brain-preset-classic').click();
+  assert.equal(await page.locator('#brain-neighbors-moore').getAttribute('aria-pressed'),'true');
   console.log('PASS B1: Brian neighbors, real electrodes, live rule changes, recipe and pure legacy restore');
 
   // Dynamics A2: real opt-in forcing for Excitable and Afterlife, never
