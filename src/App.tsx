@@ -31,6 +31,7 @@ import TerritoryDynamicsControls from './components/TerritoryDynamicsControls';
 import LatticeGasControls from './components/LatticeGasControls';
 import {validateDualColor} from './engine/dual-color';
 import {validatePrintShop} from './engine/printshop';
+import {validMargolusRule} from './engine/margolus-rules';
 import StrangeControls, { SQUARE_ONLY_ENGINES } from './components/StrangeControls';
 import {
   captureAnimation, chooseVideoMime, recommendedDimensions, CaptureCancelled
@@ -124,7 +125,8 @@ function cloneWorld(world:World):World{
     turmiteAgents:world.turmiteAgents?.map(a=>({...a})),ages:world.ages.slice(),
     neighbors:world.neighbors.slice(),events:world.events.slice(),
     traces:world.traces.slice(),previousCells:world.previousCells?.slice(),
-    olderCells:world.olderCells?.slice(),fossils:world.fossils?.slice()};
+    olderCells:world.olderCells?.slice(),fossils:world.fossils?.slice(),
+    margolusEpochs:world.margolusEpochs?.map(epoch=>({...epoch}))};
 }
 function stat(world:World):number{
   let living=0;for(let i=0;i<world.cells.length;i++)if(world.cells[i]!==0)living++;
@@ -698,6 +700,10 @@ export default function App(){
       s.cyclicReach=validatedCyclicReach(data.settings.cyclicReach,s.cyclicStates);
       s.cyclicDrive=validatedCyclicDrive(data.settings.cyclicDrive);
       s.wolframRule=Math.max(0,Math.min(255,Math.floor(s.wolframRule)||30));
+      if(!['single','alternate'].includes(s.margolusMode))throw new Error('Invalid reversible schedule mode');
+      if(!validMargolusRule(s.margolusRuleA)||!validMargolusRule(s.margolusRuleB))
+        throw new Error('Invalid reversible Margolus block rule');
+      s.margolusPeriod=Math.max(1,Math.min(120,Math.floor(Number(s.margolusPeriod))||4));
 
       for(const k of ['customBirth','customSurvive'] as const){
         if(!Array.isArray(s[k]))s[k]=k==='customBirth'?[3]:[2,3];
