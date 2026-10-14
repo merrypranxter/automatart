@@ -9,7 +9,7 @@ import type {TurmiteAgent} from './spins-turmites';
 export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus' | 'wireworld' | 'sandpile' | 'hodgepodge' | 'forestfire' | 'ising' | 'turmites' | 'hpp';
 export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'maze' | 'mazectric' | 'replicator' | 'diamoeba' | 'coral' | 'amoeba' | 'custom';
 export type PatternId = 'noise' | 'center' | 'rings' | 'stripes' | 'checker' | 'spiral' | 'web';
-export type AspectId = 'square' | 'portrait' | 'landscape';
+export type AspectId = 'square' | 'portrait' | 'landscape' | 'portrait34' | 'landscape43' | 'portrait45' | 'landscape54' | 'portrait23' | 'landscape32';
 export type ColorBy = 'state' | 'age' | 'neighbors' | 'events' | 'radius' | 'x' | 'activity' | 'entropy' | 'boundaries' | 'diversity' | 'flow' | 'birthFlash' | 'deathHeat' | 'generationWave' | 'angular' | 'diagonal' | 'gradient';
 export type SkinId = 'pixels' | 'soft' | 'glow' | 'contours' | 'mercury' | 'relief' | 'glass';
 export type NeighborShape = 'moore' | 'vonNeumann' | 'square2' | 'diamond2' | 'directional' | 'custom';
@@ -221,8 +221,8 @@ export function worldDimensions(s:SimSettings):[number,number] {
   // even offset rows so the periodic rhombille graph remains reciprocal.
   const w=s.lattice==='rhombille'?Math.ceil(s.cellCount/3)*3:s.cellCount;
   const scale=s.lattice==='rhombille'?RHOMBILLE_VERTICAL_SCALE:1;
-  let h=s.aspect==='portrait'?Math.round(w*16/9*scale):
-    s.aspect==='landscape'?Math.round(w*9/16*scale):Math.round(w*scale);
+  const aspectRatio:Record<AspectId,number>={square:1,portrait:16/9,landscape:9/16,portrait34:4/3,landscape43:3/4,portrait45:5/4,landscape54:4/5,portrait23:3/2,landscape32:2/3};
+  let h=Math.round(w*aspectRatio[s.aspect]*scale);
   // Both offset-row hex wrap and staggered triangle geometry require even
   // height for undirected toroidal edge adjacency. Margolus requires even
   // dimensions too; cellCount is already even in the UI.
