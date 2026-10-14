@@ -3,6 +3,8 @@ import {worldDimensions} from './types';
 import {createWorld} from './sim';
 import {validTurmiteRule} from './spins-turmites';
 import type {TurmiteAgent} from './spins-turmites';
+import type {MargolusEpoch} from './margolus-rules';
+import {validMargolusEpochs} from './margolus-rules';
 
 interface PackedWorld {
   kind:'automatart-world-v1';
@@ -12,6 +14,7 @@ interface PackedWorld {
   height:number;
   generation:number;
   turmiteAgents?:TurmiteAgent[];
+  margolusEpochs?:MargolusEpoch[];
   arrays:Record<'cells'|'ages'|'neighbors'|'events'|'traces'|'previousCells'|'olderCells'|'fossils',string> & {grains?:string;hppWalls?:string};
 }
 function pack(data:Uint8Array):string{
@@ -33,6 +36,7 @@ export function snapshotWorld(world:World):PackedWorld{
     kind:'automatart-world-v1',engine:world.engine,lattice:world.lattice,
     width:world.width,height:world.height,generation:world.generation,
     ...(world.engine==='turmites'?{turmiteAgents:world.turmiteAgents?.map(a=>({...a}))}:{}),
+    ...(world.engine==='margolus'?{margolusEpochs:world.margolusEpochs?.map(e=>({...e}))}:{}),
     arrays:{
       cells:pack(world.cells),ages:pack(bytes(world.ages)),
       neighbors:pack(world.neighbors),events:pack(world.events),
@@ -68,7 +72,12 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
     previousCells:get('previousCells',n),olderCells:get('olderCells',n),
     fossils:getF32('fossils'),
     grains:settings.engine==='sandpile'?new Uint32Array(get('grains',n*4).buffer):undefined,
-    hppWalls:settings.engine==='hpp'?get('hppWalls',n):undefined};
+    hppWalls:settings.engine==='hpp'?get('hppWalls',n):undefined,
+    margolusEpochs:settings.engine==='margolus'?validMargolusEpochs(s.margolusEpochs,s.generation!):undefined};
+  if(settings.engine==='margolus'){
+    for(const state of world.cells)if(state>1)
+      throw new Error('Reversible Margolus snapshot must contain binary cells');
+  }
   if(settings.engine==='hpp'){
     for(let i=0;i<n;i++)if(world.cells[i]>15||world.hppWalls![i]>1||
       (world.hppWalls![i]!==0&&world.cells[i]!==0))
