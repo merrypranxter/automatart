@@ -25,6 +25,8 @@ import DualColorControls from './components/DualColorControls';
 import CircuitControls from './components/CircuitControls';
 import WireDynamicsControls from './components/WireDynamicsControls';
 import WireLogicControls,{type WireLogicMonitor} from './components/WireLogicControls';
+import WireTimingControls,{type WireTimingMonitor} from './components/WireTimingControls';
+import {stampWireTiming,type WireTimingOptions} from './engine/wire-timing';
 import {stampWireLogic,type WireLogicOptions} from './engine/wire-logic';
 import {stampWireCircuit,wireStampFootprint,type WireStampOptions} from './engine/wire-circuit-lab';
 import ReactionControls from './components/ReactionControls';
@@ -165,7 +167,8 @@ export default function App(){
   const [wireStamp,setWireStamp]=useState<WireStampOptions>({template:'loop',radius:9,rotation:0,excite:true,clear:true});
   const [wireStampArmed,setWireStampArmed]=useState(false);
   const [wireLogicMonitor,setWireLogicMonitor]=useState<WireLogicMonitor|null>(null);
-  useEffect(()=>{setWireStampArmed(false);setWireLogicMonitor(null);},[settings.engine]);
+  const [wireTimingMonitor,setWireTimingMonitor]=useState<WireTimingMonitor|null>(null);
+  useEffect(()=>{setWireStampArmed(false);setWireLogicMonitor(null);setWireTimingMonitor(null);},[settings.engine]);
   const [inspectedCell,setInspectedCell]=useState<[number,number]|null>(null);
   const [mutationStrength,setMutationStrength]=useState<MutationStrength>('weird');
   const [mutationLocks,setMutationLocks]=useState<MutationLocks>({...INITIAL_MUTATION_LOCKS});
@@ -575,6 +578,25 @@ export default function App(){
     draw();
     drawStampPreview(point);
   }
+  function installWireTiming(opts:WireTimingOptions){
+    if(settings.engine!=='wireworld'||recordingRef.current)return;
+    if(settings.wireDrive!=='off'||settings.wireExciteMin!==1||settings.wireExciteMax!==2){
+      setMessage('Certified timing routes require original 1–2 Wireworld and PURE/OFF electrodes.');
+      return;
+    }
+    cancelBatch();setPlaying(false);setWireStampArmed(false);
+    const anchor:[number,number]=[Math.floor(worldRef.current.width/2),Math.floor(worldRef.current.height/2)];
+    try{
+      const result=stampWireTiming(worldRef.current,anchor,opts);
+      setWireTimingMonitor({kind:opts.kind,radius:opts.radius,offset:opts.offset,
+        a:opts.a,b:opts.b,outputs:result.outputs,inputs:result.inputs,
+        installedAt:worldRef.current.generation});
+      setWireLogicMonitor(null);
+      setInspectedCell(anchor);setPopulation(stat(worldRef.current));
+      setMessage('Installed real '+opts.kind+' routing · '+result.touched.length+' local cell updates.');
+      draw();
+    }catch(error){setMessage('Route placement rejected: '+(error instanceof Error?error.message:String(error)));}
+  }
   function installVerifiedLogic(opts:WireLogicOptions){
     if(settings.engine!=='wireworld'||recordingRef.current)return;
     cancelBatch();setPlaying(false);setWireStampArmed(false);
@@ -582,6 +604,7 @@ export default function App(){
     try{
       const result=stampWireLogic(worldRef.current,anchor,opts);
       setWireLogicMonitor({kind:opts.kind,ports:result.ports,installedAt:worldRef.current.generation});
+      setWireTimingMonitor(null);
       setInspectedCell(anchor);setPopulation(stat(worldRef.current));
       setMessage('Installed verified '+opts.kind.toUpperCase()+' · '+result.touched.length+' true lattice-cell updates.');
       draw();
@@ -1158,6 +1181,8 @@ export default function App(){
           {settings.engine==='wireworld'&&<WireLogicControls world={worldRef.current} settings={settings}
             inspectedCell={inspectedCell} monitor={wireLogicMonitor}
             onInstall={installVerifiedLogic}/>}
+          {settings.engine==='wireworld'&&<WireTimingControls world={worldRef.current}
+            settings={settings} monitor={wireTimingMonitor} onInstall={installWireTiming}/>}
           {(settings.engine==='hodgepodge'||settings.engine==='forestfire')&&
             <ReactionControls settings={settings} setSettings={setSettings}/>}
           {settings.engine==='hpp'&&<LatticeGasControls settings={settings}
