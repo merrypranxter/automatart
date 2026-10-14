@@ -1,4 +1,5 @@
 import { GIFEncoder } from 'gifenc';
+import {FixedWebMMuxer,offlineVideoCodec} from './fixed-webm.js';
 import { indexGifFrame } from './gif-palette';
 import { createWorld, stepWorld } from './sim';
 import { renderWorld } from './render';
@@ -269,6 +270,63 @@ export async function captureAnimation(
       }
     }
 
+    // Preferred video path: render each discrete CA generation by FRAME INDEX,
+    // not wall time. The encoder can take longer than playback without a hitch
+    // in the resulting video's timestamps or skipping simulated states.
+    const bitrate=opt.resolution>=2160?20_000_000:
+      opt.resolution>=1080?10_000_000:opt.resolution>=720?5_000_000:2_500_000;
+    const fixed=await offlineVideoCodec(width,height,opt.fps,bitrate);
+    if(fixed){
+      const Encoder=(globalThis as any).VideoEncoder;
+      const Frame=(globalThis as any).VideoFrame;
+      const mux=new FixedWebMMuxer(width,height,opt.fps,fixed.name);
+      let encoderError:Error|null=null;
+      const encoder=new Encoder({
+        output:(chunk:any)=>{try{mux.addChunk(chunk);}catch(e){encoderError=e as Error;}},
+        error:(e:Error)=>{encoderError=e;}
+      });
+      encoder.configure(fixed.config);
+      try{
+        for(let i=0;i<totalFrames;i++){
+          notCancelled(signal);
+          if(encoderError)throw encoderError;
+          renderWorld(canvas,cursor.current,a,width,height);
+          const frame=new Frame(canvas,{
+            timestamp:Math.round(i*1e6/opt.fps),
+            duration:Math.round(1e6/opt.fps)
+          });
+          encoder.encode(frame,{keyFrame:i===0||i%Math.max(1,Math.round(opt.fps*2))===0});
+          frame.close();
+          frames++;
+          const transition=cursor.advance();
+          if(transition.changed)distinctFrames++;
+          if(opt.mode==='settled'&&transition.settled){ended='settled';break;}
+          if(i===totalFrames-1&&opt.mode==='settled')ended='limit';
+          while(encoder.encodeQueueSize>3){
+            notCancelled(signal);
+            if(encoderError)throw encoderError;
+            await delay(15);
+          }
+          if(i%Math.max(1,Math.floor(opt.fps/2))===0||i===totalFrames-1)
+            update('Frame-perfect WebM: drawing actual CA states',frames);
+          await nextPaint();
+        }
+        notCancelled(signal);
+        await encoder.flush();
+        if(encoderError)throw encoderError;
+        notCancelled(signal);
+        const blob=mux.finish(frames);
+        update('Frame-perfect WebM ready',frames);
+        return {blob,extension:'webm',frames,
+          distinctFrames,elapsed:frames/opt.fps,ended};
+      }finally{
+        if(encoder.state!=='closed')encoder.close();
+      }
+    }
+
+    // Fallback for browsers without WebCodecs VP8/VP9. MediaRecorder captures
+    // wall clock and can miss frames when simulation/rendering is slow.
+    update('Offline WebM unsupported; using real-time recorder (may stutter)',0);
     const mime=chooseVideoMime();
     if(!mime||typeof canvas.captureStream!=='function')
       throw new Error('This browser cannot record canvas video. GIF export is available instead.');
