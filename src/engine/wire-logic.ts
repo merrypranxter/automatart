@@ -49,6 +49,7 @@ export function wireLogicLayout(opts:WireLogicOptions):WireLogicLayout{
   const key=x+','+y;if(seen.has(key))return false;seen.add(key);return true;
  });
  const heads:LogicPoint[]=[],tails:LogicPoint[]=[];
+ const outputPoints:LogicPoint[]=kind==='or'?[[r,0]]:[[r,0],[0,-r]];
  if(a){heads.push([-r+1,0]);tails.push([-r,0]);}
  if(kind==='or'&&b){heads.push([0,r-1]);tails.push([0,r]);}
  return {
@@ -58,7 +59,7 @@ export function wireLogicLayout(opts:WireLogicOptions):WireLogicLayout{
   ports:{
    inputA:rot([-r+1,0],k),
    ...(kind==='or'?{inputB:rot([0,r-1],k)}:{}),
-   outputs:(kind==='or'?[[r,0]]:[[r,0],[0,-r]]).map(p=>rot(p as LogicPoint,k))
+   outputs:outputPoints.map(p=>rot(p,k))
   }
  };
 }
@@ -89,7 +90,7 @@ export function runWireLogicBench(kind:WireLogicKind,radius:number):LogicBench{
   const layout=wireLogicLayout({kind,radius,rotation:0,a,b});
   const dim=2*radius+18,center=Math.floor(dim/2);
   const index=([x,y]:LogicPoint)=>(center+y)*dim+center+x;
-  let cells=new Uint8Array(dim*dim);
+  let cells:Uint8Array=new Uint8Array(dim*dim);
   for(const pt of layout.conductors)cells[index(pt)]=1;
   for(const pt of layout.heads)cells[index(pt)]=2;
   for(const pt of layout.tails)cells[index(pt)]=3;
