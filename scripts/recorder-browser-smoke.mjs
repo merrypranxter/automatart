@@ -507,7 +507,7 @@ try{
   await page.locator('#logic-input-b').uncheck();
   await page.locator('#logic-install').click();
   await page.locator('#wire-scope-scan').click();
-  assert.match(await page.locator('#wire-scope-result').innerText(),/HEAD on tick\\(s\\) 13/,
+  assert.match(await page.locator('#wire-scope-result').innerText(),/HEAD on tick\(s\) 13/,
     'NAND A-only must create exactly one genuine electron HEAD at tick 13');
   await page.locator('#logic-device').selectOption('not');
   assert.equal(await page.locator('.wire-logic-lab .wire-logic-truth-table tbody tr').count(),2);
@@ -515,7 +515,7 @@ try{
   await page.locator('#logic-input-a').uncheck();
   await page.locator('#logic-install').click();
   await page.locator('#wire-scope-scan').click();
-  assert.match(await page.locator('#wire-scope-result').innerText(),/HEAD on tick\\(s\\) 13/,
+  assert.match(await page.locator('#wire-scope-result').innerText(),/HEAD on tick\(s\) 13/,
     'NOT input 0 emits exactly one genuine HEAD with fixed two-head bias');
   const [b7Download]=await Promise.all([
    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
