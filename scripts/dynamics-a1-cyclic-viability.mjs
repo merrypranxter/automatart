@@ -8,7 +8,8 @@ import {unlink} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 const tmp=[['src/engine/sim.ts','scripts/.cyclic-viability-sim.mjs'],
- ['src/engine/types.ts','scripts/.cyclic-viability-types.mjs']];
+ ['src/engine/types.ts','scripts/.cyclic-viability-types.mjs'],
+ ['src/engine/cyclic-viability-presets.ts','scripts/.cyclic-viability-presets.mjs']];
 const conf=[
  [8,1,1,.36,0],[8,2,1,.36,0],[8,2,2,.36,0],
  [8,1,2,.36,0],[8,1,3,.36,0],[8,2,3,.36,0],[8,3,3,.36,0],
@@ -30,6 +31,7 @@ try{
   bundle:true,platform:'node',format:'esm',target:'node22'})));
  const {createWorld,stepWorld}=await import(pathToFileURL(resolve(tmp[0][1])).href);
  const {INITIAL_SETTINGS}=await import(pathToFileURL(resolve(tmp[1][1])).href);
+ const {CYCLIC_STARTER_PRESETS}=await import(pathToFileURL(resolve(tmp[2][1])).href);
  const results=[];
  for(const [states,threshold,reach,density,drive] of conf){
   const samples=[];
@@ -84,8 +86,18 @@ try{
    minBoundary:Math.min(...samples.map(x=>x.boundary)),
    avgBoundary:samples.reduce((n,x)=>n+x.boundary,0)/samples.length,
    minimumPhases:Math.min(...samples.map(x=>x.present)),
-   lateActiveSteps:Math.min(...samples.map(x=>x.activeLate))
+   lateActiveSteps:Math.min(...samples.map(x=>x.activeLate)),
+   samples
   });
+ }
+ // CI explicitly protects all five named, calibrated starter regimes.
+ for(const preset of CYCLIC_STARTER_PRESETS){
+  const score=results.find(r=>r.states===preset.states&&
+   r.threshold===preset.threshold&&r.reach===preset.reach&&
+   r.density===preset.density&&r.drive===preset.drive);
+  if(!score||score.alive!==4||score.minStructural+1e-6<preset.measuredEdgeChange)
+   throw new Error('Cyclic starter world '+preset.id+
+    ' lost measured structural viability across widths/seeds');
  }
  results.sort((a,b)=>b.alive-a.alive||b.minStructural-a.minStructural||b.minBoundary-a.minBoundary);
  console.log('Cyclic A1 viability sweep. Real cell changes and neighboring phase boundaries after 120 generations.');
