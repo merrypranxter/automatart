@@ -69,12 +69,18 @@ try{
       starts:window.__recorderStarts,uniqueFrames:new Set(hashes).size,hashes};
   });
   assert(!result.error,result.error||'Video issue');
-  assert.equal(result.starts.length,1,'Exactly one MediaRecorder started');
-  assert.deepEqual(result.starts[0],[],'Never start recorder with periodic 1-second timeslice');
+  // Modern Chromium prefers WebCodecs with exact timestamps and therefore starts
+  // ZERO MediaRecorders. A browser without an offline VP8/VP9 encoder may start
+  // ONE real-time MediaRecorder fallback, never with a periodic timeslice.
+  assert(result.starts.length===0||result.starts.length===1,
+    'Expected deterministic WebCodecs or one native recorder');
+  if(result.starts.length===1)assert.deepEqual(result.starts[0],[],
+    'Fallback MediaRecorder must not use 1-second flushes');
+  else assert(result.type.includes('webm'),'Offline path emits WebM, not fake MP4');
   assert(result.duration>=2.3&&result.duration<8,'Playable video has a believable 3-second duration: '+result.duration);
   assert(result.bytes>2000,'Encoded video must not be empty');
   assert(result.uniqueFrames>=4,'Video should contain many independently evolving frames: '+JSON.stringify(result));
-  console.log('PASS: actual browser video, no periodic flush, '+result.duration.toFixed(2)+
+  console.log('PASS: actual browser video, '+(result.starts.length===0?'offline WebCodecs fixed frames':'native recorder fallback')+', '+result.duration.toFixed(2)+
     ' sec, '+result.uniqueFrames+' distinct decoded temporal samples, '+result.bytes+' bytes');
 }finally{
   await browser?.close();
