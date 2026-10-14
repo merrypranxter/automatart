@@ -55,6 +55,8 @@ jobs:
         run: node scripts/c4-hpp-smoke.mjs
       - name: Verify D1a true rhombille tile edge graph, tap projection and CA compatibility
         run: node scripts/d1a-rhombille-smoke.mjs
+      - name: Profile Cyclic A1 structural viability across multiple widths and seeds
+        run: node scripts/dynamics-a1-cyclic-viability.mjs
       - name: Verify Dynamics P1 classic cyclic rule, chase sensitivity and seeded activity
         run: node scripts/dynamics-cyclic-smoke.mjs
       - name: Verify A2 dual-source mathematical color mixing and exports
