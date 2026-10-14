@@ -371,7 +371,7 @@ try{
     'B4 real Wireworld logic bench must be available');
   assert.match(await page.locator('#logic-certification').innerText(),
     /ALL CASES VERIFIED/,'Truth table certifies four real OR cases');
-  assert.equal(await page.locator('.wire-logic-truth-table tbody tr').count(),4);
+  assert.equal(await page.locator('.wire-logic-lab .wire-logic-truth-table tbody tr').count(),4);
   await page.locator('#logic-radius').fill('12');
   assert.match(await page.locator('#logic-certification').innerText(),/ALL CASES VERIFIED/);
   await page.locator('#logic-rotation').selectOption('3');
@@ -396,7 +396,7 @@ try{
   });
   await page.waitForFunction(()=>document.querySelector('#engine')?.value==='wireworld');
   await page.locator('#logic-device').selectOption('fanout');
-  assert.equal(await page.locator('.wire-logic-truth-table tbody tr').count(),2);
+  assert.equal(await page.locator('.wire-logic-lab .wire-logic-truth-table tbody tr').count(),2);
   assert.match(await page.locator('#logic-certification').innerText(),/ALL CASES VERIFIED/);
   await page.locator('#logic-radius').fill('7');
   await page.locator('#logic-input-a').check();
@@ -405,7 +405,7 @@ try{
     'Fanout monitors two actually simulated remote output cells');
   // B5: real XOR four-case truth table plus live-world future scope.
   await page.locator('#logic-device').selectOption('xor');
-  assert.equal(await page.locator('.wire-logic-truth-table tbody tr').count(),4);
+  assert.equal(await page.locator('.wire-logic-lab .wire-logic-truth-table tbody tr').count(),4);
   assert.match(await page.locator('#logic-certification').innerText(),/ALL CASES VERIFIED/,
    'XOR cannot appear as a certified device unless real 00/01/10/11 physics passes');
   await page.locator('#logic-input-b').uncheck();
