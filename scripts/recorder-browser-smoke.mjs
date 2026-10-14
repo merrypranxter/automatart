@@ -104,6 +104,48 @@ try{
   const validated=JSON.parse(await readFile(await clamped.path(),'utf8'));
   assert.equal(validated.settings.cyclicReach,6,'Saved rule exactly matches the visible maximum');
   console.log('PASS: Dynamics P1 live knobs, seeded drive, exact JSON roundtrip and classic migration');
+  // Dynamics A1: labels and the reset itself must be unmistakable.
+  await openTab(page,'rules');
+  assert(await page.locator('#cyclic-world-filament-engine').isVisible(),
+    'Calibrated Cyclic worlds accessible from studio RULES');
+  await page.locator('#cyclic-world-slow-spores').click();
+  await page.waitForFunction(()=>document.querySelector('#states')?.value==='12');
+  assert.equal(await page.locator('#density').inputValue(),'20');
+  assert.equal(await page.locator('#threshold').inputValue(),'2');
+  assert.equal(await page.locator('#cyclic-reach').inputValue(),'1');
+  assert.equal(await page.locator('#cyclic-drive').inputValue(),'0');
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),0,
+   'Structural world presets deliberately restart the simulation');
+  await page.locator('#cyclic-world-filament-engine').click();
+  await page.waitForFunction(()=>document.querySelector('#states')?.value==='16');
+  assert.equal(await page.locator('#density').inputValue(),'36');
+  assert.equal(await page.locator('#threshold').inputValue(),'2');
+  await page.getByRole('button',{name:'STEP +1'}).click();
+  await page.waitForFunction(()=>Number((document.querySelector('.readouts b')?.textContent||'0').replaceAll(',',''))===1);
+  assert(await page.getByText('NEIGHBOR RELATIONSHIPS CHANGED').isVisible(),
+   'Real structural motion metric is visible, distinct from changes in cell phases');
+  await page.locator('#cyclic-world-filament-engine').click();
+  await page.waitForFunction(()=>Number((document.querySelector('.readouts b')?.textContent||'0').replaceAll(',',''))===0);
+  await page.locator('#cyclic-world-seeded-bloom').click();
+  await page.waitForFunction(()=>document.querySelector('#states')?.value==='12');
+  assert.equal(await page.locator('#cyclic-drive').inputValue(),'5');
+  const [a1File]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const a1Recipe=JSON.parse(await readFile(await a1File.path(),'utf8'));
+  assert.equal(a1Recipe.settings.cyclicStates,12);
+  assert.equal(a1Recipe.settings.cyclicThreshold,2);
+  assert.equal(a1Recipe.settings.cyclicDrive,.0005);
+  assert.equal(a1Recipe.settings.pattern,'noise');
+  await page.locator('#engine').selectOption('life');
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'a1-cyclic-tested-profile.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(a1Recipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='cyclic');
+  assert.equal(await page.locator('#cyclic-drive').inputValue(),'5');
+  await openTab(page,'world');
+  console.log('PASS: A1 calibrated Cyclic pure/driven new worlds, explicit reset, structure meter and recipe roundtrip');
   // Funhouse F1 regression: precise stepping, authentic B/S roulette, and two
   // unmistakably different random color buttons.
   await page.waitForTimeout(100);
