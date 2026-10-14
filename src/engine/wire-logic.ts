@@ -126,8 +126,9 @@ export interface WireLogicStamp {
  ports:WireLogicPorts;
 }
 export function stampWireLogic(world:World,anchor:LogicPoint,opts:WireLogicOptions):WireLogicStamp{
- const ids=wireLogicFootprint(world,anchor,opts),layout=wireLogicLayout(opts);
- const w=world.width,h=world.height,owned=new Set(ids);
+ wireLogicFootprint(world,anchor,opts);
+ const layout=wireLogicLayout(opts);
+ const w=world.width,h=world.height;
  const xx=layout.conductors.map(p=>p[0]),yy=layout.conductors.map(p=>p[1]);
  const x0=Math.max(0,anchor[0]+Math.min(...xx)-2),x1=Math.min(w-1,anchor[0]+Math.max(...xx)+2);
  const y0=Math.max(0,anchor[1]+Math.min(...yy)-2),y1=Math.min(h-1,anchor[1]+Math.max(...yy)+2);
