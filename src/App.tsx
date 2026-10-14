@@ -23,6 +23,8 @@ import ColorSignalControls from './components/ColorSignalControls';
 import {NEW_COLOR_SIGNALS,isNewColorSignal,signalOptions} from './engine/color-signals';
 import DualColorControls from './components/DualColorControls';
 import CircuitControls from './components/CircuitControls';
+import WireDynamicsControls from './components/WireDynamicsControls';
+import {stampWireCircuit,wireStampFootprint,type WireStampOptions} from './engine/wire-circuit-lab';
 import ReactionControls from './components/ReactionControls';
 import SpinTurmiteControls from './components/SpinTurmiteControls';
 import CyclicDynamicsControls from './components/CyclicDynamicsControls';
@@ -158,6 +160,9 @@ export default function App(){
   const hoveredCellRef=useRef<[number,number]|null>(null);
   const strokeLastCellRef=useRef<string|null>(null);
   const [paintSpecies,setPaintSpecies]=useState(1);
+  const [wireStamp,setWireStamp]=useState<WireStampOptions>({template:'loop',radius:9,rotation:0,excite:true,clear:true});
+  const [wireStampArmed,setWireStampArmed]=useState(false);
+  useEffect(()=>{setWireStampArmed(false);},[settings.engine]);
   const [inspectedCell,setInspectedCell]=useState<[number,number]|null>(null);
   const [mutationStrength,setMutationStrength]=useState<MutationStrength>('weird');
   const [mutationLocks,setMutationLocks]=useState<MutationLocks>({...INITIAL_MUTATION_LOCKS});
@@ -398,7 +403,8 @@ export default function App(){
     const world=worldRef.current;
     const seed= (settings.seed ^ Math.imul(world.generation+1,0x9e3779b1) ^
       Math.imul(strokeCounterRef.current+1,0x85ebca6b) ^ (anchor[0]<<16)^anchor[1])>>>0;
-    const affected=alienFootprint(world,anchor,alienBrush,seed);
+    const affected=settings.engine==='wireworld'&&wireStampArmed?
+      wireStampFootprint(world,anchor,wireStamp):alienFootprint(world,anchor,alienBrush,seed);
     const shape=world.lattice??'square';
     const [ex,ey]=geometryExtent(shape,world.width,world.height);
     const sx=overlay.width/ex,sy=overlay.height/ey;
@@ -416,7 +422,7 @@ export default function App(){
     }
   }
   useEffect(()=>{drawStampPreview(hoveredCellRef.current);},
-    [alienBrush,settings.lattice,settings.cellCount,settings.aspect,settings.engine,viewerFullscreen]);
+    [alienBrush,settings.lattice,settings.cellCount,settings.aspect,settings.engine,viewerFullscreen,wireStampArmed,wireStamp]);
   useEffect(()=>{
     setAlienBrush(prev=>validateAlienBrush(prev,settings));
   },[settings.engine,settings.lattice,settings.lifeRule,settings.neighborShape,settings.speciesCount]);
@@ -566,8 +572,25 @@ export default function App(){
     draw();
     drawStampPreview(point);
   }
+  function placeWireCircuit(anchor:[number,number]){
+    if(recordingRef.current||settings.engine!=='wireworld')return;
+    cancelBatch();setPlaying(false);
+    try{
+      const touched=stampWireCircuit(worldRef.current,anchor,wireStamp);
+      setInspectedCell(anchor);setGeneration(worldRef.current.generation);
+      setPopulation(stat(worldRef.current));
+      setMessage('Placed '+wireStamp.template+' · '+touched.length+' true cell updates. Circuit saved with recipe.');
+      draw();drawStampPreview(null);
+    }catch(error){setMessage('Circuit placement failed: '+(error instanceof Error?error.message:String(error)));}
+  }
   function onPointerDown(e:PointerEvent<HTMLCanvasElement>){
     if(recordingRef.current)return;
+    if(settings.engine==='wireworld'&&wireStampArmed){
+      const point=locatePointer(e);
+      setWireStampArmed(false);
+      if(point)placeWireCircuit(point);
+      return;
+    }
     e.currentTarget.setPointerCapture(e.pointerId);
     strokeLastCellRef.current=null;
     plantAt(e);
@@ -575,7 +598,7 @@ export default function App(){
   function onPointerMove(e:PointerEvent<HTMLCanvasElement>){
     const point=locatePointer(e);
     if(!point){drawStampPreview(null);return;}
-    if((e.buttons!==0||e.pointerType==='touch')&&alienBrush.stamp==='brush'){
+    if(!wireStampArmed&&(e.buttons!==0||e.pointerType==='touch')&&alienBrush.stamp==='brush'){
       plantAt(e);
     }else drawStampPreview(point);
   }
@@ -1112,7 +1135,11 @@ export default function App(){
           </div>}
           {(settings.engine==='wireworld'||settings.engine==='sandpile')&&
             <CircuitControls settings={settings} setSettings={setSettings}
-              grains={worldRef.current.grains} inspectedCell={inspectedCell} width={worldRef.current.width}/>}
+              grains={worldRef.current.grains} inspectedCell={inspectedCell} width={worldRef.current.width}/>}}
+          {settings.engine==='wireworld'&&<WireDynamicsControls settings={settings} setSettings={setSettings}
+            world={worldRef.current} stamp={wireStamp} setStamp={setWireStamp}
+            stampArmed={wireStampArmed} setStampArmed={setWireStampArmed}
+            onCenter={()=>placeWireCircuit([Math.floor(worldRef.current.width/2),Math.floor(worldRef.current.height/2)])}/>}
           {(settings.engine==='hodgepodge'||settings.engine==='forestfire')&&
             <ReactionControls settings={settings} setSettings={setSettings}/>}
           {settings.engine==='hpp'&&<LatticeGasControls settings={settings}
