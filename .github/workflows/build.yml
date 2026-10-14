@@ -69,6 +69,8 @@ jobs:
         run: node scripts/dynamics-b2-reversible-smoke.mjs
       - name: Verify Dynamics B1 canonical Brian's Brain, electrodes, recording and recipe replay
         run: node scripts/dynamics-b1-brain-smoke.mjs
+      - name: Verify B3 canonical Wireworld circuits, real electrical sources, JSON replay and recording
+        run: node scripts/dynamics-b3-wire-smoke.mjs
       - name: Verify A2 dual-source mathematical color mixing and exports
         run: node scripts/a2-dual-color-smoke.mjs
       - name: Verify Print Shop effects, compositing and recipe migration

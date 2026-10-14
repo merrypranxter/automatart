@@ -113,11 +113,13 @@ export function createCaptureCursor(source:World,s:SimSettings,fps:number,stepsP
       // checkerboard sweeps happened not to flip a single spin.
       const thermalFuture=s.engine==='ising'&&s.isingTemperature>0;
       const cyclicFuture=s.engine==='cyclic'&&(s.cyclicDrive??0)>0;
-      const brainFuture=s.engine==='brians'&&
+      const wireFuture=s.engine==='wireworld'&&
+        (s.wireDrive==='clock'||s.wireDrive==='sparks'&&s.wireSparkRate>0)&&current.cells.includes(1);
+      const brainFuture=s.engine==='brians'&& 
         (s.brainStimulus==='clock'||s.brainStimulus==='sparks'&&(s.brainSparkRate??0)>0);
       const waveFuture=(s.engine==='generations'||s.engine==='excitable')&& 
         (s.waveStimulus==='clock'||s.waveStimulus==='sparks'&&(s.waveSparkRate??0)>0);
-      return {settled:unchanged>=3&&!randomFuture&&!thermalFuture&&!cyclicFuture&&!waveFuture&&!brainFuture,changed};
+      return {settled:unchanged>=3&&!randomFuture&&!thermalFuture&&!cyclicFuture&&!waveFuture&&!brainFuture&&!wireFuture,changed};
     }
   };
   return cursor;

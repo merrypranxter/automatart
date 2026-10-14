@@ -81,6 +81,13 @@ export interface SimSettings {
   speciesSurvive: number;
   speciesAttackBias: number;
   wireBrush:1|2|3;
+  /** B3 Wireworld canonical range 1..2 and optional genuine-state external driver. */
+  wireExciteMin:number;
+  wireExciteMax:number;
+  wireDrive:'off'|'clock'|'sparks';
+  wirePeriod:number;
+  wireSource:'center'|'quad';
+  wireSparkRate:number;
   sandFeed:number;
   sandRounds:number;
   sandSource:'center'|'random';
@@ -200,7 +207,8 @@ export const INITIAL_SETTINGS: SimSettings = {
   margolusMode:'single',margolusRuleA:'cw',margolusRuleB:'ccw',margolusPeriod:4,
   largeRadius:2,largeBirthMin:6,largeBirthMax:9,largeSurviveMin:5,largeSurviveMax:12,
   speciesCount:3,speciesBirth:2,speciesSurvive:1,speciesAttackBias:1,
-  wireBrush:1,sandFeed:6,sandRounds:3,sandSource:'center',sandBrush:8,
+  wireBrush:1,wireExciteMin:1,wireExciteMax:2,wireDrive:'off',
+  wirePeriod:12,wireSource:'center',wireSparkRate:.0002,sandFeed:6,sandRounds:3,sandSource:'center',sandBrush:8,
   hodgeStates:48,hodgeK1:2,hodgeK2:3,hodgeGrowth:12,hodgeBrush:28,
   forestGrowth:0.012,forestLightning:0.0005,forestBrush:2,
   isingTemperature:2.25,isingCoupling:1,isingField:0,isingSweeps:1,isingBrush:1,

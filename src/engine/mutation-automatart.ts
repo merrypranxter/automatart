@@ -165,6 +165,11 @@ export function mutateAutomatart(
         break;
       case 'wireworld':
         offer('Paint circuit material',()=>{s.wireBrush=choose(s.wireBrush,[1,2,3] as const)});
+        offer('Wire excitation minimum',()=>{s.wireExciteMin=intStep(s.wireExciteMin,1,s.wireExciteMax,1)});
+        offer('Wire excitation maximum',()=>{s.wireExciteMax=intStep(s.wireExciteMax,s.wireExciteMin,8,1)});
+        offer('Conductor-drive mode',()=>{s.wireDrive=choose(s.wireDrive,['off','clock','sparks'] as const)});
+        offer('Wire electrode period',()=>{s.wirePeriod=intStep(s.wirePeriod,1,120,5)});
+        offer('Wire seeded sparks',()=>{s.wireSparkRate=floatStep(s.wireSparkRate,.0005,0,.01,5)});
         break;
       case 'sandpile':
         offer('Avalanche feed',()=>{s.sandFeed=intStep(s.sandFeed,0,64,8)});

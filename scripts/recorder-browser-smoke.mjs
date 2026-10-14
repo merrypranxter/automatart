@@ -303,6 +303,66 @@ try{
   await openTab(page,'world');
   console.log('PASS B2: reversible block presets, real backward stepping, live edits and historical recipe compatibility');
 
+  // B3: actual conductor template placement, live mathematics, and JSON.
+  await page.locator('#engine').selectOption('wireworld');
+  await openTab(page,'rules');
+  assert(await page.locator('#wire-template').isVisible(),'B3 circuit generator is mounted');
+  assert.equal(await page.locator('#wire-drive-off').getAttribute('aria-pressed'),'true');
+  await page.locator('#wire-template').selectOption('loop');
+  await page.locator('#wire-template-radius').fill('8');
+  await page.locator('#wire-template-rotation').selectOption('1');
+  const wireStart=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  await page.locator('#wire-stamp-center').click();
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),wireStart,
+   'True circuit stamping does not restart the universe');
+  assert(await page.getByText('Placed loop').isVisible(),'B3 circuit changes source world cells');
+  await page.locator('#wire-rule-surge').click();
+  assert.equal(await page.locator('#wire-excite-max').inputValue(),'3');
+  await page.locator('#wire-drive-clock').click();
+  await page.locator('#wire-clock-period').fill('17');
+  await page.locator('#wire-source-quad').click();
+  const [b3File]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const b3Recipe=JSON.parse(await readFile(await b3File.path(),'utf8'));
+  assert.equal(b3Recipe.settings.wireDrive,'clock');
+  assert.equal(b3Recipe.settings.wirePeriod,17);
+  assert.equal(b3Recipe.settings.wireSource,'quad');
+  assert.equal(b3Recipe.settings.wireExciteMax,3);
+  assert(b3Recipe.world.arrays.cells.length>200,'Real conductor artwork stored in snapshot');
+  await page.locator('#wire-rule-canonical').click();
+  await page.locator('#wire-drive-off').click();
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'b3-real-electric-circuit.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(b3Recipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#wire-clock-period')?.value==='17');
+  assert.equal(await page.locator('#wire-excite-max').inputValue(),'3');
+  const legacyWire=structuredClone(b3Recipe);
+  for(const key of ['wireExciteMin','wireExciteMax','wireDrive','wirePeriod','wireSource','wireSparkRate'])
+    delete legacyWire.settings[key];
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'b3-legacy-pure-wireworld.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(legacyWire))
+  });
+  await page.waitForFunction(()=>document.querySelector('#wire-drive-off')?.getAttribute('aria-pressed')==='true');
+  assert.equal(await page.locator('#wire-excite-max').inputValue(),'2');
+  await page.locator('#wire-template').selectOption('elbow');
+  await page.locator('#wire-stamp-arm').click();
+  assert.equal(await page.locator('#wire-stamp-arm').getAttribute('aria-pressed'),'true');
+  const wireArt=page.locator('canvas[aria-label^="Interactive cellular"]');
+  const wb=await wireArt.boundingBox();
+  await wireArt.hover({position:{x:wb.width*.5,y:wb.height*.5}});
+  assert((await page.locator('canvas.alien-brush-preview').evaluate(c=>
+    c.getContext('2d').getImageData(0,0,c.width,c.height).data.some((v,i)=>i%4===3&&v>0))),
+    'Armed circuit accurately previews canonical conductor sites');
+  await wireArt.click({position:{x:wb.width*.5,y:wb.height*.5}});
+  assert.equal(await page.locator('#wire-stamp-arm').getAttribute('aria-pressed'),'false',
+    'Stage tap stamps one true circuit then safely disarms');
+  await page.locator('#engine').selectOption('cyclic');
+  await openTab(page,'world');
+  console.log('PASS B3: live math, circuit stamps, tap-preview, source controls and pure legacy recipes');
+
   // Funhouse F1 regression: precise stepping, authentic B/S roulette, and two
   // unmistakably different random color buttons.
   await page.waitForTimeout(100);
