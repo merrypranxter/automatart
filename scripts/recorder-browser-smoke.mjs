@@ -146,6 +146,54 @@ try{
   assert.equal(await page.locator('#cyclic-drive').inputValue(),'5');
   await openTab(page,'world');
   console.log('PASS: A1 calibrated Cyclic pure/driven new worlds, explicit reset, structure meter and recipe roundtrip');
+  // Dynamics B1: physical paired electrodes, 4/8/12/24 real graph controls,
+  // alternate match rule, JSON roundtrip and legacy recipe compatibility.
+  await page.locator('#engine').selectOption('brians');
+  await openTab(page,'rules');
+  assert(await page.locator('#brain-forecast').isVisible(),
+    'Brian has a real birth forecast from canonical current cells');
+  assert.equal(await page.locator('#brain-stimulus-off').getAttribute('aria-pressed'),'true');
+  const brainGen=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  await page.locator('#brain-neighbors-square2').click();
+  await page.locator('#brain-birth-count').fill('3');
+  await page.locator('#brain-match-at-least').click();
+  await page.locator('#brain-stimulus-clock').click();
+  await page.locator('#brain-clock-period').fill('11');
+  await page.locator('#brain-source-ring').click();
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),brainGen,
+    'Live Brain parameters do not reset the universe');
+  const [brainDownload]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const brainRecipe=JSON.parse(await readFile(await brainDownload.path(),'utf8'));
+  assert.equal(brainRecipe.settings.brainBirthCount,3);
+  assert.equal(brainRecipe.settings.brainBirthMatch,'atLeast');
+  assert.equal(brainRecipe.settings.brainStimulus,'clock');
+  assert.equal(brainRecipe.settings.brainClockSource,'ring');
+  assert.equal(brainRecipe.settings.brainClockPeriod,11);
+  await page.locator('#brain-preset-classic').click();
+  assert.equal(await page.locator('#brain-stimulus-off').getAttribute('aria-pressed'),'true');
+  assert.equal(await page.locator('#brain-birth-count').inputValue(),'2');
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'b1-electric-brain.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(brainRecipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#brain-clock-period')?.value==='11');
+  assert.equal(await page.locator('#brain-match-at-least').getAttribute('aria-pressed'),'true');
+  const legacyBrain=structuredClone(brainRecipe);
+  for(const key of ['brainBirthCount','brainBirthMatch','brainStimulus',
+    'brainClockSource','brainClockPeriod','brainSparkRate'])delete legacyBrain.settings[key];
+  await page.locator('input[type=file]').last().setInputFiles({
+    name:'b1-classic-legacy.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify(legacyBrain))
+  });
+  await page.waitForFunction(()=>document.querySelector('#brain-stimulus-off')?.getAttribute('aria-pressed')==='true');
+  assert.equal(await page.locator('#brain-birth-count').inputValue(),'2');
+  await page.locator('#brain-preset-filament').click();
+  assert.equal(await page.locator('#brain-stimulus-sparks').getAttribute('aria-pressed'),'true');
+  assert.equal(await page.locator('#brain-spark-rate').inputValue(),'10');
+  console.log('PASS B1: Brian neighbors, real electrodes, live rule changes, recipe and pure legacy restore');
+
   // Dynamics A2: real opt-in forcing for Excitable and Afterlife, never
   // just a color shimmer; saved recipe reflects exact live math controls.
   await page.locator('#engine').selectOption('excitable');
