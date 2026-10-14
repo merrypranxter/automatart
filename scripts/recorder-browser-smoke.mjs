@@ -444,9 +444,48 @@ try{
    buffer:Buffer.from(JSON.stringify(b5Recipe))
   });
   await page.waitForFunction(()=>document.querySelector('#engine')?.value==='wireworld');
+  // B6: physical conductor delay lanes, measurable head timing and pure stage.
+  assert(await page.locator('#wire-route-kind').isVisible(),'B6 routing/timing instrument mounted');
+  await page.locator('#wire-route-kind').selectOption('lanes');
+  await page.locator('#wire-route-radius').fill('9');
+  await page.locator('#wire-route-offset').fill('7');
+  assert.match(await page.locator('#wire-route-certification').innerText(),/ALL ROUTE TIMINGS VERIFIED/,
+    'Physical timing bench certifies each A/B signal configuration');
+  const b6Before=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  await page.locator('#wire-route-install').click();
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),b6Before,
+    'Physical lane insertion must preserve the universe clock');
+  assert(await page.locator('#wire-route-live').isVisible(),'Actual current-world output probes present');
+  const b6Pixels=await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL());
+  await page.locator('#wire-route-measure').click();
+  const b6Trace=await page.locator('#wire-route-measurement').innerText();
+  assert.match(b6Trace,/T17/,'Lane A HEAD reaches the distant output after 17 genuine transitions');
+  assert.match(b6Trace,/T24/,'Extra seven physical wire cells delay lane B by seven real transitions');
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),b6Before);
+  assert.equal(await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL()),
+    b6Pixels,'Measuring future signals cannot repaint the source canvas');
+  await page.locator('#wire-route-kind').selectOption('train');
+  await page.locator('#wire-route-offset').fill('5');
+  assert.match(await page.locator('#wire-route-certification').innerText(),/ALL ROUTE TIMINGS VERIFIED/);
+  assert.match(await page.locator('.wire-logic-truth-table').last().innerText(),/T22/,
+    'The true two-pulse train contains a physically delayed second HEAD');
+  await page.locator('#wire-route-install').click();
+  await page.locator('#wire-route-measure').click();
+  assert.match(await page.locator('#wire-route-measurement').innerText(),/T17, T22/,
+    'A single conductor rail delivers two actual electron HEAD events');
+  const [b6Download]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const b6Saved=JSON.parse(await readFile(await b6Download.path(),'utf8'));
+  assert.equal(b6Saved.world.kind,'automatart-world-v1');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'b6-physical-timing-rail.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(b6Saved))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='wireworld');
   await page.locator('#engine').selectOption('cyclic');
   await openTab(page,'world');
-  console.log('PASS B4/B5: OR/fanout/XOR physical truth tables, live probes, exact non-destructive signal scope, saved recipe');
+  console.log('PASS B4/B5/B6: verified logic, two-lane skew, distinct timed pulses, untouched scope source and recipe');
 
   // Funhouse F1 regression: precise stepping, authentic B/S roulette, and two
   // unmistakably different random color buttons.
