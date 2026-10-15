@@ -7,6 +7,7 @@ import {isingEnergy,isingMagnetization,validTurmiteRule,turmiteTurnAt,turmiteWri
 import type {TurmiteWriteProgram,TurmiteAlchemy,TurmiteMemory} from '../engine/spins-turmites';
 export interface TurmitePlacement{agentId:number;heading:0|1|2|3}
 interface Props {settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSettings>>;
+ onMemoryChange:(patch:Partial<TurmiteMemory>)=>void;
  world:World;resetNumber:number;onReseed:()=>void;placement:TurmitePlacement|null;
  onPlacementChange:Dispatch<SetStateAction<TurmitePlacement|null>>}
 const RULES=[
@@ -22,7 +23,7 @@ const RULES=[
 const COMMANDS:Record<string,string>={R:'↻ RIGHT',L:'↺ LEFT',S:'↑ STRAIGHT',U:'↩ REVERSE'};
 const mirror=(rule:string)=>[...rule].map(t=>t==='L'?'R':t==='R'?'L':t).join('');
 export default function SpinTurmiteControls({settings:s,setSettings,world,resetNumber,
- placement,onPlacementChange,onReseed}:Props){
+ placement,onPlacementChange,onReseed,onMemoryChange}:Props){
  const [selectedAgent,setSelectedAgent]=useState(0);
  const [alchemySpecies,setAlchemySpecies]=useState(0);
  const [selectedHeading,setSelectedHeading]=useState<0|1|2|3>(0);
@@ -39,9 +40,7 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
   return {...old,turmiteAlchemy:{...oldAlchemy,species:oldAlchemy.species.map((v,i)=>
    i===alchemySpecies?{...v,...patch}:v)}};
  });
- const updateMemory=(patch:Partial<TurmiteMemory>)=>setSettings(old=>({
-  ...old,turmiteMemory:{...(old.turmiteMemory??DEFAULT_TURMITE_MEMORY),...patch}
- }));
+ const updateMemory=onMemoryChange;
  const [typed,setTyped]=useState(s.turmiteRule);
  // Recipes may replace the committed rule while the editor stays mounted.
  // Don't let a stale draft overwrite the freshly restored world.
