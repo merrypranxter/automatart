@@ -579,9 +579,56 @@ try{
    buffer:Buffer.from(JSON.stringify(b8Recipe))
   });
   await page.waitForFunction(()=>document.querySelector('#engine')?.value==='wireworld');
+  // B9: real two-stage NAND -> synchronized NOT -> AND. No Boolean shortcuts.
+  assert(await page.locator('#wire-cascade-certification').isVisible(),
+   'B9 cascade physically proven on real four-state conductor artwork');
+  assert.match(await page.locator('#wire-cascade-certification').innerText(),/ALL FOUR INPUT CASES CERTIFIED/);
+  assert.equal(await page.locator('#wire-cascade-truth tbody tr').count(),4);
+  assert.match(await page.locator('#wire-cascade-truth').innerText(),/T19/,
+   'A real two-stage AND pulse reaches the remote output after NAND + bias collision + wire travel');
+  await page.locator('#wire-rule-canonical').click();
+  await page.locator('#wire-drive-off').click();
+  await page.locator('#wire-cascade-radius').fill('9');
+  await page.locator('#wire-cascade-output-length').fill('8');
+  await page.locator('#wire-cascade-rotation').selectOption('0');
+  await page.locator('#wire-cascade-a').check();
+  await page.locator('#wire-cascade-b').check();
+  const b9Gen=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  assert(await page.locator('#wire-cascade-install').isEnabled(),
+   'The user can stamp an actually certified cascade');
+  await page.locator('#wire-cascade-install').click();
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),b9Gen,
+   'A full physical AND cascade is installed without resetting time');
+  assert(await page.locator('#wire-cascade-live').isVisible());
+  const b9Pixels=await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL());
+  await page.locator('#wire-cascade-measure').click();
+  const b9Trace=await page.locator('#wire-cascade-measurement').innerText();
+  assert.match(b9Trace,/STAGE 2.*T11/);
+  assert.match(b9Trace,/BIAS NW.*T10/);
+  assert.match(b9Trace,/FINAL AND.*T19/);
+  assert.match(b9Trace,/STAGE 1 NAND: NO HEAD/,
+   'NAND is physically suppressed for input 11');
+  assert.equal(await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL()),
+    b9Pixels,'Four-site nondestructive scope must not repaint or advance source artwork');
+  await page.locator('#wire-cascade-b').uncheck();
+  await page.locator('#wire-cascade-install').click();
+  await page.locator('#wire-cascade-measure').click();
+  const b9Off=await page.locator('#wire-cascade-measurement').innerText();
+  assert.match(b9Off,/STAGE 1 NAND: T10/);
+  assert.match(b9Off,/FINAL AND: NO HEAD/,'One asserted input must NEVER falsely activate AND');
+  const [b9File]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const b9Recipe=JSON.parse(await readFile(await b9File.path(),'utf8'));
+  assert.equal(b9Recipe.world.kind,'automatart-world-v1');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'b9-real-physical-and-cascade.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(b9Recipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='wireworld');
   await page.locator('#engine').selectOption('cyclic');
   await openTab(page,'world');
-  console.log('PASS B7/B8: true NAND/NOT/NOR/NAE signal physics, 8-case collision microscope, alternate law spectrum, and saved recipe');
+  console.log('PASS B9: true traveling NAND→NOT AND, synchronized independent biases, read-only live probes, recipe and GIF/video');
 
   // Funhouse F1 regression: precise stepping, authentic B/S roulette, and two
   // unmistakably different random color buttons.
