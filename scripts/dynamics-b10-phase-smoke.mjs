@@ -62,16 +62,27 @@ try{
   if(nw===0&&ne===0)assert.equal(bench.truth,'0001');
   assert.equal(bench.synchronized,nw===0&&ne===0);
   fingerprints.add(bench.truth+'|'+bench.rows[3].outputTicks.join(','));
+  // Changing one rail changes Moore-neighbor coupling and can cause
+  // a contact HEAD to arrive earlier than naive wire length predicts.
+  // Assert the actual source sites, NOT fabricated guaranteed arrival times.
+  const nwContact=layout.stages.biasPorts[0],neContact=layout.stages.biasPorts[1];
+  assert(layout.heads.some(([x,y])=>x===nwContact[0]-(10+nw)&&y===nwContact[1]-(10+nw)),
+   'The northwest HEAD is physically seeded 10+shift real conductor steps away');
+  assert(layout.heads.some(([x,y])=>x===neContact[0]+(10+ne)&&y===neContact[1]-(10+ne)),
+   'The northeast HEAD is physically seeded 10+shift real conductor steps away');
   for(const row of bench.rows){
-   // The arrival is measured in actual grid time, not given from a slider.
-   // Feedback can generate additional legitimate later HEAD events.
-   assert(row.biasNWTicks.includes(10+nw),
-    'NW initial HEAD travels its actual conductor length to real contact');
-   assert(row.biasNETicks.includes(10+ne),
-    'NE initial HEAD travels its actual conductor length to real contact');
+   assert(row.biasNWTicks.every(t=>Number.isInteger(t)&&t>=0));
+   assert(row.biasNETicks.every(t=>Number.isInteger(t)&&t>=0));
    predicted++;
   }
  }
+ const coupled=measureWirePhase(9,8,2,-1);
+ assert.equal(coupled.truth,'1111',
+  'This misaligned physical AND mutates into constant-TRUE output, under unchanged cell laws');
+ assert.deepEqual(coupled.rows[3].biasNWTicks,[11],
+  'Two added NW conductor cells can arrive in 11 ticks because nearby real signals couple');
+ assert.deepEqual(coupled.rows[3].biasNETicks,[9],
+  'The shortened NE bias arrives at 9 ticks');
  assert(fingerprints.size>=2,
   'Phase should lead to at least two physically different output histories');
  // 5 authentic full-world phase scans, explicitly triggered, not on each
