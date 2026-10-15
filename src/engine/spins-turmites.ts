@@ -68,13 +68,15 @@ export function isingEnergy(cells:Uint8Array,w:number,h:number,wrap:boolean,
  }
  return -coupling*bonds-field*mag;
 }
-/** Classic Langton's ant is RL: on an empty cell turn R, write state 1,
- * then on state 1 turn L, write state 0. Rule strings are clockwise R/L
- * turns indexed by the cell's current color (2..12 colors).
- * Agents are advanced in stable array order when paths collide.
+/** Classic Langton's ant is RL. T1 extends the turn alphabet while
+ * retaining every original LR trajectory:
+ * R clockwise, L counter-clockwise, S go straight, U make a U-turn.
+ * The read state chooses its command; writing increments it modulo
+ * the rule length. Each agent reads the PREVIOUS agent's real paint in
+ * stable array order. 2..24 track pigments are actual CA states.
  */
 export function validTurmiteRule(value:unknown):value is string{
- return typeof value==='string'&&/^[LR]{2,12}$/.test(value);
+ return typeof value==='string'&&/^[LRSU]{2,24}$/.test(value);
 }
 export function seedTurmites(w:number,h:number,count:number,seed:number):TurmiteAgent[]{
  if(!Number.isInteger(count)||count<1||count>12||w<2||h<2)
@@ -91,18 +93,23 @@ export function seedTurmites(w:number,h:number,count:number,seed:number):Turmite
  });
 }
 export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
- rule:string,agents:readonly TurmiteAgent[]):TurmiteResult{
- if(!validTurmiteRule(rule)||cells.length!==w*h||!agents.length||agents.length>12)
+ rule:string,agents:readonly TurmiteAgent[],steps=1):TurmiteResult{
+ if(!validTurmiteRule(rule)||cells.length!==w*h||!agents.length||agents.length>12||
+    !Number.isInteger(steps)||steps<1||steps>8)
   throw new Error('Invalid Turmite world or rule');
- const next=cells.slice(),moved:TurmiteAgent[]=[];
+ const next=cells.slice();
+ let current=agents.map(a=>({...a}));
  const vectors:readonly (readonly [number,number])[]=[[0,-1],[1,0],[0,1],[-1,0]];
- for(const a of agents){
+ for(let substep=0;substep<steps;substep++){
+ const moved:TurmiteAgent[]=[];
+ for(const a of current){
   if(!Number.isInteger(a.x)||!Number.isInteger(a.y)||a.x<0||a.x>=w||
     a.y<0||a.y>=h||!Number.isInteger(a.heading)||a.heading<0||a.heading>3)
     throw new Error('Invalid Turmite position or heading');
   const p=a.y*w+a.x,state=next[p];
   if(state>=rule.length)throw new Error('Invalid Turmite track state');
-  const direction=rule[state]==='R'?1:3;
+  const turn=rule[state];
+  const direction=turn==='R'?1:turn==='L'?3:turn==='U'?2:0;
   let heading=((a.heading+direction)%4) as 0|1|2|3;
   next[p]=(state+1)%rule.length;
   let x=a.x+vectors[heading][0],y=a.y+vectors[heading][1];
@@ -113,5 +120,7 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
   }
   moved.push({x,y,heading});
  }
- return {cells:next,agents:moved};
+ current=moved;
+ }
+ return {cells:next,agents:current};
 }
