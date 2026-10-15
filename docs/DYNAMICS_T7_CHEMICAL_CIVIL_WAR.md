@@ -19,7 +19,7 @@ Annihilation genuinely destroys paired concentrations, while conversion exactly 
 
 ## Live artist controls
 
-Under the T6 laboratory, T7 has real controls for: on/off, gradient allegiance, four reaction modes, reaction rate (0–24), B deposition (0–32), B diffusion (0–8), B evaporation (0–8), gradient threshold (1–64), steering 0/1/2. A controls remain in T6. T7 enabling automatically ensures T6 is active and at least two different species exist, without restarting the world.
+Under the T6 laboratory, T7 has real controls for: on/off, gradient allegiance, four reaction modes, reaction rate (0–24), B deposition (0–32), B diffusion (0–8), B evaporation (0–8), gradient threshold (1–64), steering 0/1/2. A controls remain in T6. Activating T7 requires at least two **real** ants. With only one ant, T7 activation and all four presets are disabled (the default one-ant setup cannot produce B). To start a two-faction experiment, the user can explicitly raise Ant Population, or use a guarded two-click **START 2-ANT DUET → YES, RESTART** control. That population change is deliberately disclosed and starts a fresh world; Cancel preserves the art. With two or more ants, enabling T7 ensures T6 and at least two species are selected without restarting the world.
 
 Four live presets:
 - **Chemical Front Lines** — competing rival territories annihilate each other at contact.
