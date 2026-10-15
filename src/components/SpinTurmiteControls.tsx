@@ -1,8 +1,12 @@
 import {useEffect,useState} from 'react';
 import type {Dispatch,SetStateAction} from 'react';
 import type {SimSettings,World} from '../engine/types';
-import {isingEnergy,isingMagnetization,validTurmiteRule,turmiteTurnAt} from '../engine/spins-turmites';
-interface Props {settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSettings>>;world:World;resetNumber:number}
+import {isingEnergy,isingMagnetization,validTurmiteRule,turmiteTurnAt,turmiteWriteAt,
+ DEFAULT_TURMITE_WRITE_PROGRAM} from '../engine/spins-turmites';
+export interface TurmitePlacement{agentId:number;heading:0|1|2|3}
+interface Props {settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSettings>>;
+ world:World;resetNumber:number;placement:TurmitePlacement|null;
+ onPlacementChange:Dispatch<SetStateAction<TurmitePlacement|null>>}
 const RULES=[
  {rule:'RL',label:"LANGTON'S ANT · 2"},
  {rule:'LLRR',label:'LLRR · 4'},
@@ -15,7 +19,12 @@ const RULES=[
 ] as const;
 const COMMANDS:Record<string,string>={R:'↻ RIGHT',L:'↺ LEFT',S:'↑ STRAIGHT',U:'↩ REVERSE'};
 const mirror=(rule:string)=>[...rule].map(t=>t==='L'?'R':t==='R'?'L':t).join('');
-export default function SpinTurmiteControls({settings:s,setSettings,world,resetNumber}:Props){
+export default function SpinTurmiteControls({settings:s,setSettings,world,resetNumber,
+ placement,onPlacementChange}:Props){
+ const [selectedAgent,setSelectedAgent]=useState(0);
+ const [selectedHeading,setSelectedHeading]=useState<0|1|2|3>(0);
+ const writeProgram={mode:s.turmiteWriteMode??'next',stride:s.turmiteWriteStride??1,
+  table:s.turmiteWriteTable??DEFAULT_TURMITE_WRITE_PROGRAM.table};
  const [typed,setTyped]=useState(s.turmiteRule);
  // Recipes may replace the committed rule while the editor stays mounted.
  // Don't let a stale draft overwrite the freshly restored world.
@@ -212,6 +221,87 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
     turmiteHeadingShear:1,turmiteContact:'repel',turmiteFormation:'stack'
    }))}>✹ MUTANT SPECIES PILEUP</button>
   </div>
+  <div className="c3-header"><strong>🧬 T3 · INDEPENDENT TRACK-WRITER LAB</strong>
+   <span>TURN PROGRAM ≠ WRITE PROGRAM</span></div>
+  <p className="module-note">Every ant still READS its actual current pigment and chooses its real turn using T1/T2. But what it WRITES afterward is now independently programmable. Skip color states, erase cells, or make an explicit substitution table. These controls change the true mathematical lattice, not a shader effect.</p>
+  <label className="input-label" htmlFor="turmite-write-mode">What should every ant WRITE? <em>changes LIVE</em></label>
+  <select id="turmite-write-mode" value={s.turmiteWriteMode??'next'}
+   onChange={e=>change('turmiteWriteMode',e.target.value as SimSettings['turmiteWriteMode'])}>
+   <option value="next">NEXT PIGMENT · original (c + 1) mod N</option>
+   <option value="stride">COLOR JUMP · (c + stride) mod N</option>
+   <option value="erase">ERASE · write true state 0</option>
+   <option value="table">SUBSTITUTE · use my 24-slot absolute state map</option>
+  </select>
+  {(s.turmiteWriteMode??'next')==='stride'&&<>
+   <label className="input-label" htmlFor="turmite-write-stride">
+    Actual color-cycle jump <em>{s.turmiteWriteStride??1} · negative values run backwards</em>
+   </label>
+   <input id="turmite-write-stride" type="range" min="-12" max="12" step="1"
+    value={s.turmiteWriteStride??1} onChange={e=>change('turmiteWriteStride',Number(e.target.value))}/>
+  </>}
+  {(s.turmiteWriteMode??'next')==='table'&&<>
+   <p className="neighborhood-note">A 24-slot write DNA table: each current track pigment gets an explicit absolute replacement pigment. Outputs wrap modulo the current genome length. Unlike the turn genome, editing this table does NOT reset the artwork.</p>
+   <div id="turmite-write-table" role="group" aria-label="Independent track-state write substitutions"
+    style={{display:'flex',gap:7,flexWrap:'wrap'}}>
+    {Array.from({length:s.turmiteRule.length},(_,state)=><label key={state}
+     style={{display:'flex',flexDirection:'column',minWidth:60,fontSize:'.78rem'}}>
+     <span>#{state} →</span>
+     <select data-write-source={state} aria-label={'Write track pigment when reading state '+state}
+      value={(writeProgram.table[state]??0)%s.turmiteRule.length}
+      onChange={e=>setSettings(old=>({
+       ...old,turmiteWriteTable:Array.from({length:24},(_,i)=>
+        i===state?Number(e.target.value):(old.turmiteWriteTable?.[i]??(i+1)%24))
+      }))}>
+      {Array.from({length:s.turmiteRule.length},(_,target)=>
+       <option key={target} value={target}>#{target}</option>)}
+     </select>
+    </label>)}
+   </div>
+   <button id="turmite-write-reset-table" type="button"
+    onClick={()=>change('turmiteWriteTable',Array.from({length:24},(_,i)=>(i+1)%24))}>
+    ↺ RESET TABLE TO NEXT PIGMENT
+   </button>
+  </>}
+  <p className="neighborhood-note" id="turmite-write-observation" role="status">
+   Selected pigment #{s.turmiteBrush}: the current writing rule produces
+   ** #{turmiteWriteAt(s.turmiteBrush,s.turmiteRule.length,writeProgram)}**.
+   Every species uses the same write rule while retaining its own distinct T2 turning instructions.
+  </p>
+  <div className="c3-presets">
+   <button id="turmite-write-classic" type="button" onClick={()=>setSettings(old=>({
+    ...old,turmiteWriteMode:'next',turmiteWriteStride:1
+   }))}>↺ ORIGINAL INCREMENT WRITER</button>
+   <button id="turmite-write-chaos" type="button" onClick={()=>setSettings(old=>({
+    ...old,turmiteWriteMode:'stride',turmiteWriteStride:5
+   }))}>✹ SKIP FIVE TRACK STATES</button>
+  </div>
+  <div className="c3-header"><strong>⌖ T3 · PUT AN ANT WHERE YOU WANT IT</strong>
+   <span>ONE TAP · NO BRUSH MARKS · NO RESET</span></div>
+  <p className="module-note">Choose a real existing ant identity and its new heading. Arm one placement, tap the stage once, and that ant moves onto the selected grid cell without erasing the path or changing the generation. Other ants stay where they are. Cancel to return to painting.</p>
+  <label className="input-label" htmlFor="turmite-place-agent">Which real ant do we relocate?</label>
+  <select id="turmite-place-agent" value={Math.min(selectedAgent,(world.turmiteAgents?.length??s.turmiteCount)-1)}
+   onChange={e=>setSelectedAgent(Number(e.target.value))}>
+   {Array.from({length:world.turmiteAgents?.length??s.turmiteCount},(_,id)=>{
+    const ant=world.turmiteAgents?.[id];
+    return <option value={id} key={id}>ANT #{id+1} · species #{id%(s.turmiteSpeciesCount??1)+1}
+     {ant?' · ('+ant.x+','+ant.y+')':''}</option>;
+   })}
+  </select>
+  <label className="input-label" htmlFor="turmite-place-heading">Actual heading of relocated ant</label>
+  <select id="turmite-place-heading" value={selectedHeading}
+   onChange={e=>setSelectedHeading(Number(e.target.value) as 0|1|2|3)}>
+   <option value={0}>↑ NORTH</option><option value={1}>→ EAST</option>
+   <option value={2}>↓ SOUTH</option><option value={3}>← WEST</option>
+  </select>
+  <div className="c3-presets">
+   <button id="turmite-place-arm" type="button" aria-pressed={!!placement}
+    onClick={()=>onPlacementChange(placement?null:{agentId:Math.min(selectedAgent,(world.turmiteAgents?.length??s.turmiteCount)-1),heading:selectedHeading})}>
+    {placement?'✕ CANCEL ANT PLACEMENT':'⌖ ARM ONE-TAP ANT PLACEMENT'}
+   </button>
+  </div>
+  {placement&&<p id="turmite-place-status" className="neighborhood-note" role="status">
+   ⌖ READY · tap the canvas to reposition ant #{placement.agentId+1}. The next tap does NOT paint.
+  </p>}
   <p className="neighborhood-note">Species identity comes from each saved agent's stable list position, so old recipe positions and headings remain valid without a new hidden agent schema. Same-cell pigment writing still occurs sequentially; only the explicit REPEL setting changes initial headings during a real contact.</p>
   <p className="neighborhood-note">The selected brush paints actual indexed track data, not a decorative layer. Agents and track states are preserved by recipe JSON, GIF/video capture and deterministic replay. Old L/R rules and old saves remain fully supported. Finite edges reflect ants inward; wrapped edges connect.</p>
  </section>;
