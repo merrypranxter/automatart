@@ -39,6 +39,7 @@ import {validTurmiteRule,validTurmiteWriteProgram,validTurmiteAlchemy,DEFAULT_TU
   from './engine/spins-turmites';
 import {DEFAULT_TURMITE_PHEROMONES,validTurmitePheromones} from './engine/turmite-pheromones';
 import {DEFAULT_TURMITE_DUET,validTurmiteDuet} from './engine/turmite-duet';
+import {DEFAULT_TURMITE_RHYTHM,validTurmiteRhythm} from './engine/turmite-rhythm';
 import CyclicDynamicsControls from './components/CyclicDynamicsControls';
 import WaveDynamicsControls from './components/WaveDynamicsControls';
 import BrainDynamicsControls from './components/BrainDynamicsControls';
@@ -968,6 +969,8 @@ export default function App(){
       if(!validTurmitePheromones(s.turmitePheromoneRules))throw new Error('Invalid T6 chemical field program');
       s.turmiteDuet=s.turmiteDuet??{...DEFAULT_TURMITE_DUET};
       if(!validTurmiteDuet(s.turmiteDuet))throw new Error('Invalid T7 dual chemistry program');
+      s.turmiteRhythm=s.turmiteRhythm??{...DEFAULT_TURMITE_RHYTHM};
+      if(!validTurmiteRhythm(s.turmiteRhythm))throw new Error('Invalid T8 oscillator coupling program');
       s.turmiteWriteMode=s.turmiteWriteMode??'next';
       s.turmiteWriteStride=s.turmiteWriteStride??1;
       s.turmiteWriteTable=s.turmiteWriteTable??Array.from({length:24},(_,i)=>(i+1)%24);
