@@ -6,6 +6,7 @@ import {DEFAULT_STENCIL_MASK} from './stencil';
 import {RHOMBILLE_VERTICAL_SCALE} from './rhombille';
 import type {TurmiteAgent,TurmiteAlchemy,TurmiteMemory} from './spins-turmites';
 import type {TurmitePheromones} from './turmite-pheromones';
+import type {TurmiteDuet} from './turmite-duet';
 
 export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus' | 'wireworld' | 'sandpile' | 'hodgepodge' | 'forestfire' | 'ising' | 'turmites' | 'hpp';
 export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'maze' | 'mazectric' | 'replicator' | 'diamoeba' | 'coral' | 'amoeba' | 'custom';
@@ -119,6 +120,8 @@ export interface SimSettings {
   turmiteMemory:TurmiteMemory;
   /** T6: real independent chemical lattice influencing agent movement. */
   turmitePheromoneRules:TurmitePheromones;
+  /** T7: antagonist field, cross-reactions and species-specific navigation. */
+  turmiteDuet:TurmiteDuet;
   /** T1: actual 1..8 complete ordered agent substeps per displayed generation. */
   turmiteSteps:number;
   /** T2: N distinct deterministic transition programs, assigned by agent ID. */
@@ -194,6 +197,7 @@ export interface World {
   turmiteAgents?:TurmiteAgent[];
   /** Actual 8-bit physical scent field, independent of painted track. */
   turmitePheromones?:Uint8Array;
+  turmiteRivalPheromones?:Uint8Array;
   turmiteRule?:string;
   ages: Uint16Array;
   neighbors: Uint8Array;
@@ -243,6 +247,7 @@ export const INITIAL_SETTINGS: SimSettings = {
     {mode:'table',stride:1,table:Array.from({length:24},(_,i)=>23-i)}
   ]},turmiteMemory:{enabled:false,states:8,mode:'read',turnBias:1,writeBias:0},
    turmitePheromoneRules:{enabled:false,deposit:18,diffusion:4,evaporation:1,steering:'attract',strength:1,threshold:2},
+   turmiteDuet:{enabled:false,deposit:24,diffusion:4,evaporation:1,reaction:'neutralize',reactionRate:6,navigation:'territories',threshold:2,strength:2},
    turmiteSteps:1,turmiteSpeciesCount:1,turmiteSpeciesStride:0,turmiteSpeciesMirror:false,turmiteHeadingShear:0,turmiteContact:'shared',turmiteFormation:'orbit',turmiteCount:1,turmiteBrush:1,
   hppBrush:15,hppTool:'particles'
 };
