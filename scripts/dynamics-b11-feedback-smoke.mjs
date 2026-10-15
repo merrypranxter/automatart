@@ -95,10 +95,6 @@ try{
    assert.equal((stamp.ports.guardPorts?.length??0),guarded?2:0);
    let restored=restoreWorldSnapshot(snapshotWorld(world),s);
    assert.deepEqual(restored.cells,world.cells);
-   const sites=[
-    stamp.ports.nand,
-    [36+([rotation===0?-1:0][0]),36]
-   ];
    // Test all five physically observed sites, including true upstream
    // return-wave points transformed by quarter-turn rotation.
    const r90=([x,y],k)=>k===1?[-y,x]:k===2?[-x,-y]:k===3?[y,-x]:[x,y];
