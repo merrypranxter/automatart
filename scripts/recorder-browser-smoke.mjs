@@ -1427,6 +1427,70 @@ try{
   assert.deepEqual(t3Loaded.world.turmiteAgents,t3After.world.turmiteAgents);
   assert.equal(t3Loaded.world.arrays.cells,t3After.world.arrays.cells);
   console.log('PASS T3: real pigment write substitution, negative jumps, true erasure and one-tap ant relocation preserving art and recipes');
+  // T4: chemically different REAL track writers for different T2 species.
+  const [t4PrevFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t4Prev=JSON.parse(await readFile(await t4PrevFile.path(),'utf8'));
+  assert.equal(await page.locator('#turmite-alchemy-enabled').isChecked(),false);
+  await page.locator('#turmite-alchemy-enabled').check();
+  assert.match(await page.locator('#turmite-alchemy-output').innerText(),/ACTIVE MULTI-SPECIES WRITERS/);
+  assert.deepEqual(await page.locator('#turmite-alchemy-matrix [data-alchemy-occupancy="1"]').allInnerTexts(),
+   ['#1','#1','#0','#3'],
+   'Four species actually emit four independently computed track products on the same read pigment');
+  await page.locator('#turmite-alchemy-collision').selectOption('fuse');
+  assert.deepEqual(await page.locator('#turmite-alchemy-matrix [data-alchemy-occupancy="2"]').allInnerTexts(),
+   ['#0','#1','#1','#1'],
+   'True 2-body fusion differs from independently emitted single-species pigments');
+  await page.locator('#turmite-alchemy-collision').selectOption('invert');
+  assert.equal(await page.locator('#turmite-alchemy-matrix [data-alchemy-occupancy="2"][data-alchemy-species="0"]').innerText(),'#2');
+  await page.locator('#turmite-alchemy-collision').selectOption('erase');
+  assert.deepEqual(await page.locator('#turmite-alchemy-matrix [data-alchemy-occupancy="2"]').allInnerTexts(),
+   ['#0','#0','#0','#0'],'All genuine co-location reactions can dissolve track cells');
+  await page.locator('#turmite-alchemy-collision').selectOption('fuse');
+  await page.locator('#turmite-alchemy-species').selectOption('2');
+  assert.equal(await page.locator('#turmite-alchemy-mode').inputValue(),'erase');
+  await page.locator('#turmite-alchemy-mode').selectOption('stride');
+  await page.locator('#turmite-alchemy-stride').fill('3');
+  assert.equal(await page.locator('#turmite-alchemy-matrix [data-alchemy-occupancy="1"][data-alchemy-species="2"]').innerText(),'#3');
+  await page.locator('#turmite-alchemy-species').selectOption('3');
+  assert.equal(await page.locator('#turmite-alchemy-mode').inputValue(),'table');
+  await page.locator('#turmite-alchemy-table [data-alchemy-source="0"]').selectOption('2');
+  assert.equal(await page.locator('#turmite-alchemy-matrix [data-alchemy-occupancy="1"][data-alchemy-species="3"]').innerText(),'#2');
+  const [t4EditedFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t4Edited=JSON.parse(await readFile(await t4EditedFile.path(),'utf8'));
+  assert.equal(t4Edited.world.generation,t4Prev.world.generation,
+   'Switching chemical reactions must preserve time');
+  assert.equal(t4Edited.world.arrays.cells,t4Prev.world.arrays.cells,
+   'Live chemical and species edits must not erase or recolor EXISTING artwork');
+  assert.deepEqual(t4Edited.world.turmiteAgents,t4Prev.world.turmiteAgents);
+  assert.equal(t4Edited.settings.turmiteAlchemy.enabled,true);
+  assert.equal(t4Edited.settings.turmiteAlchemy.collision,'fuse');
+  assert.equal(t4Edited.settings.turmiteAlchemy.species[2].stride,3);
+  assert.equal(t4Edited.settings.turmiteAlchemy.species[3].table[0],2);
+  await page.locator('#turmite-alchemy-reset').click();
+  assert.equal(await page.locator('#turmite-alchemy-enabled').isChecked(),false);
+  await page.locator('#turmite-alchemy-preset').click();
+  assert.equal(await page.locator('#turmite-alchemy-enabled').isChecked(),true);
+  assert.equal(await page.locator('#turmite-alchemy-collision').inputValue(),'fuse');
+  assert.equal(await page.locator('#turmite-formation').inputValue(),'stack');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t4-mathematically-reactive-ant-ecosystem.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(t4Edited))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-alchemy-enabled')?.checked===true&&
+   document.querySelector('#turmite-alchemy-species')?.value==='3');
+  assert.equal(await page.locator('#turmite-alchemy-table [data-alchemy-source="0"]').inputValue(),'2');
+  const [t4RestoredFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t4Restored=JSON.parse(await readFile(await t4RestoredFile.path(),'utf8'));
+  assert.deepEqual(t4Restored.settings.turmiteAlchemy,t4Edited.settings.turmiteAlchemy);
+  assert.equal(t4Restored.world.arrays.cells,t4Edited.world.arrays.cells);
+  assert.deepEqual(t4Restored.world.turmiteAgents,t4Edited.world.turmiteAgents);
+  console.log('PASS T4: four true per-species writers, live 2-body fusion/invert/dissolve, no erased art and exact chemical recipe');
 
 
 
