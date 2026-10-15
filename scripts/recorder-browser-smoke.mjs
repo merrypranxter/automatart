@@ -1685,6 +1685,118 @@ try{
   assert.deepEqual(t6Restored.world.turmiteAgents,t6Stepped.world.turmiteAgents);
   console.log('PASS T6: four live chemical presets, physical saved scent grid, source-frame immutability and exact JSON replay');
 
+  // T7 real antagonistic two-field ecology; none of these controls may
+  // reset the underlying T6 field, genuine paint, agents, or generation.
+  const [t7BeforeFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t7Before=JSON.parse(await readFile(await t7BeforeFile.path(),'utf8'));
+  assert.equal(await page.locator('#turmite-duet-enabled').isChecked(),false);
+  assert.equal(await page.locator('#turmite-duet-field [data-duet-site]').count(),25);
+  await page.locator('#turmite-duet-war').click();
+  assert.equal(await page.locator('#turmite-duet-enabled').isChecked(),true);
+  assert.match(await page.locator('#turmite-duet-status').innerText(),/TWO CHEMICAL FIELDS ACTIVE/);
+  assert.equal(await page.locator('#turmite-duet-navigation').inputValue(),'territories');
+  assert.equal(await page.locator('#turmite-duet-reaction').inputValue(),'neutralize');
+  await page.locator('#turmite-duet-reaction').selectOption('convertB');
+  await page.locator('#turmite-duet-reaction-rate').fill('9');
+  await page.locator('#turmite-duet-deposit').fill('32');
+  await page.locator('#turmite-duet-diffusion').fill('0');
+  await page.locator('#turmite-duet-evaporation').fill('0');
+  await page.locator('#turmite-duet-strength').fill('2');
+  await page.locator('#turmite-duet-threshold').fill('1');
+  const [t7EditedFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t7Edited=JSON.parse(await readFile(await t7EditedFile.path(),'utf8'));
+  assert.equal(t7Edited.world.generation,t7Before.world.generation,'T7 edits must not reset actual time');
+  assert.equal(t7Edited.world.arrays.cells,t7Before.world.arrays.cells,'T7 edits must not repaint tracks');
+  assert.deepEqual(t7Edited.world.turmiteAgents,t7Before.world.turmiteAgents);
+  assert.equal(t7Edited.world.arrays.turmitePheromones,t7Before.world.arrays.turmitePheromones,
+   'T7 enabling must not erase previous T6 scent');
+  assert.equal(t7Edited.settings.turmiteDuet.reaction,'convertB');
+  assert.equal(t7Edited.settings.turmiteDuet.reactionRate,9);
+  await page.getByRole('button',{name:'STEP +1'}).click();
+  const [t7SteppedFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t7Stepped=JSON.parse(await readFile(await t7SteppedFile.path(),'utf8'));
+  assert.equal(t7Stepped.world.generation,t7Edited.world.generation+1);
+  const rivalBytes=Buffer.from(t7Stepped.world.arrays.turmiteRivalPheromones??'','base64');
+  assert(rivalBytes.some(b=>b>0),'Real rival field must contain independently deposited chemical');
+  assert(Number(await page.locator('#turmite-duet-b-sites').innerText())>0);
+  await page.locator('#turmite-duet-parasite').click();
+  assert.equal(await page.locator('#turmite-duet-navigation').inputValue(),'inverted');
+  await page.locator('#turmite-duet-bloom').click();
+  assert.equal(await page.locator('#turmite-duet-reaction').inputValue(),'convertA');
+  await page.locator('#turmite-duet-ceasefire').click();
+  assert.equal(await page.locator('#turmite-duet-reaction').inputValue(),'none');
+  await page.locator('#turmite-duet-off').click();
+  const [t7FrozenFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t7Frozen=JSON.parse(await readFile(await t7FrozenFile.path(),'utf8'));
+  assert.equal(t7Frozen.settings.turmiteDuet.enabled,false);
+  assert.equal(t7Frozen.world.arrays.turmiteRivalPheromones,
+   t7Stepped.world.arrays.turmiteRivalPheromones,
+   'Turning off the duet must freeze rival chemistry without deleting it');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t7-chemical-civil-war.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(t7Stepped))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-duet-enabled')?.checked===true&&
+   document.querySelector('#turmite-duet-reaction')?.value==='convertB');
+  const [t7RestoredFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t7Restored=JSON.parse(await readFile(await t7RestoredFile.path(),'utf8'));
+  assert.deepEqual(t7Restored.settings.turmiteDuet,t7Stepped.settings.turmiteDuet);
+  assert.equal(t7Restored.world.arrays.turmiteRivalPheromones,
+   t7Stepped.world.arrays.turmiteRivalPheromones);
+  assert.equal(t7Restored.world.arrays.turmitePheromones,
+   t7Stepped.world.arrays.turmitePheromones);
+  assert.equal(t7Restored.world.arrays.cells,t7Stepped.world.arrays.cells);
+  assert.deepEqual(t7Restored.world.turmiteAgents,t7Stepped.world.turmiteAgents);
+  console.log('PASS T7: physical dual chemistry, true rival concentration, live conflict presets and two-field JSON/recorder parity');
+  // Codex P1: a default SINGLE ant cannot physically deposit field B.
+  // Gate activation/presets, preserve the art on CANCEL and require
+  // a second confirmed click before changing a structural ant count.
+  await page.locator('#turmite-count').fill('1');
+  await page.waitForFunction(()=>document.querySelector('#turmite-duet-enabled')?.disabled===true);
+  assert.equal(await page.locator('#turmite-duet-war').isDisabled(),true);
+  assert(await page.locator('#turmite-duet-needs-rival').isVisible());
+  const [t7OneFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t7One=JSON.parse(await readFile(await t7OneFile.path(),'utf8'));
+  assert.equal(t7One.world.turmiteAgents.length,1);
+  await page.locator('#turmite-duet-arm-restart').click();
+  assert(await page.locator('#turmite-duet-confirm-restart').isVisible());
+  await page.locator('#turmite-duet-cancel-restart').click();
+  const [t7CancelledFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t7Cancelled=JSON.parse(await readFile(await t7CancelledFile.path(),'utf8'));
+  assert.deepEqual(t7Cancelled.world.turmiteAgents,t7One.world.turmiteAgents,
+   'Cancel must keep the existing universe instead of spawning/resetting');
+  assert.equal(t7Cancelled.world.generation,t7One.world.generation);
+  assert.equal(t7Cancelled.world.arrays.cells,t7One.world.arrays.cells);
+  await page.locator('#turmite-duet-arm-restart').click();
+  await page.locator('#turmite-duet-confirm-restart').click();
+  await page.waitForFunction(()=>document.querySelector('#turmite-duet-enabled')?.checked===true&&
+   document.querySelector('#turmite-count')?.value==='2'&&
+   document.querySelector('#turmite-duet-war')?.disabled===false);
+  const [t7RivalFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t7Rival=JSON.parse(await readFile(await t7RivalFile.path(),'utf8'));
+  assert.equal(t7Rival.settings.turmiteSpeciesCount,2);
+  assert.equal(t7Rival.world.turmiteAgents.length,2,
+   'Explicit confirmed two-ant restart must create REAL opposing species');
+  assert.equal(t7Rival.world.generation,0,
+   'Structural population reset must be explicit and start a new universe');
+  console.log('PASS T7 review P1: impossible single-ant duet gated, cancel keeps art, confirmed restart creates two real factions');
+
 
 
   await page.locator('#engine').selectOption('life');

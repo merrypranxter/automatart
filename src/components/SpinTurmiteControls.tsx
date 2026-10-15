@@ -6,9 +6,11 @@ import {isingEnergy,isingMagnetization,validTurmiteRule,turmiteTurnAt,turmiteWri
  from '../engine/spins-turmites';
 import type {TurmiteWriteProgram,TurmiteAlchemy,TurmiteMemory} from '../engine/spins-turmites';
 import TurmiteScentControls from './TurmiteScentControls';
+import TurmiteDuetControls from './TurmiteDuetControls';
 export interface TurmitePlacement{agentId:number;heading:0|1|2|3}
 interface Props {settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSettings>>;
  onMemoryChange:(patch:Partial<TurmiteMemory>)=>void;
+ onStartRival:()=>void;
  world:World;resetNumber:number;onReseed:()=>void;placement:TurmitePlacement|null;
  onPlacementChange:Dispatch<SetStateAction<TurmitePlacement|null>>}
 const RULES=[
@@ -24,7 +26,7 @@ const RULES=[
 const COMMANDS:Record<string,string>={R:'↻ RIGHT',L:'↺ LEFT',S:'↑ STRAIGHT',U:'↩ REVERSE'};
 const mirror=(rule:string)=>[...rule].map(t=>t==='L'?'R':t==='R'?'L':t).join('');
 export default function SpinTurmiteControls({settings:s,setSettings,world,resetNumber,
- placement,onPlacementChange,onReseed,onMemoryChange}:Props){
+ placement,onPlacementChange,onReseed,onMemoryChange,onStartRival}:Props){
  const [selectedAgent,setSelectedAgent]=useState(0);
  const [alchemySpecies,setAlchemySpecies]=useState(0);
  const [selectedHeading,setSelectedHeading]=useState<0|1|2|3>(0);
@@ -441,6 +443,8 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
   </div>
   <p className="neighborhood-note">LIVE editing never clears artwork, moves ants, or resets time. Turning memory OFF bypasses the feedback without forgetting saved registers; turning it ON resumes those registers. Changing the number of register states maps each stored phase modulo the selected cycle. Restarting the universe starts fresh, and recipes/recordings retain the actual registers.</p>
   <TurmiteScentControls settings={s} setSettings={setSettings} world={world} selectedAgent={selectedAgent}/>
+  <TurmiteDuetControls settings={s} setSettings={setSettings} world={world}
+   selectedAgent={selectedAgent} onStartRival={onStartRival}/>
   <div className="c3-header"><strong>⌖ T3 · PUT AN ANT WHERE YOU WANT IT</strong>
    <span>ONE TAP · NO BRUSH MARKS · NO RESET</span></div>
   <p className="module-note">Choose a real existing ant identity and its new heading. Arm one placement, tap the stage once, and that ant moves onto the selected grid cell without erasing the path or changing the generation. Other ants stay where they are. Cancel to return to painting.</p>

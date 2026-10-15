@@ -15,7 +15,7 @@ interface PackedWorld {
   generation:number;
   turmiteAgents?:TurmiteAgent[];
   margolusEpochs?:MargolusEpoch[];
-  arrays:Record<'cells'|'ages'|'neighbors'|'events'|'traces'|'previousCells'|'olderCells'|'fossils',string> & {grains?:string;hppWalls?:string;turmitePheromones?:string};
+  arrays:Record<'cells'|'ages'|'neighbors'|'events'|'traces'|'previousCells'|'olderCells'|'fossils',string> & {grains?:string;hppWalls?:string;turmitePheromones?:string;turmiteRivalPheromones?:string};
 }
 function pack(data:Uint8Array):string{
   let string='';
@@ -47,7 +47,9 @@ export function snapshotWorld(world:World):PackedWorld{
       ...(world.engine==='sandpile'?{grains:pack(bytes(world.grains??new Uint32Array(n)))}:{}),
       ...(world.engine==='hpp'?{hppWalls:pack(world.hppWalls??new Uint8Array(n))}:{}),
       ...(world.engine==='turmites'&&world.turmitePheromones?
-       {turmitePheromones:pack(world.turmitePheromones)}:{})
+       {turmitePheromones:pack(world.turmitePheromones)}:{}),
+      ...(world.engine==='turmites'&&world.turmiteRivalPheromones?
+       {turmiteRivalPheromones:pack(world.turmiteRivalPheromones)}:{})
     }
   };
 }
@@ -78,6 +80,11 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
     turmitePheromones:settings.engine==='turmites'?
       (source.turmitePheromones!==undefined?get('turmitePheromones',n):
        settings.turmitePheromoneRules?.enabled?new Uint8Array(n):undefined):undefined,
+    turmiteRivalPheromones:settings.engine==='turmites'?
+      (source.turmiteRivalPheromones!==undefined?get('turmiteRivalPheromones',n):
+       settings.turmitePheromoneRules?.enabled&&settings.turmiteDuet?.enabled&&
+       settings.turmiteCount>=2&&settings.turmiteSpeciesCount>=2?
+       new Uint8Array(n):undefined):undefined,
     margolusEpochs:settings.engine==='margolus'?validMargolusEpochs(s.margolusEpochs,s.generation!):undefined};
   if(settings.engine==='margolus'){
     for(const state of world.cells)if(state>1)

@@ -76,6 +76,9 @@ export function createWorld(s:SimSettings):World{
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,hppWalls,turmiteAgents,
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,
     turmitePheromones:s.engine==='turmites'&&s.turmitePheromoneRules?.enabled?new Uint8Array(n):undefined,
+    turmiteRivalPheromones:s.engine==='turmites'&&s.turmiteDuet?.enabled&&
+      s.turmitePheromoneRules?.enabled&&s.turmiteCount>=2&&s.turmiteSpeciesCount>=2?
+       new Uint8Array(n):undefined,
     hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,ages,
     neighbors:new Uint8Array(n),events:new Uint8Array(n),traces,
     previousCells:cells.slice(),olderCells:cells.slice(),fossils:new Float32Array(n),
@@ -96,6 +99,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
   const nextFossils=new Float32Array(n);
   let nextAgents=prev.turmiteAgents;
   let nextPheromones=prev.turmitePheromones;
+  let nextRivalPheromones=prev.turmiteRivalPheromones;
   let waveStimulusCount=0;
   let margolusEpochs:MargolusEpoch[]|undefined=prev.margolusEpochs;
   const brainParams={mode:s.brainStimulus??'off',source:s.brainClockSource??'center',
@@ -130,8 +134,10 @@ export function stepWorld(prev:World,s:SimSettings):World{
       contact:s.turmiteContact??'shared'},{
       mode:s.turmiteWriteMode??'next',stride:s.turmiteWriteStride??1,
       table:s.turmiteWriteTable??Array.from({length:24},(_,i)=>(i+1)%24)},
-      s.turmiteAlchemy,s.turmiteMemory,s.turmitePheromoneRules,prev.turmitePheromones);
+      s.turmiteAlchemy,s.turmiteMemory,s.turmitePheromoneRules,prev.turmitePheromones,
+      s.turmiteDuet,prev.turmiteRivalPheromones);
     next.set(result.cells);nextAgents=result.agents;nextPheromones=result.pheromones;
+    nextRivalPheromones=result.rivalPheromones;
     const cardinal=neighborOffsets('square',0,0,'vonNeumann');
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
       const p=y*w+x;
@@ -334,6 +340,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,stepChanged,stepStructural,waveStimulusCount,margolusEpochs,
     cells:next,grains:nextGrains,hppWalls:prev.hppWalls?.slice(),turmiteAgents:nextAgents?.map(a=>({...a})),
     turmitePheromones:nextPheromones?.slice(),
+    turmiteRivalPheromones:nextRivalPheromones?.slice(),
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,
     ages:nextAges,neighbors,events,traces:nextTraces,
     previousCells:cells.slice(),
