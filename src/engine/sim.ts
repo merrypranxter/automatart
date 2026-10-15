@@ -127,7 +127,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
       contact:s.turmiteContact??'shared'},{
       mode:s.turmiteWriteMode??'next',stride:s.turmiteWriteStride??1,
       table:s.turmiteWriteTable??Array.from({length:24},(_,i)=>(i+1)%24)},
-      s.turmiteAlchemy);
+      s.turmiteAlchemy,s.turmiteMemory);
     next.set(result.cells);nextAgents=result.agents;
     const cardinal=neighborOffsets('square',0,0,'vonNeumann');
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){

@@ -12,7 +12,7 @@ export interface IsingRule{
  temperature:number; coupling:number; field:number;sweeps:number;
  seed:number;generation:number;
 }
-export interface TurmiteAgent {x:number;y:number;heading:0|1|2|3}
+export interface TurmiteAgent {x:number;y:number;heading:0|1|2|3;memory?:number}
 export type TurmiteFormation='orbit'|'stack'|'cross';
 export type TurmiteContact='shared'|'repel';
 export interface TurmiteDynamics{
@@ -117,6 +117,57 @@ export function turmiteAlchemyWriteAt(state:number,length:number,species:number,
  // and the simultaneously counted number of occupants.
  return (product+occupancy+species+1)%length;
 }
+/** T5: each ant can carry an actual finite-state memory register.
+ * It changes both the turn-rule index and the outgoing track pigment. The
+ * register advances AFTER the physical write, so each following step really
+ * depends on this agent's earlier encounters, not on a decorative overlay.
+ */
+export type TurmiteMemoryMode='tick'|'read'|'write'|'collision';
+export interface TurmiteMemory{
+ enabled:boolean;
+ states:number;       // 2..24 independently addressable internal states
+ mode:TurmiteMemoryMode;
+ turnBias:number;     // 0..3 lookup displacement per memory phase
+ writeBias:number;    // -3..3 outgoing pigment displacement per phase
+}
+export const DEFAULT_TURMITE_MEMORY:TurmiteMemory={
+ enabled:false,states:8,mode:'read',turnBias:1,writeBias:0
+};
+export function validTurmiteMemory(v:TurmiteMemory):boolean{
+ return !!v&&typeof v.enabled==='boolean'&&Number.isInteger(v.states)&&
+  v.states>=2&&v.states<=24&&['tick','read','write','collision'].includes(v.mode)&&
+  Number.isInteger(v.turnBias)&&v.turnBias>=0&&v.turnBias<=3&&
+  Number.isInteger(v.writeBias)&&v.writeBias>=-3&&v.writeBias<=3;
+}
+export function turmiteMemoryAdvance(phase:number,read:number,written:number,
+ occupancy:number,v:TurmiteMemory):number{
+ if(!validTurmiteMemory(v)||!Number.isInteger(phase)||phase<0||phase>=v.states||
+    !Number.isInteger(read)||read<0||read>23||
+    !Number.isInteger(written)||written<0||written>23||
+    !Number.isInteger(occupancy)||occupancy<1||occupancy>12)
+  throw new Error('Invalid T5 Turmite memory transition');
+ const increment=v.mode==='tick'?1:
+  v.mode==='read'?read+1:
+  v.mode==='write'?written+1:
+  occupancy>1?occupancy:0;
+ return (phase+increment)%v.states;
+}
+/** Shrinking a T5 cycle is a destructive operation on the REGISTER ONLY:
+ * once phase 10 is reduced to 3 in a seven-state ring, expanding to 12
+ * must never resurrect the old 10. Neither track paint nor positions change.
+ * Absent legacy registers remain absent for exact T1–T4 compatibility.
+ */
+export function normalizeTurmiteAgentMemories(
+ agents:readonly TurmiteAgent[],states:number):TurmiteAgent[]{
+ if(!Number.isInteger(states)||states<2||states>24)
+  throw new Error('Invalid T5 memory cycle size');
+ return agents.map(agent=>{
+  if(agent.memory===undefined)return {...agent};
+  if(!Number.isInteger(agent.memory)||agent.memory<0||agent.memory>23)
+   throw new Error('Invalid T5 stored agent memory');
+  return {...agent,memory:agent.memory%states};
+ });
+}
 /** Move precisely ONE stable agent identity, retaining every other agent and
  * every painted pixel. Return a new list, never mutate the saved source.
  */
@@ -127,7 +178,7 @@ export function relocateTurmiteAgent(agents:readonly TurmiteAgent[],w:number,h:n
     !Number.isInteger(x)||!Number.isInteger(y)||x<0||x>=w||y<0||y>=h||
     !Number.isInteger(heading)||heading<0||heading>3)
   throw new Error('Invalid T3 Turmite placement');
- return agents.map((a,i)=>i===agentId?{x,y,heading}:{...a});
+ return agents.map((a,i)=>i===agentId?{...a,x,y,heading}:{...a});
 }
 export interface TurmiteResult{cells:Uint8Array;agents:TurmiteAgent[]}
 const indexAt=(x:number,y:number,w:number,h:number,wrap:boolean):number=>{
@@ -222,10 +273,12 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
  rule:string,agents:readonly TurmiteAgent[],steps=1,
  dynamics:TurmiteDynamics=DEFAULT_TURMITE_DYNAMICS,
  write:TurmiteWriteProgram=DEFAULT_TURMITE_WRITE_PROGRAM,
- alchemy:TurmiteAlchemy=DEFAULT_TURMITE_ALCHEMY):TurmiteResult{
+ alchemy:TurmiteAlchemy=DEFAULT_TURMITE_ALCHEMY,
+ memory:TurmiteMemory=DEFAULT_TURMITE_MEMORY):TurmiteResult{
  if(!validTurmiteRule(rule)||cells.length!==w*h||!agents.length||agents.length>12||
     !Number.isInteger(steps)||steps<1||steps>8||!validTurmiteDynamics(dynamics)||
-    !validTurmiteWriteProgram(write)||!validTurmiteAlchemy(alchemy))
+    !validTurmiteWriteProgram(write)||!validTurmiteAlchemy(alchemy)||
+    !validTurmiteMemory(memory))
   throw new Error('Invalid Turmite world or rule');
  const next=cells.slice();
  let current=agents.map(a=>({...a}));
@@ -235,30 +288,39 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
  // Read REAL co-location at the start of each round (before any agents
  // move). The decision is simultaneous; sequential paint remains ordered.
  const occupancy=new Map<number,number>();
- if(dynamics.contact==='repel'||(alchemy.enabled&&alchemy.collision!=='none'))
+ if(dynamics.contact==='repel'||(alchemy.enabled&&alchemy.collision!=='none')||
+    (memory.enabled&&memory.mode==='collision'))
   for(const a of current){
    const key=a.y*w+a.x;occupancy.set(key,(occupancy.get(key)??0)+1);
   }
  for(const [agentId,a] of current.entries()){
   if(!Number.isInteger(a.x)||!Number.isInteger(a.y)||a.x<0||a.x>=w||
-    a.y<0||a.y>=h||!Number.isInteger(a.heading)||a.heading<0||a.heading>3)
+    a.y<0||a.y>=h||!Number.isInteger(a.heading)||a.heading<0||a.heading>3||
+    (a.memory!==undefined&&(!Number.isInteger(a.memory)||a.memory<0||a.memory>23)))
     throw new Error('Invalid Turmite position or heading');
   const p=a.y*w+a.x,state=next[p];
   if(state>=rule.length)throw new Error('Invalid Turmite track state');
   const encounter=dynamics.contact==='repel'&&(occupancy.get(p)??0)>1;
   const startingHeading=encounter?((a.heading+2)%4) as 0|1|2|3:a.heading;
   const species=agentId%dynamics.speciesCount;
-  const turn=turmiteTurnAt(rule,state,startingHeading,species,dynamics);
+  const phase=(a.memory??0)%memory.states;
+  const lookup=memory.enabled?(state+phase*memory.turnBias)%rule.length:state;
+  const turn=turmiteTurnAt(rule,lookup,startingHeading,species,dynamics);
   const direction=turn==='R'?1:turn==='L'?3:turn==='U'?2:0;
   let heading=((startingHeading+direction)%4) as 0|1|2|3;
-  next[p]=turmiteAlchemyWriteAt(state,rule.length,species,occupancy.get(p)??1,write,alchemy);
+  const base=turmiteAlchemyWriteAt(state,rule.length,species,occupancy.get(p)??1,write,alchemy);
+  const pigment=memory.enabled?
+   ((base+phase*memory.writeBias)%rule.length+rule.length)%rule.length:base;
+  next[p]=pigment;
+  const nextMemory=memory.enabled?
+   turmiteMemoryAdvance(phase,state,pigment,occupancy.get(p)??1,memory):a.memory;
   let x=a.x+vectors[heading][0],y=a.y+vectors[heading][1];
   if(wrap){x=(x+w)%w;y=(y+h)%h;}
   else if(x<0||x>=w||y<0||y>=h){
    heading=((heading+2)%4) as 0|1|2|3;
    x=a.x+vectors[heading][0];y=a.y+vectors[heading][1];
   }
-  moved.push({x,y,heading});
+  moved.push(nextMemory===undefined?{x,y,heading}:{x,y,heading,memory:nextMemory});
  }
  current=moved;
  }

@@ -1,7 +1,7 @@
 import type {SimSettings,World} from './types';
 import {worldDimensions} from './types';
 import {createWorld} from './sim';
-import {validTurmiteRule} from './spins-turmites';
+import {validTurmiteRule,normalizeTurmiteAgentMemories,DEFAULT_TURMITE_MEMORY} from './spins-turmites';
 import type {TurmiteAgent} from './spins-turmites';
 import type {MargolusEpoch} from './margolus-rules';
 import {validMargolusEpochs} from './margolus-rules';
@@ -94,12 +94,15 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
     for(const agent of agents){
       if(!agent||!Number.isInteger(agent.x)||!Number.isInteger(agent.y)||
          !Number.isInteger(agent.heading)||agent.x<0||agent.x>=width||
-         agent.y<0||agent.y>=height||agent.heading<0||agent.heading>3)
+         agent.y<0||agent.y>=height||agent.heading<0||agent.heading>3||
+          (agent.memory!==undefined&&(!Number.isInteger(agent.memory)||
+           agent.memory<0||agent.memory>23)))
         throw new Error('Invalid saved Turmite coordinate');
     }
     for(let i=0;i<n;i++)if(world.cells[i]>=settings.turmiteRule.length)
       throw new Error('Invalid Turmite track state');
-    world.turmiteAgents=agents.map(a=>({x:a.x,y:a.y,heading:a.heading}));
+    world.turmiteAgents=normalizeTurmiteAgentMemories(agents,
+      settings.turmiteMemory?.states??DEFAULT_TURMITE_MEMORY.states);
     world.turmiteRule=settings.turmiteRule;
   }
   if(settings.engine==='forestfire'){
