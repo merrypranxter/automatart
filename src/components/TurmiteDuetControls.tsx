@@ -35,7 +35,8 @@ export default function TurmiteDuetControls({settings:s,setSettings,world,select
    <span>ENABLE DUAL CHEMICAL ECOLOGY</span></label>
   <p className="neighborhood-note" id="turmite-duet-status" role="status">
    {active?'TWO CHEMICAL FIELDS ACTIVE':d.enabled?'DUET PAUSED · enable T6 chemistry to evolve':'DUAL FIELD BYPASSED · EXACT T6 BEHAVIOR'}
-   {' · '}T7 requires T6 active and at least two different species to deposit both chemicals. Enabling T7 selects two species without moving ants or restarting the artwork.
+   {' · '}T7 requires T6 and at least two actual ants for both chemicals. Enabling selects two species without moving ants or restarting artwork.
+   {s.turmiteCount<2?' ONLY ONE ANT IS PRESENT: the B field stays empty until you increase Ant Population above to 2 or more (that population change intentionally reseeds the world).':''}
   </p>
   <label className="input-label" htmlFor="turmite-duet-navigation">Navigation by combined chemical gradient</label>
   <select id="turmite-duet-navigation" value={d.navigation}
