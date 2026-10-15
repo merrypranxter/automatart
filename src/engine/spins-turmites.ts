@@ -152,6 +152,22 @@ export function turmiteMemoryAdvance(phase:number,read:number,written:number,
   occupancy>1?occupancy:0;
  return (phase+increment)%v.states;
 }
+/** Shrinking a T5 cycle is a destructive operation on the REGISTER ONLY:
+ * once phase 10 is reduced to 3 in a seven-state ring, expanding to 12
+ * must never resurrect the old 10. Neither track paint nor positions change.
+ * Absent legacy registers remain absent for exact T1–T4 compatibility.
+ */
+export function normalizeTurmiteAgentMemories(
+ agents:readonly TurmiteAgent[],states:number):TurmiteAgent[]{
+ if(!Number.isInteger(states)||states<2||states>24)
+  throw new Error('Invalid T5 memory cycle size');
+ return agents.map(agent=>{
+  if(agent.memory===undefined)return {...agent};
+  if(!Number.isInteger(agent.memory)||agent.memory<0||agent.memory>23)
+   throw new Error('Invalid T5 stored agent memory');
+  return {...agent,memory:agent.memory%states};
+ });
+}
 /** Move precisely ONE stable agent identity, retaining every other agent and
  * every painted pixel. Return a new list, never mutate the saved source.
  */
