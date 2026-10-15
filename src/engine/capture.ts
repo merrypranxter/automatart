@@ -53,6 +53,7 @@ export function cloneWorld(w:World):World{
   // powers first-frame GIF/video capture before any simulated steps occur.
   return {...w,cells:w.cells.slice(),grains:w.grains?.slice(),hppWalls:w.hppWalls?.slice(),
     turmiteAgents:w.turmiteAgents?.map(a=>({...a})),turmitePheromones:w.turmitePheromones?.slice(),
+    turmiteRivalPheromones:w.turmiteRivalPheromones?.slice(),
     ages:w.ages.slice(),neighbors:w.neighbors.slice(),
     events:w.events.slice(),traces:w.traces.slice(),
     previousCells:w.previousCells?.slice(),olderCells:w.olderCells?.slice(),
@@ -98,6 +99,12 @@ export function createCaptureCursor(source:World,s:SimSettings,fps:number,stepsP
         const next=stepWorld(current,s);
         const same=equalCells(current.cells,next.cells)&&
           (s.engine!=='turmites'||JSON.stringify(current.turmiteAgents)===JSON.stringify(next.turmiteAgents))&&
+          ((!current.turmitePheromones&&!next.turmitePheromones)||
+           (!!current.turmitePheromones&&!!next.turmitePheromones&&
+            equalCells(current.turmitePheromones,next.turmitePheromones)))&&
+          ((!current.turmiteRivalPheromones&&!next.turmiteRivalPheromones)||
+           (!!current.turmiteRivalPheromones&&!!next.turmiteRivalPheromones&&
+            equalCells(current.turmiteRivalPheromones,next.turmiteRivalPheromones)))&&
           (!next.grains||!!current.grains&&equalGrains(current.grains,next.grains));
         unchanged=same?unchanged+1:0;
         if(!same)changed=true;
