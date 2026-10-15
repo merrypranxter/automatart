@@ -10,12 +10,13 @@ interface Props{
  setSettings:Dispatch<SetStateAction<SimSettings>>;
  world:World;
  selectedAgent:number;
+ onStartRival:()=>void;
 }
-export default function TurmiteDuetControls({settings:s,setSettings,world,selectedAgent}:Props){
+export default function TurmiteDuetControls({settings:s,setSettings,world,selectedAgent,onStartRival}:Props){
  const d=s.turmiteDuet??DEFAULT_TURMITE_DUET;
  const [restartArmed,setRestartArmed]=useState(false);
  const realAntCount=world.turmiteAgents?.length??s.turmiteCount;
- const needsRival=realAntCount<2;
+ const needsRival=Math.min(realAntCount,s.turmiteCount)<2;
  const chem=s.turmitePheromoneRules??DEFAULT_TURMITE_PHEROMONES;
  const statsA=pheromoneStats(world.turmitePheromones);
  const statsB=pheromoneStats(world.turmiteRivalPheromones);
@@ -54,6 +55,7 @@ export default function TurmiteDuetControls({settings:s,setSettings,world,select
        turmitePheromoneRules:{...(old.turmitePheromoneRules??DEFAULT_TURMITE_PHEROMONES),enabled:true},
        turmiteDuet:{...(old.turmiteDuet??DEFAULT_TURMITE_DUET),enabled:true}}));
       setRestartArmed(false);
+      onStartRival();
      }}>YES · RESTART FRESH WITH 2 ANTS</button>
      <button id="turmite-duet-cancel-restart" type="button" onClick={()=>setRestartArmed(false)}>
       ✕ KEEP MY CURRENT ARTWORK</button>
