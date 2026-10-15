@@ -92,6 +92,13 @@ try{
  assert.equal(noT7.pheromones[3*7+3],12);
  assert.equal(noT7.pheromones[3*7+4],12,'T7 off restores exact all-species T6 deposition');
  assert.equal(noT7.rivalPheromones,undefined);
+ const singleSpecies=stepTurmites(zero,7,7,true,'SS',[agents[0]],1,spin,
+  DEFAULT_TURMITE_WRITE_PROGRAM,DEFAULT_TURMITE_ALCHEMY,DEFAULT_TURMITE_MEMORY,
+  c,zero,active);
+ assert.equal(singleSpecies.rivalPheromones,undefined,
+  'A single real ant cannot silently activate a fake rival chemical field');
+ assert.equal(singleSpecies.pheromones[3*7+3],12,
+  'A blocked one-ant duet must retain authentic T6 deposition instead');
  const froze=stepTurmites(zero,7,7,true,'SS',agents,1,spin,
   DEFAULT_TURMITE_WRITE_PROGRAM,DEFAULT_TURMITE_ALCHEMY,DEFAULT_TURMITE_MEMORY,
   {...c,enabled:false},group.a,{...d,enabled:true},group.b);
