@@ -28,7 +28,7 @@ Different Wireworld-style mathematical excitation intervals convert the *same co
 
 The spectrum reruns the actual production `stepWireworld` for each row, at the currently chosen radius and gate type. This is not Boolean arithmetic plugged into a decorative matrix. The real measured fingerprint is shown as a colored bit ribbon, with head-arrival ticks available by hovering. Its alternate-law results are demonstrations **only**, and do not silently change live-world physics; the existing B3 controls already let users change live rule thresholds explicitly.
 
-Under canonical NAE, 111 stays silent. Under physically valid generalized **1–3 HEADS**, the same 111 input now triggers an output. That is an actual mutation of the circuit's mathematical operation caused solely by changing the discrete physical law.
+Under canonical NAE, 111 stays silent. Under physically valid generalized **1–3 HEADS**, the same 111 input now triggers an output. That is an actual mutation of the circuit's mathematical operation caused solely by changing the discrete physical law. Under **exactly 3 HEADS**, the 111 junction does ignite at t=1, but the downstream wire does **not** transmit the signal: each subsequent conductor sees only one neighboring HEAD. The spectrum correctly records a silent remote port. Local excitation is not the same as a working output connection.
 
 ### Real collision microscope
 
