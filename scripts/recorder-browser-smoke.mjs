@@ -1797,6 +1797,75 @@ try{
    'Structural population reset must be explicit and start a new universe');
   console.log('PASS T7 review P1: impossible single-ant duet gated, cancel keeps art, confirmed restart creates two real factions');
 
+  // T8: real per-ant phase registers must change actual physics, save
+  // exactly, and never reset painting when the rhythm controls are edited.
+  const [t8BeforeDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t8Before=JSON.parse(await readFile(await t8BeforeDownload.path(),'utf8'));
+  assert.equal(await page.locator('#turmite-rhythm-enabled').isChecked(),false);
+  assert.equal(await page.locator('#turmite-rhythm-matrix [data-rhythm-agent]').count(),2);
+  await page.locator('#turmite-rhythm-choir').click();
+  assert.equal(await page.locator('#turmite-rhythm-enabled').isChecked(),true);
+  assert.equal(await page.locator('#turmite-rhythm-mode').inputValue(),'phase');
+  await page.locator('#turmite-rhythm-frequency').fill('17');
+  await page.locator('#turmite-rhythm-coupling').fill('-23');
+  await page.locator('#turmite-rhythm-radius').fill('20');
+  await page.locator('#turmite-rhythm-chemistry').fill('8');
+  await page.locator('#turmite-rhythm-detune').fill('6');
+  await page.locator('#turmite-rhythm-turn-bias').fill('3');
+  await page.locator('#turmite-rhythm-write-bias').fill('-2');
+  const [t8EditedDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t8Edited=JSON.parse(await readFile(await t8EditedDownload.path(),'utf8'));
+  assert.equal(t8Edited.world.generation,t8Before.world.generation);
+  assert.equal(t8Edited.world.arrays.cells,t8Before.world.arrays.cells);
+  assert.deepEqual(t8Edited.world.turmiteAgents,t8Before.world.turmiteAgents,
+   'T8 live control edits preserve actual agent identity and history');
+  assert.equal(t8Edited.settings.turmiteRhythm.coupling,-23);
+  assert.equal(t8Edited.settings.turmiteRhythm.chemistry,8);
+  await page.getByRole('button',{name:'STEP +1'}).click();
+  const [t8SteppedDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t8Stepped=JSON.parse(await readFile(await t8SteppedDownload.path(),'utf8'));
+  assert.equal(t8Stepped.world.generation,t8Before.world.generation+1);
+  assert(t8Stepped.world.turmiteAgents.every(a=>Number.isInteger(a.rhythmPhase)&&
+   a.rhythmPhase>=0&&a.rhythmPhase<256),'T8 actual phase registers saved');
+  assert.equal(await page.locator('#turmite-rhythm-matrix [data-rhythm-phase]').count(),2);
+  assert(Number(await page.locator('#turmite-rhythm-order').innerText())>=0);
+  await page.locator('#turmite-rhythm-riot').click();
+  assert.equal(await page.locator('#turmite-rhythm-mode').inputValue(),'inverse');
+  await page.locator('#turmite-rhythm-pulse').click();
+  assert.equal(await page.locator('#turmite-rhythm-mode').inputValue(),'pulse');
+  await page.locator('#turmite-rhythm-chemical').click();
+  assert.equal(await page.locator('#turmite-rhythm-chemistry').inputValue(),'16');
+  await page.locator('#turmite-rhythm-off').click();
+  const [t8FrozenDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t8Frozen=JSON.parse(await readFile(await t8FrozenDownload.path(),'utf8'));
+  assert.equal(t8Frozen.settings.turmiteRhythm.enabled,false);
+  assert.deepEqual(t8Frozen.world.turmiteAgents,t8Stepped.world.turmiteAgents,
+   'Turning off T8 freezes, rather than discards, real oscillators');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t8-kuramites-true-phase.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(t8Stepped))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-rhythm-enabled')?.checked===true&&
+   document.querySelector('#turmite-rhythm-coupling')?.value==='-23');
+  const [t8RestoredDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t8Restored=JSON.parse(await readFile(await t8RestoredDownload.path(),'utf8'));
+  assert.deepEqual(t8Restored.settings.turmiteRhythm,t8Stepped.settings.turmiteRhythm);
+  assert.deepEqual(t8Restored.world.turmiteAgents,t8Stepped.world.turmiteAgents);
+  assert.equal(t8Restored.world.arrays.cells,t8Stepped.world.arrays.cells);
+  assert.equal(t8Restored.world.arrays.turmitePheromones,t8Stepped.world.arrays.turmitePheromones);
+  assert.equal(t8Restored.world.arrays.turmiteRivalPheromones,t8Stepped.world.arrays.turmiteRivalPheromones);
+  console.log('PASS T8: real oscillators, eight sectors, four presets, live no-reset knobs and exact T1–T8 recipe replay');
+
 
 
   await page.locator('#engine').selectOption('life');
