@@ -5,7 +5,7 @@
  */
 import {stepWireworld} from './circuits';
 import type {World} from './types';
-export type WireLogicKind='or'|'fanout'|'xor'|'nand'|'not';
+export type WireLogicKind='or'|'fanout'|'xor'|'nand'|'not'|'nor'|'nae';
 export type WireLogicBit=0|1;
 export type LogicPoint=readonly [number,number];
 export interface WireLogicOptions {
@@ -14,10 +14,13 @@ export interface WireLogicOptions {
  rotation:0|1|2|3;
  a:WireLogicBit;
  b:WireLogicBit;
+ /** Three-input NAE uses a genuine third contact; old gates default to zero. */
+ c?:WireLogicBit;
 }
 export interface WireLogicPorts {
  inputA:LogicPoint;
  inputB?:LogicPoint;
+ inputC?:LogicPoint;
  outputs:LogicPoint[];
 }
 export interface WireLogicLayout {
@@ -36,12 +39,24 @@ function vertical(x:number,from:number,to:number,pts:LogicPoint[]){
  for(let y=from;y<=to;y++)pts.push([x,y]);
 }
 export function wireLogicLayout(opts:WireLogicOptions):WireLogicLayout{
- const {kind,radius:r,rotation:k,a,b}=opts;
- if(!['or','fanout','xor','nand','not'].includes(kind)||!Number.isInteger(r)||r<7||r>12||
-    ![0,1,2,3].includes(k)||![0,1].includes(a)||![0,1].includes(b))
+ const {kind,radius:r,rotation:k,a,b,c=0}=opts;
+ if(!['or','fanout','xor','nand','not','nor','nae'].includes(kind)||!Number.isInteger(r)||r<7||r>12||
+    ![0,1,2,3].includes(k)||![0,1].includes(a)||![0,1].includes(b)||![0,1].includes(c))
   throw Error('Invalid verified wire logic configuration');
  const conductors:LogicPoint[]=[];
- if(kind==='nand'||kind==='not'){
+ if(kind==='nor'||kind==='nae'){
+  // Canonical NAE emits iff exactly 1 or 2 of three real input heads.
+  // NOR has two bias contacts and two OPTIONAL live HEAD contacts.
+  // An OFF optional NOR contact is EMPTY, NOT a passive conductive stub:
+  // retaining that stub causes physically real delayed parasitic pulses,
+  // and therefore fails certification. The input bit seeds a contact site.
+  for(let i=0;i<=r;i++)conductors.push([i,-i]);
+  if(kind==='nor'){
+   conductors.push([-1,0],[-1,1]);
+   if(a)conductors.push([-1,-1]);
+   if(b)conductors.push([0,1]);
+  }else conductors.push([-1,0],[-1,1],[0,1]);
+ }else if(kind==='nand'||kind==='not'){
   // Canonical inhibition gates. A central conductor sees a permanently
   // initialized bias of 1 HEAD (NAND) or 2 HEADS (NOT). Optional input
   // HEAD contacts increase the Moore neighbor count. Exactly 1 or 2 heads
@@ -66,8 +81,16 @@ export function wireLogicLayout(opts:WireLogicOptions):WireLogicLayout{
   const key=x+','+y;if(seen.has(key))return false;seen.add(key);return true;
  });
  const heads:LogicPoint[]=[],tails:LogicPoint[]=[];
- const outputPoints:LogicPoint[]=(kind==='xor'||kind==='nand'||kind==='not')?[[r,-r]]:kind==='or'?[[r,0]]:[[r,0],[0,-r]];
- if(kind==='nand'||kind==='not'){
+ const outputPoints:LogicPoint[]=(kind==='xor'||kind==='nand'||kind==='not'||kind==='nor'||kind==='nae')?[[r,-r]]:kind==='or'?[[r,0]]:[[r,0],[0,-r]];
+ if(kind==='nor'){
+  heads.push([-1,0],[-1,1]);
+  if(a)heads.push([-1,-1]);
+  if(b)heads.push([0,1]);
+ }else if(kind==='nae'){
+  if(a)heads.push([-1,0]);
+  if(b)heads.push([-1,1]);
+  if(c)heads.push([0,1]);
+ }else if(kind==='nand'||kind==='not'){
   heads.push([-1,0]); // NAND always has 1 real seed HEAD; NOT has 2.
   if(kind==='not')heads.push([-1,1]);
   if(a)heads.push(kind==='nand'?[-1,1]:[0,1]);
@@ -86,9 +109,10 @@ export function wireLogicLayout(opts:WireLogicOptions):WireLogicLayout{
   heads:heads.map(p=>rot(p,k)),
   tails:tails.map(p=>rot(p,k)),
   ports:{
-   inputA:rot(kind==='nand'?[-1,1]:kind==='not'?[0,1]:kind==='xor'?[-1,0]:[-r+1,0],k),
-   ...((kind==='or'||kind==='xor'||kind==='nand')?
-    {inputB:rot(kind==='xor'||kind==='nand'?[0,1]:[0,r-1],k)}:{}),
+   inputA:rot(kind==='nor'?[-1,-1]:kind==='nae'?[-1,0]:kind==='nand'?[-1,1]:kind==='not'?[0,1]:kind==='xor'?[-1,0]:[-r+1,0],k),
+   ...((kind==='or'||kind==='xor'||kind==='nand'||kind==='nor'||kind==='nae')?
+    {inputB:rot(kind==='nae'?[-1,1]:kind==='nor'||kind==='xor'||kind==='nand'?[0,1]:[0,r-1],k)}:{}),
+   ...(kind==='nae'?{inputC:rot([0,1],k)}:{}),
    outputs:outputPoints.map(p=>rot(p,k))
   }
  };
@@ -96,6 +120,7 @@ export function wireLogicLayout(opts:WireLogicOptions):WireLogicLayout{
 export interface LogicWave {
  a:WireLogicBit;
  b:WireLogicBit;
+ c:WireLogicBit;
  hits:boolean[];
  firstTick:(number|null)[];
  waveforms:boolean[][];
@@ -115,9 +140,9 @@ export interface LogicBench {
  */
 export function runWireLogicBench(kind:WireLogicKind,radius:number):LogicBench{
  const cases:LogicWave[]=[];
- const choices:WireLogicBit[][]=(kind==='fanout'||kind==='not')?[[0,0],[1,0]]:[[0,0],[0,1],[1,0],[1,1]];
- for(const [a,b] of choices){
-  const layout=wireLogicLayout({kind,radius,rotation:0,a,b});
+ const choices:WireLogicBit[][]=kind==='nae'?[[0,0,0],[0,0,1],[0,1,0],[0,1,1],[1,0,0],[1,0,1],[1,1,0],[1,1,1]]:(kind==='fanout'||kind==='not')?[[0,0],[1,0]]:[[0,0],[0,1],[1,0],[1,1]];
+ for(const [a,b,c=0] of choices){
+  const layout=wireLogicLayout({kind,radius,rotation:0,a,b,c});
   const dim=2*radius+18,center=Math.floor(dim/2);
   const index=([x,y]:LogicPoint)=>(center+y)*dim+center+x;
   let cells:Uint8Array=new Uint8Array(dim*dim);
@@ -132,9 +157,9 @@ export function runWireLogicBench(kind:WireLogicKind,radius:number):LogicBench{
   }
   const firstTick=waveforms.map(w=>{const at=w.indexOf(true);return at<0?null:at;});
   const hits=firstTick.map(v=>v!==null);
-  const expected=kind==='or'?Boolean(a||b):kind==='xor'?Boolean(a!==b):kind==='nand'?!(a&&b):kind==='not'?!a:Boolean(a);
+  const expected=kind==='or'?Boolean(a||b):kind==='xor'?Boolean(a!==b):kind==='nand'?!(a&&b):kind==='nor'?!(a||b):kind==='nae'?!(a===b&&b===c):kind==='not'?!a:Boolean(a);
   const pass=hits.every(v=>v===expected);
-  cases.push({a,b,hits,firstTick,waveforms,pass});
+  cases.push({a,b,c,hits,firstTick,waveforms,pass});
  }
  return {kind,radius,canonical:true,cases,allPass:cases.every(c=>c.pass)};
 }
@@ -182,6 +207,7 @@ export function stampWireLogic(world:World,anchor:LogicPoint,opts:WireLogicOptio
  const ports:WireLogicPorts={
   inputA:offset(anchor,layout.ports.inputA),
   ...(layout.ports.inputB?{inputB:offset(anchor,layout.ports.inputB)}:{}),
+  ...(layout.ports.inputC?{inputC:offset(anchor,layout.ports.inputC)}:{}),
   outputs:layout.ports.outputs.map(p=>offset(anchor,p))
  };
  return {touched,ports};

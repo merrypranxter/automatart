@@ -57,6 +57,8 @@ jobs:
         run: node scripts/d1a-rhombille-smoke.mjs
       - name: Test Cyclic A1 calibrated starter worlds, physical structure and exact replay
         run: node scripts/dynamics-a1-presets-smoke.mjs
+      - name: Verify B8 canonical NOR/three-input NAE and five alternate true CA head-count spectra
+        run: node scripts/dynamics-b8-threshold-smoke.mjs
       - name: Profile Cyclic A1 structural viability across multiple widths and seeds
         run: node scripts/dynamics-a1-cyclic-viability.mjs
       - name: Verify Dynamics P1 classic cyclic rule, chase sensitivity and seeded activity
