@@ -635,8 +635,11 @@ try{
   assert.match(await page.locator('#wire-phase-certification').innerText(),/EXACT B9 CERTIFIED AND/);
   await page.locator('#wire-phase-nw').fill('2');
   await page.locator('#wire-phase-ne').fill('-1');
-  assert.equal(await page.locator('#wire-phase-nw-time').innerText(),'T12');
+  assert.equal(await page.locator('#wire-phase-nw-time').innerText(),'T11',
+   'Observed NW pulse beats naive T12 because real Moore-neighbor coupling changes propagation');
   assert.equal(await page.locator('#wire-phase-ne-time').innerText(),'T9');
+  assert.equal(await page.locator('#wire-phase-bits').innerText(),'1111',
+   'True physical phase mutation transforms AND into a constant-TRUE four-input fingerprint');
   assert.match(await page.locator('#wire-phase-certification').innerText(),/EXPERIMENTAL PHASE SPECIMEN/);
   assert.equal(await page.locator('#wire-phase-truth tbody tr').count(),4);
   const beforeScan=await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL());
@@ -656,7 +659,7 @@ try{
   const b10Pixels=await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL());
   await page.locator('#wire-phase-measure').click();
   const phaseReport=await page.locator('#wire-phase-measurement').innerText();
-  assert.match(phaseReport,/NW BIAS:.*T12/);
+  assert.match(phaseReport,/NW BIAS:.*T11/);
   assert.match(phaseReport,/NE BIAS:.*T9/);
   assert.equal(await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL()),b10Pixels,
    'Four actual phase probes cannot mutate the real stage');
