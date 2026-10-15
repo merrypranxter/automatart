@@ -65,7 +65,7 @@ export default function WireCascadeControls({world,settings,monitor,onInstall}:P
    {[0,1,2,3].map(k=><option key={k} value={k}>{k*90}°</option>)}
   </select>
   <strong className="input-label">ACTUAL FOUR-STATE AND TRUTH TABLE</strong>
-  <div className="wire-logic-truth-table" style={{overflowX:'auto'}}>
+  <div className="wire-cascade-truth-table" style={{overflowX:'auto'}}>
    <table id="wire-cascade-truth" aria-label="Real two-stage cascaded NAND NOT AND truth table" style={{width:'100%',minWidth:350,fontSize:'.78rem'}}>
     <thead><tr><th>A</th><th>B</th><th>NAND FWD</th><th>PORT HEADS incl. return</th><th>BIAS ×2</th><th>STAGE 2 HEAD</th><th>AND OUT</th><th>PASS</th></tr></thead>
     <tbody>{bench.cases.map(row=><tr key={''+row.a+row.b}>
