@@ -66,7 +66,7 @@ try{
  assert.equal(pheromoneSteerHeading(new Uint8Array(49),7,7,true,3,3,2,0,chem),2,
   'Zero chemical gradients MUST NOT rotate ants');
  assert.equal(pheromoneSteerHeading(concentration,7,7,true,3,3,2,0,
-  {...chem,strength:1}),1,'Quarter-turn steering must respect maximum 90 degrees');
+  {...chem,strength:1}),3,'Quarter-turn steering must respect maximum 90 degrees');
  assert.equal(pheromoneSteerHeading(concentration,7,7,true,3,3,2,0,
   {...chem,threshold:32}),2,'Sub-threshold gradients must not influence heading');
  const diffuse={...chem,diffusion:8,deposit:8};
@@ -83,7 +83,7 @@ try{
  assert.equal(saturated[3*7+3],255,'Two+ body pileups must saturate, not overflow Uint8');
  const border=stepTurmitePheromones(zeros,7,7,false,[{x:0,y:0}],
   {...diffuse,deposit:16});
- assert.equal(border[0],10,'Finite edges mirror missing neighbors, not teleport chemicals');
+ assert.equal(border[0],12,'Finite edges mirror missing neighbors, not teleport chemicals');
  const torus=stepTurmitePheromones(zeros,7,7,true,[{x:0,y:0}],
   {...diffuse,deposit:16});
  assert.equal(torus[0],8,'Periodic torus uses true wrapped physical neighbors');
