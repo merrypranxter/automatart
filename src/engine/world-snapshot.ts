@@ -1,7 +1,7 @@
 import type {SimSettings,World} from './types';
 import {worldDimensions} from './types';
 import {createWorld} from './sim';
-import {validTurmiteRule} from './spins-turmites';
+import {validTurmiteRule,normalizeTurmiteAgentMemories,DEFAULT_TURMITE_MEMORY} from './spins-turmites';
 import type {TurmiteAgent} from './spins-turmites';
 import type {MargolusEpoch} from './margolus-rules';
 import {validMargolusEpochs} from './margolus-rules';
@@ -101,7 +101,8 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
     }
     for(let i=0;i<n;i++)if(world.cells[i]>=settings.turmiteRule.length)
       throw new Error('Invalid Turmite track state');
-    world.turmiteAgents=agents.map(a=>({...a}));
+    world.turmiteAgents=normalizeTurmiteAgentMemories(agents,
+      settings.turmiteMemory?.states??DEFAULT_TURMITE_MEMORY.states);
     world.turmiteRule=settings.turmiteRule;
   }
   if(settings.engine==='forestfire'){
