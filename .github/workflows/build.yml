@@ -61,6 +61,8 @@ jobs:
         run: node scripts/dynamics-t4-collision-alchemy-smoke.mjs
       - name: Verify T5 per-ant finite-state memory, feedback, saved histories and recording
         run: node scripts/dynamics-t5-memory-ants-smoke.mjs
+      - name: Verify T6 true chemical fields, diffusion, chemotaxis and persistent recipes
+        run: node scripts/dynamics-t6-pheromone-gravity-smoke.mjs
       - name: Verify C4 HPP conservation, boundaries, wall painting, recipes and recording
         run: node scripts/c4-hpp-smoke.mjs
       - name: Verify D1a true rhombille tile edge graph, tap projection and CA compatibility
