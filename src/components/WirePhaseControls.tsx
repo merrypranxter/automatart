@@ -29,6 +29,7 @@ export default function WirePhaseControls({world,settings,monitor,onInstall}:Pro
  const [error,setError]=useState('');
  const phase=useMemo(()=>measureWirePhase(radius,outputLength,biasNWShift,biasNEShift),
   [radius,outputLength,biasNWShift,biasNEShift]);
+ const selectedInput11=phase.rows[3];
  const pure=world.engine==='wireworld'&&world.lattice==='square'&&
   settings.wireExciteMin===1&&settings.wireExciteMax===2&&settings.wireDrive==='off';
  const args:WireCascadeOptions={radius,outputLength,rotation,a,b,biasNWShift,biasNEShift};
@@ -61,7 +62,7 @@ export default function WirePhaseControls({world,settings,monitor,onInstall}:Pro
    <strong>◴ B10 · PHASE MUTATION LAB</strong>
    <span>DIFFERENT WIRE LENGTHS · DIFFERENT MATHEMATICS</span>
   </div>
-  <p className="module-note">Take the real B9 NAND → NOT cascade and make its TWO independent bias signals early or late by shortening or lengthening their physical conducting rails. The original rules stay untouched. A shift is measured in WHOLE CONDUCTOR CELLS, not animation frames. Discover whether a gate still behaves like AND—or starts transmitting surprising extra pulses.</p>
+  <p className="module-note">Take the real B9 NAND → NOT cascade and make its TWO independent bias signals early or late by shortening or lengthening their physical conducting rails. The original rules stay untouched. A shift is measured in WHOLE CONDUCTOR CELLS, not animation frames. Coupled neighbors can make actual arrival times DIFFER from naive wire-length predictions. Every meter reports true measured HEAD arrivals. Discover whether AND becomes something bizarre.</p>
   <label className="input-label" htmlFor="wire-phase-nw">
    NW bias rail · physical timing shift <em>{biasNWShift>0?'+':''}{biasNWShift} {biasNWShift===1?'cell':'cells'}</em>
   </label>
@@ -73,8 +74,8 @@ export default function WirePhaseControls({world,settings,monitor,onInstall}:Pro
   <input id="wire-phase-ne" type="range" min="-3" max="3" step="1" value={biasNEShift}
    onChange={e=>setBiasNEShift(Number(e.target.value))}/>
   <div className="wave-dynamics-meters">
-   <div><b id="wire-phase-nw-time">T{radius+1+biasNWShift}</b><span>NW SOURCE ARRIVAL PREDICTION</span></div>
-   <div><b id="wire-phase-ne-time">T{radius+1+biasNEShift}</b><span>NE SOURCE ARRIVAL PREDICTION</span></div>
+   <div><b id="wire-phase-nw-time">{pulses(selectedInput11.biasNWTicks)}</b><span>ACTUAL NW HEAD ARRIVALS FOR INPUT 11</span></div>
+   <div><b id="wire-phase-ne-time">{pulses(selectedInput11.biasNETicks)}</b><span>ACTUAL NE HEAD ARRIVALS FOR INPUT 11</span></div>
    <div><b id="wire-phase-bits">{phase.truth}</b><span>PHYSICALLY MEASURED OUTPUT FINGERPRINT</span></div>
   </div>
   <p id="wire-phase-certification" className="neighborhood-note" role="status">
