@@ -18,7 +18,7 @@ try{
  })));
  const load=async i=>import(pathToFileURL(resolve(paths[i][1])).href);
  const {stepTurmites,seedTurmites,relocateTurmiteAgent,
-  turmiteMemoryAdvance,validTurmiteMemory,DEFAULT_TURMITE_MEMORY,
+  turmiteMemoryAdvance,validTurmiteMemory,DEFAULT_TURMITE_MEMORY,normalizeTurmiteAgentMemories,
   DEFAULT_TURMITE_ALCHEMY,DEFAULT_TURMITE_WRITE_PROGRAM}=await load(0);
  const {createWorld,stepWorld}=await load(1);
  const {INITIAL_SETTINGS}=await load(2);
@@ -28,6 +28,23 @@ try{
  const memory={...DEFAULT_TURMITE_MEMORY,enabled:true,states:8,
   mode:'read',turnBias:1,writeBias:1};
  assert(validTurmiteMemory(DEFAULT_TURMITE_MEMORY));
+ const packedHistory=[
+  {x:2,y:4,heading:0,memory:10},
+  {x:3,y:4,heading:1,memory:6},
+  {x:4,y:4,heading:2}
+ ];
+ const reduced=normalizeTurmiteAgentMemories(packedHistory,7);
+ assert.deepEqual(reduced.map(a=>a.memory),[3,6,undefined],
+  'Contraction truly changes saved register values without inventing legacy memory');
+ assert.deepEqual(normalizeTurmiteAgentMemories(reduced,12).map(a=>a.memory),[3,6,undefined],
+  'Growing after shrinking must not resurrect discarded higher register phases');
+ assert.deepEqual(reduced.map(a=>[a.x,a.y,a.heading]),
+  packedHistory.map(a=>[a.x,a.y,a.heading]),
+  'Memory contraction never relocates real agents');
+ assert.equal(packedHistory[0].memory,10,'Memory normalization must not mutate its source');
+ assert.throws(()=>normalizeTurmiteAgentMemories(packedHistory,1),/Invalid T5/);
+ assert.throws(()=>normalizeTurmiteAgentMemories([{x:1,y:1,heading:0,memory:25}],7),/Invalid T5/);
+
  for(const v of [{...memory,states:0},{...memory,states:25},
   {...memory,turnBias:4},{...memory,writeBias:-4},
   {...memory,mode:'hallucination'},{...memory,enabled:'true'}])
@@ -128,6 +145,16 @@ try{
  assert.deepEqual(snapshotWorld(original).turmiteAgents,original.turmiteAgents,
   'Read-only export cursor never changes its source world');
 
+ const rebased=structuredClone(packed);
+ rebased.turmiteAgents[0].memory=10;
+ const smaller={...settings,turmiteMemory:{...settings.turmiteMemory,states:7}};
+ const reducedSave=restoreWorldSnapshot(rebased,smaller);
+ assert.equal(reducedSave.turmiteAgents[0].memory,3,
+  'Older recipes with out-of-cycle stored phases are durably reduced on import');
+ assert.equal(restoreWorldSnapshot(snapshotWorld(reducedSave),
+  {...smaller,turmiteMemory:{...smaller.turmiteMemory,states:12}})
+  .turmiteAgents[0].memory,3,
+  'A larger cycle after import must not revive the former memory phase');
  const bad=structuredClone(packed);bad.turmiteAgents[0].memory=24;
  assert.throws(()=>restoreWorldSnapshot(bad,settings),/Invalid saved Turmite coordinate/);
  const badFraction=structuredClone(packed);badFraction.turmiteAgents[0].memory=2.5;
