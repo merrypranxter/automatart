@@ -76,7 +76,9 @@ export function createWorld(s:SimSettings):World{
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,hppWalls,turmiteAgents,
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,
     turmitePheromones:s.engine==='turmites'&&s.turmitePheromoneRules?.enabled?new Uint8Array(n):undefined,
-    turmiteRivalPheromones:s.engine==='turmites'&&s.turmiteDuet?.enabled&&s.turmitePheromoneRules?.enabled?new Uint8Array(n):undefined,
+    turmiteRivalPheromones:s.engine==='turmites'&&s.turmiteDuet?.enabled&&
+      s.turmitePheromoneRules?.enabled&&s.turmiteCount>=2&&s.turmiteSpeciesCount>=2?
+       new Uint8Array(n):undefined,
     hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,ages,
     neighbors:new Uint8Array(n),events:new Uint8Array(n),traces,
     previousCells:cells.slice(),olderCells:cells.slice(),fossils:new Float32Array(n),
