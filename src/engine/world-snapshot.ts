@@ -82,7 +82,9 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
        settings.turmitePheromoneRules?.enabled?new Uint8Array(n):undefined):undefined,
     turmiteRivalPheromones:settings.engine==='turmites'?
       (source.turmiteRivalPheromones!==undefined?get('turmiteRivalPheromones',n):
-       settings.turmitePheromoneRules?.enabled&&settings.turmiteDuet?.enabled?new Uint8Array(n):undefined):undefined,
+       settings.turmitePheromoneRules?.enabled&&settings.turmiteDuet?.enabled&&
+       settings.turmiteCount>=2&&settings.turmiteSpeciesCount>=2?
+       new Uint8Array(n):undefined):undefined,
     margolusEpochs:settings.engine==='margolus'?validMargolusEpochs(s.margolusEpochs,s.generation!):undefined};
   if(settings.engine==='margolus'){
     for(const state of world.cells)if(state>1)
