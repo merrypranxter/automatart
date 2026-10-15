@@ -61,6 +61,8 @@ jobs:
         run: node scripts/dynamics-b8-threshold-smoke.mjs
       - name: Verify B9 genuine two-stage NAND to synchronized NOT to AND physical signals and recipe replay
         run: node scripts/dynamics-b9-cascade-smoke.mjs
+      - name: Verify B10 genuine bias path-length phase mutation and all four-state output fingerprints
+        run: node scripts/dynamics-b10-phase-smoke.mjs
       - name: Profile Cyclic A1 structural viability across multiple widths and seeds
         run: node scripts/dynamics-a1-cyclic-viability.mjs
       - name: Verify Dynamics P1 classic cyclic rule, chase sensitivity and seeded activity
