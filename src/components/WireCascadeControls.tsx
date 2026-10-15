@@ -65,11 +65,12 @@ export default function WireCascadeControls({world,settings,monitor,onInstall}:P
    {[0,1,2,3].map(k=><option key={k} value={k}>{k*90}°</option>)}
   </select>
   <strong className="input-label">ACTUAL FOUR-STATE AND TRUTH TABLE</strong>
-  <div className="wire-logic-truth-table" style={{overflowX:'auto'}}>
+  <div className="wire-cascade-truth-table" style={{overflowX:'auto'}}>
    <table id="wire-cascade-truth" aria-label="Real two-stage cascaded NAND NOT AND truth table" style={{width:'100%',minWidth:350,fontSize:'.78rem'}}>
-    <thead><tr><th>A</th><th>B</th><th>NAND HEAD</th><th>BIAS ×2</th><th>STAGE 2 HEAD</th><th>AND OUT</th><th>PASS</th></tr></thead>
+    <thead><tr><th>A</th><th>B</th><th>NAND FWD</th><th>PORT HEADS incl. return</th><th>BIAS ×2</th><th>STAGE 2 HEAD</th><th>AND OUT</th><th>PASS</th></tr></thead>
     <tbody>{bench.cases.map(row=><tr key={''+row.a+row.b}>
      <td>{row.a}</td><td>{row.b}</td>
+     <td>{row.nandForward?'T'+(radius+1):'—'}</td>
      <td>{row.nandTicks.map(t=>'T'+t).join(', ')||'—'}</td>
      <td>{row.biasTicks.map(w=>w.map(t=>'T'+t).join(', ')).join(' / ')}</td>
      <td>{row.secondStageTicks.map(t=>'T'+t).join(', ')||'—'}</td>
@@ -98,10 +99,11 @@ export default function WireCascadeControls({world,settings,monitor,onInstall}:P
   {!canonical&&<p className="neighborhood-note" role="status">
    Certified installation requires square Wireworld with the original 1–2 HEAD excitation law and external electrodes OFF. Use B3 controls to choose canonical settings; B9 will never change your physics secretly.
   </p>}
+  <p className="neighborhood-note">⚠ Real conductors are bidirectional. On input 11, the successfully ignited second stage sends a RETURN electron wave toward the NAND port at tick {radius+3}. This is not a forward NAND result or an extra AND output. The table includes it instead of concealing physical feedback. These seeded specimens are not reusable asynchronous clocked logic modules.</p>
   <p className="neighborhood-note">The installer makes one localized art edit, with a two-cell clearing moat, and keeps the current generation. A full cascade is taller than a single gate because both bias sources must travel in time; clipped devices are rejected without changing any cells. Save a recipe to preserve exact conductor/head/tail states.</p>
   {monitor&&<div className="neighborhood-note" id="wire-cascade-live">
    <strong>FOUR REAL-WORLD PROBES · INSTALLED AT GENERATION {monitor.installedAt}</strong>
-   <div>STAGE 1 NAND ({monitor.ports.nand.join(',')}) · {sample(monitor.ports.nand)}</div>
+   <div>STAGE 1 NAND PORT ({monitor.ports.nand.join(',')}) · {sample(monitor.ports.nand)} · includes reflected pulses</div>
    <div>STAGE 2 DETECTOR ({monitor.ports.inverter.join(',')}) · {sample(monitor.ports.inverter)}</div>
    <div>BIAS CONTACTS · {monitor.ports.biases.map(sample).join(' + ')}</div>
    <div>FINAL AND ({monitor.ports.output.join(',')}) · {sample(monitor.ports.output)}</div>

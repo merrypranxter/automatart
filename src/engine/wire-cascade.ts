@@ -28,7 +28,8 @@ export interface WireCascadeLayout {
 }
 export interface WireCascadeCase {
  a:WireLogicBit;b:WireLogicBit;
- nandTicks:number[];secondStageTicks:number[];biasTicks:number[][];outputTicks:number[];
+ nandTicks:number[];nandForward:boolean;nandFeedbackTicks:number[];
+ secondStageTicks:number[];biasTicks:number[][];outputTicks:number[];
  expectedOutputTicks:number[];
  pass:boolean;
 }
@@ -114,12 +115,19 @@ export function runWireCascadeBench(radius:number,outputLength:number):WireCasca
    cells=stepWireworld(cells,dimension,dimension,false,1,2);
   }
   const expectedOutputTicks=a===1&&b===1?[radius+2+outputLength]:[];
+  // Wireworld's conductors are BIDIRECTIONAL: for 11, the successfully
+  // fired stage two returns one genuine HEAD back onto the NAND port at
+  // tick r+3. This is late reverse propagation, NOT a forward NAND output.
+  const nandForward=nandTicks.includes(radius+1);
+  const nandFeedbackTicks=nandTicks.filter(t=>t>radius+1);
   const pass=
-   JSON.stringify(nandTicks)===(a&&b?'[]':'['+(radius+1)+']')&&
+   nandForward===!(a&&b)&&
+   JSON.stringify(nandTicks)===(a&&b?'['+(radius+3)+']':'['+(radius+1)+']')&&
    JSON.stringify(biasTicks)==='[['+(radius+1)+'],['+(radius+1)+']]'&&
    JSON.stringify(secondStageTicks)===(a&&b?'['+(radius+2)+']':'[]')&&
    JSON.stringify(outputTicks)===JSON.stringify(expectedOutputTicks);
-  cases.push({a,b,nandTicks,secondStageTicks,biasTicks,outputTicks,expectedOutputTicks,pass});
+  cases.push({a,b,nandTicks,nandForward,nandFeedbackTicks,
+   secondStageTicks,biasTicks,outputTicks,expectedOutputTicks,pass});
  }
  return {radius,outputLength,canonical:true,cases,allPass:cases.every(row=>row.pass)};
 }

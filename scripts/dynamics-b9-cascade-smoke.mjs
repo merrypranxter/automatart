@@ -36,10 +36,13 @@ try{
   assert.deepEqual(bench.cases.map(row=>Number(row.outputTicks.length>0)),[0,0,0,1],
    'Remote output is true AND, with no late spurious electron arrivals');
   for(const row of bench.cases){
-   const nandExpected=row.a&&row.b?[]:[radius+1];
+   const nandExpected=row.a&&row.b?[radius+3]:[radius+1];
+   assert.equal(row.nandForward,!(row.a&&row.b),
+    'Only the decision-time NAND wave counts as forward output; late returns are genuine wire feedback');
+   assert.deepEqual(row.nandFeedbackTicks,row.a&&row.b?[radius+3]:[]);
    const secondExpected=row.a&&row.b?[radius+2]:[];
    const andExpected=row.a&&row.b?[radius+2+outLength]:[];
-   assert.deepEqual(row.nandTicks,nandExpected,'First stage is TRUE simulated NAND');
+   assert.deepEqual(row.nandTicks,nandExpected,'Probe records true forward NAND and any late reverse-propagating HEAD');
    assert.deepEqual(row.biasTicks,[[radius+1],[radius+1]],
     'Two real independent bias electron waves MUST arrive in the NAND signal window');
    assert.deepEqual(row.secondStageTicks,secondExpected,
@@ -105,8 +108,8 @@ try{
   {label:'AND',x:ports.output[0],y:ports.output[1]}
  ];
  const scope=forecastWireSignals(world,s,points,64);
- assert.deepEqual(scope.traces.map(t=>t.headTicks),[[],[11],[10],[19]],
-  'Read-only four-point oscilloscope sees both real stages and phased bias');
+ assert.deepEqual(scope.traces.map(t=>t.headTicks),[[12],[11],[10],[19]],
+  'Read-only scope captures both stages, timed bias AND reverse HEAD feedback after AND fires');
  assert.deepEqual(world.cells,unchanged);
  assert.equal(world.generation,gen);
  const captured=createCaptureCursor(world,s,20,20);captured.advance();
