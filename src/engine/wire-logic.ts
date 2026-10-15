@@ -46,9 +46,16 @@ export function wireLogicLayout(opts:WireLogicOptions):WireLogicLayout{
  const conductors:LogicPoint[]=[];
  if(kind==='nor'||kind==='nae'){
   // Canonical NAE emits iff exactly 1 or 2 of three real input heads.
-  // NOR starts with two actual bias HEADs, optional A and B add one.
+  // NOR has two bias contacts and two OPTIONAL live HEAD contacts.
+  // An OFF optional NOR contact is EMPTY, NOT a passive conductive stub:
+  // retaining that stub causes physically real delayed parasitic pulses,
+  // and therefore fails certification. The input bit seeds a contact site.
   for(let i=0;i<=r;i++)conductors.push([i,-i]);
-  conductors.push([-1,-1],[-1,0],[-1,1],[0,1]);
+  if(kind==='nor'){
+   conductors.push([-1,0],[-1,1]);
+   if(a)conductors.push([-1,-1]);
+   if(b)conductors.push([0,1]);
+  }else conductors.push([-1,0],[-1,1],[0,1]);
  }else if(kind==='nand'||kind==='not'){
   // Canonical inhibition gates. A central conductor sees a permanently
   // initialized bias of 1 HEAD (NAND) or 2 HEADS (NOT). Optional input
