@@ -50,8 +50,8 @@ export default function TurmiteDuetControls({settings:s,setSettings,world,select
     {!restartArmed?<button id="turmite-duet-arm-restart" type="button" onClick={()=>setRestartArmed(true)}>
      + START 2-ANT DUET · RESTART REQUIRED</button>:<>
      <button id="turmite-duet-confirm-restart" type="button" onClick={()=>{
-      setSettings(old=>({...old,turmiteCount:Math.max(2,old.turmiteCount),
-       turmiteSpeciesCount:Math.max(2,old.turmiteSpeciesCount),
+      setSettings(old=>({...old,turmiteCount:2,
+       turmiteSpeciesCount:2,
        turmitePheromoneRules:{...(old.turmitePheromoneRules??DEFAULT_TURMITE_PHEROMONES),enabled:true},
        turmiteDuet:{...(old.turmiteDuet??DEFAULT_TURMITE_DUET),enabled:true}}));
       setRestartArmed(false);
