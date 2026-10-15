@@ -27,7 +27,7 @@ const restartKeys=(s:SimSettings)=>[
   s.engine,s.cellCount,s.aspect,s.seed,
   s.engine==='turmites'?null:s.pattern,
   s.engine==='turmites'?null:s.density,
-  s.cyclicStates,s.genStates,s.exciteStates,s.speciesCount,s.hodgeStates,s.turmiteCount,s.turmiteRule,s.lattice
+  s.cyclicStates,s.genStates,s.exciteStates,s.speciesCount,s.hodgeStates,s.turmiteCount,s.turmiteRule,s.turmiteFormation,s.lattice
 ];
 export function requiresWorldRestart(before:SimSettings,after:SimSettings):boolean{
   const a=restartKeys(before),b=restartKeys(after);
