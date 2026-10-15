@@ -20,6 +20,9 @@ export interface WireCascadeOptions {
  rotation:0|1|2|3;
  a:WireLogicBit;
  b:WireLogicBit;
+ /** B10: actual upstream bias-wire length adjustments, in lattice cells. */
+ biasNWShift?:number;
+ biasNEShift?:number;
 }
 export interface WireCascadeLayout {
  conductors:LogicPoint[];
@@ -48,11 +51,14 @@ export const validWireCascade=(v:WireCascadeOptions):boolean=>
  Number.isInteger(v.radius)&&v.radius>=7&&v.radius<=12&&
  Number.isInteger(v.outputLength)&&v.outputLength>=5&&v.outputLength<=12&&
  [0,1,2,3].includes(v.rotation)&&
- (v.a===0||v.a===1)&&(v.b===0||v.b===1);
+ (v.a===0||v.a===1)&&(v.b===0||v.b===1)&&
+ Number.isInteger(v.biasNWShift??0)&&Math.abs(v.biasNWShift??0)<=3&&
+ Number.isInteger(v.biasNEShift??0)&&Math.abs(v.biasNEShift??0)<=3;
 
 export function wireCascadeLayout(v:WireCascadeOptions):WireCascadeLayout{
  if(!validWireCascade(v))throw Error('Invalid certified two-stage AND circuit');
- const {radius:r,outputLength:d,rotation:k,a,b}=v;
+ const {radius:r,outputLength:d,rotation:k,a,b,
+  biasNWShift=0,biasNEShift=0}=v;
  const wires:LogicPoint[]=[],heads:LogicPoint[]=[];
  // Stage one — NAND. Off contacts are actually VOID, not parasitic stubs.
  for(let i=0;i<=r;i++)wires.push([i,-i]);
@@ -66,11 +72,14 @@ export function wireCascadeLayout(v:WireCascadeOptions):WireCascadeLayout{
  const biasPorts:LogicPoint[]=[];
  for(const slope of [-1,1]){
   const endpoint:LogicPoint=[j[0]+slope,j[1]-1];
+  const length=r+1+(slope===-1?biasNWShift:biasNEShift);
   biasPorts.push(endpoint);
-  for(let i=0;i<=r+1;i++){
+  for(let i=0;i<=length;i++){
    const point:LogicPoint=[endpoint[0]+slope*i,endpoint[1]-i];
    wires.push(point);
-   if(i===r+1)heads.push(point); // physically travels r+1 actual steps
+   // B10: shifting a source actually changes the NUMBER of conducting
+   // cells traversed. It is not a tick offset or altered renderer.
+   if(i===length)heads.push(point);
   }
  }
  // The outgoing SE rail is not adjacent to any of the THREE incoming
