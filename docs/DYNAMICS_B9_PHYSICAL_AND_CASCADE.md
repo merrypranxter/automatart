@@ -27,9 +27,9 @@ The three incoming detector contacts are arranged to be nonadjacent to the first
 | 0 | 0 | Yes | Both | No | No |
 | 0 | 1 | Yes | Both | No | No |
 | 1 | 0 | Yes | Both | No | No |
-| 1 | 1 | No | Both | Yes | One at T(r+2+d) |
+| 1 | 1 | No **forward** NAND HEAD (a reverse HEAD returns later at T(r+3)) | Both | Yes | One at T(r+2+d) |
 
-The whole trajectory is checked for additional late output pulses, not just the expected event tick. For every radius 7..12 and several output lengths, the truth table is computed using the same production `stepWireworld` as the live simulation.
+The whole trajectory is checked for additional late **FINAL-PORT** pulses, not just the expected event tick. There is, however, a significant physically observed reverse wave. Under input 11 the second detector ignites at t=r+2 and sends a returning HEAD back into the first diagonal rail: the NAND rail's final cell records a HEAD at **t=r+3**, not t=r+1. This late **back-propagation** is explicitly measured and displayed; it is **not a forward NAND signal** and does not generate a false remote AND pulse during the measured horizon. The original Wireworld conductors are bidirectional, so treating these initialized devices as arbitrarily reusable clocked logic would be inaccurate. For every radius 7..12 and several output lengths, the truth table is computed using the same production `stepWireworld` as the live simulation.
 
 ### What the artist can do
 
