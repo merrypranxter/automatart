@@ -33,7 +33,7 @@ export default function TurmiteDuetControls({settings:s,setSettings,world,select
  };
  const setMode=(patch:Partial<TurmiteDuet>)=>set(patch);
  const ant=world.turmiteAgents?.[Math.min(selectedAgent,(world.turmiteAgents?.length??1)-1)];
- const active=d.enabled&&chem.enabled&&!needsRival;
+ const active=d.enabled&&chem.enabled&&!needsRival&&s.turmiteSpeciesCount>=2;
  const [a,b]=[world.turmitePheromones,world.turmiteRivalPheromones];
  return <div aria-label="T7 real competing chemical fields">
   <div className="c3-header"><strong>☣ T7 · CHEMICAL CIVIL WAR</strong>
