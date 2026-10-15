@@ -57,6 +57,8 @@ jobs:
         run: node scripts/dynamics-t2-mutant-turmites-smoke.mjs
       - name: Verify T3 separate Turmite turn/write genomes, real erasure/jumps and safe manual placement
         run: node scripts/dynamics-t3-write-program-smoke.mjs
+      - name: Verify T4 genuine per-species pigment chemistry and same-site encounter reactions
+        run: node scripts/dynamics-t4-collision-alchemy-smoke.mjs
       - name: Verify C4 HPP conservation, boundaries, wall painting, recipes and recording
         run: node scripts/c4-hpp-smoke.mjs
       - name: Verify D1a true rhombille tile edge graph, tap projection and CA compatibility

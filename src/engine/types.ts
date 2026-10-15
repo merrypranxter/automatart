@@ -4,7 +4,7 @@ import type {PrintShop} from './printshop';
 import type {DualColor} from './dual-color';
 import {DEFAULT_STENCIL_MASK} from './stencil';
 import {RHOMBILLE_VERTICAL_SCALE} from './rhombille';
-import type {TurmiteAgent} from './spins-turmites';
+import type {TurmiteAgent,TurmiteAlchemy} from './spins-turmites';
 
 export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus' | 'wireworld' | 'sandpile' | 'hodgepodge' | 'forestfire' | 'ising' | 'turmites' | 'hpp';
 export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'maze' | 'mazectric' | 'replicator' | 'diamoeba' | 'coral' | 'amoeba' | 'custom';
@@ -112,6 +112,8 @@ export interface SimSettings {
   turmiteWriteMode:'next'|'stride'|'erase'|'table';
   turmiteWriteStride:number;
   turmiteWriteTable:number[];
+  /** T4 species-indexed finite-state writers and authentic same-site reaction. */
+  turmiteAlchemy:TurmiteAlchemy;
   /** T1: actual 1..8 complete ordered agent substeps per displayed generation. */
   turmiteSteps:number;
   /** T2: N distinct deterministic transition programs, assigned by agent ID. */
@@ -226,7 +228,13 @@ export const INITIAL_SETTINGS: SimSettings = {
   forestGrowth:0.012,forestLightning:0.0005,forestBrush:2,
   isingTemperature:2.25,isingCoupling:1,isingField:0,isingSweeps:1,isingBrush:1,
   turmiteRule:'RL',turmiteWriteMode:'next',turmiteWriteStride:1,
-  turmiteWriteTable:Array.from({length:24},(_,i)=>(i+1)%24),turmiteSteps:1,turmiteSpeciesCount:1,turmiteSpeciesStride:0,turmiteSpeciesMirror:false,turmiteHeadingShear:0,turmiteContact:'shared',turmiteFormation:'orbit',turmiteCount:1,turmiteBrush:1,
+  turmiteWriteTable:Array.from({length:24},(_,i)=>(i+1)%24),
+  turmiteAlchemy:{enabled:false,collision:'none',species:[
+    {mode:'next',stride:1,table:Array.from({length:24},(_,i)=>(i+1)%24)},
+    {mode:'stride',stride:-3,table:Array.from({length:24},(_,i)=>(i+1)%24)},
+    {mode:'erase',stride:1,table:Array.from({length:24},(_,i)=>(i+1)%24)},
+    {mode:'table',stride:1,table:Array.from({length:24},(_,i)=>23-i)}
+  ]},turmiteSteps:1,turmiteSpeciesCount:1,turmiteSpeciesStride:0,turmiteSpeciesMirror:false,turmiteHeadingShear:0,turmiteContact:'shared',turmiteFormation:'orbit',turmiteCount:1,turmiteBrush:1,
   hppBrush:15,hppTool:'particles'
 };
 export const INITIAL_APPEARANCE: Appearance = {

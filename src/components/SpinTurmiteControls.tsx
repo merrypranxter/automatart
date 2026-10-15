@@ -2,7 +2,9 @@ import {useEffect,useState} from 'react';
 import type {Dispatch,SetStateAction} from 'react';
 import type {SimSettings,World} from '../engine/types';
 import {isingEnergy,isingMagnetization,validTurmiteRule,turmiteTurnAt,turmiteWriteAt,
- DEFAULT_TURMITE_WRITE_PROGRAM} from '../engine/spins-turmites';
+ turmiteAlchemyWriteAt,DEFAULT_TURMITE_WRITE_PROGRAM,DEFAULT_TURMITE_ALCHEMY}
+ from '../engine/spins-turmites';
+import type {TurmiteWriteProgram,TurmiteAlchemy} from '../engine/spins-turmites';
 export interface TurmitePlacement{agentId:number;heading:0|1|2|3}
 interface Props {settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSettings>>;
  world:World;resetNumber:number;placement:TurmitePlacement|null;
@@ -22,9 +24,20 @@ const mirror=(rule:string)=>[...rule].map(t=>t==='L'?'R':t==='R'?'L':t).join('')
 export default function SpinTurmiteControls({settings:s,setSettings,world,resetNumber,
  placement,onPlacementChange}:Props){
  const [selectedAgent,setSelectedAgent]=useState(0);
+ const [alchemySpecies,setAlchemySpecies]=useState(0);
  const [selectedHeading,setSelectedHeading]=useState<0|1|2|3>(0);
  const writeProgram={mode:s.turmiteWriteMode??'next',stride:s.turmiteWriteStride??1,
   table:s.turmiteWriteTable??DEFAULT_TURMITE_WRITE_PROGRAM.table};
+ const alchemy=s.turmiteAlchemy??DEFAULT_TURMITE_ALCHEMY;
+ const speciesWrite=alchemy.species[alchemySpecies];
+ const updateAlchemy=(patch:Partial<TurmiteAlchemy>)=>setSettings(old=>({
+  ...old,turmiteAlchemy:{...(old.turmiteAlchemy??DEFAULT_TURMITE_ALCHEMY),...patch}
+ }));
+ const updateSpecies=(patch:Partial<TurmiteWriteProgram>)=>setSettings(old=>{
+  const oldAlchemy=old.turmiteAlchemy??DEFAULT_TURMITE_ALCHEMY;
+  return {...old,turmiteAlchemy:{...oldAlchemy,species:oldAlchemy.species.map((v,i)=>
+   i===alchemySpecies?{...v,...patch}:v)}};
+ });
  const [typed,setTyped]=useState(s.turmiteRule);
  // Recipes may replace the committed rule while the editor stays mounted.
  // Don't let a stale draft overwrite the freshly restored world.
@@ -265,7 +278,7 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
   <p className="neighborhood-note" id="turmite-write-observation" role="status">
    Selected pigment #{s.turmiteBrush}: the current writing rule produces
    ** #{turmiteWriteAt(s.turmiteBrush,s.turmiteRule.length,writeProgram)}**.
-   Every species uses the same write rule while retaining its own distinct T2 turning instructions.
+   {alchemy.enabled?' T4 SPECIES CHEMISTRY OVERRIDES this global writer. Disable it to use these T3 settings.':' Every species uses this global write rule until T4 alchemy is enabled.'}
   </p>
   <div className="c3-presets">
    <button id="turmite-write-classic" type="button" onClick={()=>setSettings(old=>({
@@ -275,6 +288,89 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
     ...old,turmiteWriteMode:'stride',turmiteWriteStride:5
    }))}>✹ SKIP FIVE TRACK STATES</button>
   </div>
+  <div className="c3-header"><strong>⚗ T4 · COLLISION ALCHEMY</strong>
+   <span>FOUR WRITERS · ONE SHARED PHYSICAL TRACK</span></div>
+  <p className="module-note">Each species can WRITE a different real track pigment when reading the same cell. A collision happens only when two or more actual ant bodies start a movement round on that EXACT cell. You can turn collisions into erasures, pigment inversions or species-dependent modular fusion. The T2 REPEL option still controls TURNING; these reactions independently control PAINTING.</p>
+  <label className="toggle"><input id="turmite-alchemy-enabled" type="checkbox"
+   checked={alchemy.enabled} onChange={e=>updateAlchemy({enabled:e.target.checked})}/>
+   <span>ENABLE INDIVIDUAL SPECIES CHEMISTRY</span>
+  </label>
+  <p className="neighborhood-note">OFF = exact T3 shared writer. ON = each ant uses its own program, indexed by its existing stable T2 species identity. Editing these knobs is LIVE and doesn't clear the canvas or reset generations.</p>
+  <label className="input-label" htmlFor="turmite-alchemy-species">Edit writer for species</label>
+  <select id="turmite-alchemy-species" value={alchemySpecies}
+   onChange={e=>setAlchemySpecies(Number(e.target.value))}>
+   {Array.from({length:4},(_,i)=><option key={i} value={i}>SPECIES {i+1}{i>=(s.turmiteSpeciesCount??1)?' · inactive at current species count':''}</option>)}
+  </select>
+  <label className="input-label" htmlFor="turmite-alchemy-mode">Species {alchemySpecies+1}: real pigment-writing rule</label>
+  <select id="turmite-alchemy-mode" value={speciesWrite.mode}
+   onChange={e=>updateSpecies({mode:e.target.value as TurmiteWriteProgram['mode']})}>
+   <option value="next">NEXT COLOR · original +1</option>
+   <option value="stride">STRIDE · modular jump / freeze</option>
+   <option value="erase">ERASE · physically write state zero</option>
+   <option value="table">DNA TABLE · each input pigment has a replacement</option>
+  </select>
+  {speciesWrite.mode==='stride'&&<>
+   <label className="input-label" htmlFor="turmite-alchemy-stride">
+    Species pigment jump <em>{speciesWrite.stride>0?'+':''}{speciesWrite.stride} / ±12</em>
+   </label>
+   <input id="turmite-alchemy-stride" type="range" min="-12" max="12" step="1"
+    value={speciesWrite.stride} onChange={e=>updateSpecies({stride:Number(e.target.value)})}/>
+  </>}
+  {speciesWrite.mode==='table'&&<div id="turmite-alchemy-table" role="group"
+   aria-label="Genuine per-species 24-slot track substitution table"
+   style={{display:'flex',flexWrap:'wrap',gap:7}}>
+   {Array.from({length:s.turmiteRule.length},(_,state)=><label key={state}
+    style={{display:'flex',flexDirection:'column',minWidth:60,fontSize:'.78rem'}}>
+    <span>#{state} →</span>
+    <select data-alchemy-source={state} aria-label={'Species '+(alchemySpecies+1)+' replacement of track pigment '+state}
+     value={speciesWrite.table[state]%s.turmiteRule.length}
+     onChange={e=>updateSpecies({table:Array.from({length:24},(_,i)=>
+      i===state?Number(e.target.value):speciesWrite.table[i])})}>
+     {Array.from({length:s.turmiteRule.length},(_,target)=><option key={target} value={target}>#{target}</option>)}
+    </select>
+   </label>)}
+  </div>}
+  <label className="input-label" htmlFor="turmite-alchemy-collision">
+   Same-site chemical reaction <em>requires ≥2 real co-located ants</em>
+  </label>
+  <select id="turmite-alchemy-collision" value={alchemy.collision}
+   onChange={e=>updateAlchemy({collision:e.target.value as TurmiteAlchemy['collision']})}>
+   <option value="none">NO REACTION · use species's normal output</option>
+   <option value="erase">DISSOLVE · write true state zero</option>
+   <option value="invert">INVERT · (N - 1) - produced pigment</option>
+   <option value="fuse">FUSE · (produced + occupants + species + 1) mod N</option>
+  </select>
+  <div className="neighborhood-note" id="turmite-alchemy-output" role="status">
+   {alchemy.enabled?'ACTIVE MULTI-SPECIES WRITERS':'BYPASSED · ORIGINAL GLOBAL WRITER'} ·
+   Sample: reading track pigment #{s.turmiteBrush}.
+   <div id="turmite-alchemy-matrix" style={{overflowX:'auto'}}>
+    <table style={{width:'100%',fontSize:'.79rem',minWidth:260}}
+     aria-label="Measured mathematical pigment products by species and actual occupancy">
+     <thead><tr><th>REAL SPECIES</th><th>ALONE</th><th>AT 2-BODY COLLISION</th></tr></thead>
+     <tbody>{Array.from({length:s.turmiteSpeciesCount??1},(_,i)=><tr key={i}>
+      <th>SPECIES {i+1}</th>
+      <td data-alchemy-species={i} data-alchemy-occupancy="1">
+       #{turmiteAlchemyWriteAt(s.turmiteBrush,s.turmiteRule.length,i,1,writeProgram,alchemy)}
+      </td>
+      <td data-alchemy-species={i} data-alchemy-occupancy="2">
+       #{turmiteAlchemyWriteAt(s.turmiteBrush,s.turmiteRule.length,i,2,writeProgram,alchemy)}
+      </td>
+     </tr>)}</tbody>
+    </table>
+   </div>
+   Actual two-body output changes only when the agents truly overlap. The table shows exact transition results, not simulations painted onto the preview.
+  </div>
+  <div className="c3-presets">
+   <button id="turmite-alchemy-reset" type="button" onClick={()=>updateAlchemy({enabled:false,collision:'none'})}>
+    ↺ RESTORE T3 CLASSIC WRITERS
+   </button>
+   <button id="turmite-alchemy-preset" type="button" onClick={()=>setSettings(old=>({
+    ...old,turmiteCount:Math.max(old.turmiteCount,4),turmiteSpeciesCount:4,
+    turmiteFormation:'stack',turmiteSteps:Math.max(2,old.turmiteSteps),
+    turmiteAlchemy:{...structuredClone(DEFAULT_TURMITE_ALCHEMY),enabled:true,collision:'fuse'}
+   }))}>⚗ FOUR-SPECIES FUSION PILEUP</button>
+  </div>
+  <p className="neighborhood-note">Four-species fusion starts a pileup so you can see actual chemistry right away. Changing the physical starting formation or number of ants intentionally restarts the world. Switching writers and collision reactions during play does NOT restart it. Original recipes still work with alchemy disabled.</p>
   <div className="c3-header"><strong>⌖ T3 · PUT AN ANT WHERE YOU WANT IT</strong>
    <span>ONE TAP · NO BRUSH MARKS · NO RESET</span></div>
   <p className="module-note">Choose a real existing ant identity and its new heading. Arm one placement, tap the stage once, and that ant moves onto the selected grid cell without erasing the path or changing the generation. Other ants stay where they are. Cancel to return to painting.</p>
