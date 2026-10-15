@@ -124,7 +124,9 @@ export function stepWorld(prev:World,s:SimSettings):World{
     const result=stepTurmites(cells,w,h,s.wrap,s.turmiteRule,prev.turmiteAgents,s.turmiteSteps??1,{
       speciesCount:s.turmiteSpeciesCount??1,speciesStride:s.turmiteSpeciesStride??0,
       speciesMirror:s.turmiteSpeciesMirror??false,headingShear:s.turmiteHeadingShear??0,
-      contact:s.turmiteContact??'shared'});
+      contact:s.turmiteContact??'shared'},{
+      mode:s.turmiteWriteMode??'next',stride:s.turmiteWriteStride??1,
+      table:s.turmiteWriteTable??Array.from({length:24},(_,i)=>(i+1)%24)});
     next.set(result.cells);nextAgents=result.agents;
     const cardinal=neighborOffsets('square',0,0,'vonNeumann');
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
