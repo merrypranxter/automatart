@@ -71,7 +71,7 @@ export function createWorld(s:SimSettings):World{
     if(cells[p]>0||s.engine==='cyclic'){ages[p]=1;traces[p]=1;}
   }
   const turmiteAgents=s.engine==='turmites'?seedTurmites(width,height,s.turmiteCount,s.seed,s.turmiteFormation??'orbit'):undefined;
-  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
+  return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,hppWalls,turmiteAgents,
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,
