@@ -35,7 +35,8 @@ import {stampWireLogic,type WireLogicOptions} from './engine/wire-logic';
 import {stampWireCircuit,wireStampFootprint,type WireStampOptions} from './engine/wire-circuit-lab';
 import ReactionControls from './components/ReactionControls';
 import SpinTurmiteControls from './components/SpinTurmiteControls';
-import {validTurmiteRule} from './engine/spins-turmites';
+import {validTurmiteRule,validTurmiteWriteProgram,relocateTurmiteAgent}
+  from './engine/spins-turmites';
 import CyclicDynamicsControls from './components/CyclicDynamicsControls';
 import WaveDynamicsControls from './components/WaveDynamicsControls';
 import BrainDynamicsControls from './components/BrainDynamicsControls';
@@ -916,6 +917,13 @@ export default function App(){
         throw new Error("Invalid Turmite turning rule");
       s.turmiteCount=bounded(s.turmiteCount,1,12,1);
       s.turmiteSteps=bounded(s.turmiteSteps,1,8,1);
+      if(!validTurmiteWriteProgram({mode:s.turmiteWriteMode??'next',
+       stride:s.turmiteWriteStride??1,
+       table:s.turmiteWriteTable??Array.from({length:24},(_,i)=>(i+1)%24)}))
+        throw new Error('Invalid Turmite writer program');
+      s.turmiteWriteMode=s.turmiteWriteMode??'next';
+      s.turmiteWriteStride=s.turmiteWriteStride??1;
+      s.turmiteWriteTable=s.turmiteWriteTable??Array.from({length:24},(_,i)=>(i+1)%24);
       s.turmiteSpeciesCount=bounded(s.turmiteSpeciesCount,1,4,1);
       s.turmiteSpeciesStride=bounded(s.turmiteSpeciesStride,0,5,0);
       s.turmiteHeadingShear=bounded(s.turmiteHeadingShear,0,3,0);
