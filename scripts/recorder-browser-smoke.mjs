@@ -1579,6 +1579,38 @@ try{
   assert.deepEqual(t5Restored.settings.turmiteMemory,t5Stepped.settings.turmiteMemory);
   assert.deepEqual(t5Restored.world.turmiteAgents,t5Stepped.world.turmiteAgents);
   assert.equal(t5Restored.world.arrays.cells,t5Stepped.world.arrays.cells);
+  // T5 review regression: state reduction MUST persist in the actual world.
+  // A register holding 10 in a 12-state cycle, shrunk to 7 and grown back
+  // to 12 before ANY physics tick, must retain 3 rather than revive 10.
+  const t5ShrinkFixture=structuredClone(t5Stepped);
+  t5ShrinkFixture.settings.turmiteMemory.states=12;
+  t5ShrinkFixture.world.turmiteAgents[0].memory=10;
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t5-register-10-fixture.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(t5ShrinkFixture))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-memory-states')?.value==='12');
+  assert.equal(await page.locator('#turmite-memory-matrix [data-memory-agent="0"]').innerText(),'10');
+  await page.locator('#turmite-memory-states').fill('7');
+  const [t5ShrunkFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t5Shrunk=JSON.parse(await readFile(await t5ShrunkFile.path(),'utf8'));
+  assert.equal(t5Shrunk.world.turmiteAgents[0].memory,3,
+   'Shrinking the memory cycle immediately rewrites the actual saved register 10 → 3');
+  assert.equal(t5Shrunk.world.generation,t5ShrinkFixture.world.generation);
+  assert.equal(t5Shrunk.world.arrays.cells,t5ShrinkFixture.world.arrays.cells);
+  assert.deepEqual(t5Shrunk.world.turmiteAgents.map(a=>[a.x,a.y,a.heading]),
+   t5ShrinkFixture.world.turmiteAgents.map(a=>[a.x,a.y,a.heading]));
+  await page.locator('#turmite-memory-states').fill('12');
+  const [t5GrownFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t5Grown=JSON.parse(await readFile(await t5GrownFile.path(),'utf8'));
+  assert.equal(t5Grown.world.turmiteAgents[0].memory,3,
+   'Growing the cycle before stepping cannot restore a discarded phase');
+  assert.equal(await page.locator('#turmite-memory-matrix [data-memory-agent="0"]').innerText(),'3');
+  console.log('PASS T5: real saved memory shrinks 10 → 3 and remains 3 after regrowth, without resetting artwork');
   console.log('PASS T5: live history controls, four feedback programs, actual saved ant registers, no reset, exact recipe restore');
 
 
