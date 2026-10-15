@@ -606,8 +606,10 @@ try{
   assert.match(b9Trace,/STAGE 2.*T11/);
   assert.match(b9Trace,/BIAS NW.*T10/);
   assert.match(b9Trace,/FINAL AND.*T19/);
-  assert.match(b9Trace,/STAGE 1 NAND: NO HEAD/,
-   'NAND is physically suppressed for input 11');
+  assert.match(b9Trace,/STAGE 1 NAND: T12/,
+   'The stage-two ignition generates an honest reverse-propagating HEAD at NAND port on tick 12');
+  assert.match(await page.locator('#wire-cascade-truth').innerText(),/T12/,
+   'The physical truth table includes delayed backpropagation rather than hiding it');
   assert.equal(await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL()),
     b9Pixels,'Four-site nondestructive scope must not repaint or advance source artwork');
   await page.locator('#wire-cascade-b').uncheck();
