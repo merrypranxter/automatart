@@ -35,7 +35,7 @@ import {stampWireLogic,type WireLogicOptions} from './engine/wire-logic';
 import {stampWireCircuit,wireStampFootprint,type WireStampOptions} from './engine/wire-circuit-lab';
 import ReactionControls from './components/ReactionControls';
 import SpinTurmiteControls,{type TurmitePlacement} from './components/SpinTurmiteControls';
-import {validTurmiteRule,validTurmiteWriteProgram,validTurmiteAlchemy,DEFAULT_TURMITE_ALCHEMY,relocateTurmiteAgent}
+import {validTurmiteRule,validTurmiteWriteProgram,validTurmiteAlchemy,DEFAULT_TURMITE_ALCHEMY,validTurmiteMemory,DEFAULT_TURMITE_MEMORY,relocateTurmiteAgent}
   from './engine/spins-turmites';
 import CyclicDynamicsControls from './components/CyclicDynamicsControls';
 import WaveDynamicsControls from './components/WaveDynamicsControls';
@@ -942,6 +942,8 @@ export default function App(){
         throw new Error('Invalid Turmite writer program');
       s.turmiteAlchemy=s.turmiteAlchemy??structuredClone(DEFAULT_TURMITE_ALCHEMY);
       if(!validTurmiteAlchemy(s.turmiteAlchemy))throw new Error('Invalid per-species Turmite alchemy');
+      s.turmiteMemory=s.turmiteMemory??{...DEFAULT_TURMITE_MEMORY};
+      if(!validTurmiteMemory(s.turmiteMemory))throw new Error('Invalid T5 ant memory program');
       s.turmiteWriteMode=s.turmiteWriteMode??'next';
       s.turmiteWriteStride=s.turmiteWriteStride??1;
       s.turmiteWriteTable=s.turmiteWriteTable??Array.from({length:24},(_,i)=>(i+1)%24);
