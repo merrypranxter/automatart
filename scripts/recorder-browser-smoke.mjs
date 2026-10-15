@@ -1522,6 +1522,65 @@ try{
   assert.deepEqual(t4Restored.world.turmiteAgents,t4Edited.world.turmiteAgents);
   console.log('PASS T4: four true per-species writers, live 2-body fusion/invert/dissolve, no erased art and exact chemical recipe');
 
+  // T5: actual per-ant history registers, non-destructive edits and live replay.
+  const [t5BeforeFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t5Before=JSON.parse(await readFile(await t5BeforeFile.path(),'utf8'));
+  assert.equal(await page.locator('#turmite-memory-enabled').isChecked(),false);
+  assert.match(await page.locator('#turmite-memory-readout').innerText(),/MEMORY BYPASSED/);
+  await page.locator('#turmite-memory-echo').click();
+  assert.equal(await page.locator('#turmite-memory-enabled').isChecked(),true);
+  assert.equal(await page.locator('#turmite-memory-mode').inputValue(),'read');
+  assert.equal(await page.locator('#turmite-memory-matrix [data-memory-agent]').count(),4);
+  await page.locator('#turmite-memory-states').fill('7');
+  await page.locator('#turmite-memory-turn-bias').fill('2');
+  await page.locator('#turmite-memory-write-bias').fill('-2');
+  await page.locator('#turmite-memory-mode').selectOption('write');
+  const [t5EditedFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t5Edited=JSON.parse(await readFile(await t5EditedFile.path(),'utf8'));
+  assert.equal(t5Edited.world.generation,t5Before.world.generation,'Live T5 edits preserve time');
+  assert.equal(t5Edited.world.arrays.cells,t5Before.world.arrays.cells,'Live T5 edits preserve actual pigments');
+  assert.deepEqual(t5Edited.world.turmiteAgents,t5Before.world.turmiteAgents,'Memory controls never relocate ants');
+  assert.deepEqual(t5Edited.settings.turmiteMemory,{
+   enabled:true,states:7,mode:'write',turnBias:2,writeBias:-2});
+  await page.getByRole('button',{name:'STEP +1'}).click();
+  const [t5SteppedFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t5Stepped=JSON.parse(await readFile(await t5SteppedFile.path(),'utf8'));
+  assert.equal(t5Stepped.world.generation,t5Edited.world.generation+1);
+  assert(t5Stepped.world.turmiteAgents.every(v=>Number.isInteger(v.memory)&&
+   v.memory>=0&&v.memory<7),'Every ant now carries a real evolving register in its saved world');
+  await page.locator('#turmite-memory-clock').click();
+  assert.equal(await page.locator('#turmite-memory-mode').inputValue(),'tick');
+  await page.locator('#turmite-memory-scar').click();
+  assert.equal(await page.locator('#turmite-memory-mode').inputValue(),'collision');
+  await page.locator('#turmite-memory-off').click();
+  assert.equal(await page.locator('#turmite-memory-enabled').isChecked(),false);
+  const [t5OffFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t5Off=JSON.parse(await readFile(await t5OffFile.path(),'utf8'));
+  assert.deepEqual(t5Off.world.turmiteAgents,t5Stepped.world.turmiteAgents,
+   'Bypassing T5 must preserve the saved internal phases for reactivation');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t5-memory-ants-replay.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(t5Stepped))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-memory-enabled')?.checked===true&&
+   document.querySelector('#turmite-memory-mode')?.value==='write');
+  const [t5RestoredFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t5Restored=JSON.parse(await readFile(await t5RestoredFile.path(),'utf8'));
+  assert.deepEqual(t5Restored.settings.turmiteMemory,t5Stepped.settings.turmiteMemory);
+  assert.deepEqual(t5Restored.world.turmiteAgents,t5Stepped.world.turmiteAgents);
+  assert.equal(t5Restored.world.arrays.cells,t5Stepped.world.arrays.cells);
+  console.log('PASS T5: live history controls, four feedback programs, actual saved ant registers, no reset, exact recipe restore');
+
 
 
   await page.locator('#engine').selectOption('life');
