@@ -338,7 +338,7 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
    <option value="none">NO REACTION · use species's normal output</option>
    <option value="erase">DISSOLVE · write true state zero</option>
    <option value="invert">INVERT · (N - 1) - produced pigment</option>
-   <option value="fuse">FUSE · (produced + (species+1) × occupants) mod N</option>
+   <option value="fuse">FUSE · (produced + occupants + species + 1) mod N</option>
   </select>
   <div className="neighborhood-note" id="turmite-alchemy-output" role="status">
    {alchemy.enabled?'ACTIVE MULTI-SPECIES WRITERS':'BYPASSED · ORIGINAL GLOBAL WRITER'} ·
