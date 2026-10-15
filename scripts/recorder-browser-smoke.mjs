@@ -1367,6 +1367,68 @@ try{
   assert.equal(await page.locator('#turmite-species-matrix [data-heading="0"][data-species="3"]').innerText(),'R');
   console.log('PASS T2: four physical species and heading-conditioned commands, collision stacks, live settings and legacy recipe');
 
+  // T3: turn and WRITE are independent mathematically executable programs.
+  assert.equal(await page.locator('#turmite-write-mode').inputValue(),'next');
+  await page.locator('#turmite-write-mode').selectOption('stride');
+  await page.locator('#turmite-write-stride').fill('-3');
+  assert.match(await page.locator('#turmite-write-observation').innerText(),/#1/);
+  await page.locator('#turmite-write-mode').selectOption('erase');
+  assert.match(await page.locator('#turmite-write-observation').innerText(),/#0/);
+  await page.locator('#turmite-write-mode').selectOption('table');
+  assert(await page.locator('#turmite-write-table [data-write-source="0"]').isVisible());
+  await page.locator('#turmite-write-table [data-write-source="0"]').selectOption('3');
+  assert.match(await page.locator('#turmite-write-observation').innerText(),/#3/);
+  const [writeBefore]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t3Before=JSON.parse(await readFile(await writeBefore.path(),'utf8'));
+  assert.equal(t3Before.settings.turmiteWriteMode,'table');
+  assert.equal(t3Before.settings.turmiteWriteTable[0],3);
+  assert.equal(t3Before.settings.turmiteWriteStride,-3);
+  const buttonPause=page.getByRole('button',{name:'Pause simulation'});
+  if(await buttonPause.isVisible())await buttonPause.click();
+  await page.locator('#turmite-place-agent').selectOption('1');
+  await page.locator('#turmite-place-heading').selectOption('3');
+  await page.locator('#turmite-place-arm').click();
+  assert(await page.locator('#turmite-place-status').isVisible(),
+   'Direct placement requires explicit arming before a canvas tap');
+  const t3Stage=page.locator('canvas[aria-label^="Interactive cellular"]');
+  const t3Box=await t3Stage.boundingBox();assert(t3Box);
+  await t3Stage.click({position:{x:Math.floor(t3Box.width*.19),y:Math.floor(t3Box.height*.73)}});
+  assert.equal(await page.locator('#turmite-place-status').count(),0,
+   'Direct placement automatically disarms after exactly one tap');
+  const [writeAfter]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t3After=JSON.parse(await readFile(await writeAfter.path(),'utf8'));
+  assert.equal(t3After.world.generation,t3Before.world.generation);
+  assert.equal(t3After.world.arrays.cells,t3Before.world.arrays.cells,
+   'Relocating an ant cannot paint, erase or reset ANY existing indexed track cell');
+  assert.deepEqual(t3After.world.turmiteAgents.filter((_,i)=>i!==1),
+   t3Before.world.turmiteAgents.filter((_,i)=>i!==1),
+   'One-tap relocation preserves every other agent, heading and identity');
+  assert.equal(t3After.world.turmiteAgents[1].heading,3);
+  assert.notDeepEqual(t3After.world.turmiteAgents[1],
+   t3Before.world.turmiteAgents[1],'Chosen ant really moved on the square lattice');
+  await page.locator('#turmite-write-reset-table').click();
+  await page.locator('#turmite-write-classic').click();
+  assert.equal(await page.locator('#turmite-write-mode').inputValue(),'next');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t3-independently-written-turmite-art.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(t3After))
+  });
+  await page.waitForFunction(()=>
+   document.querySelector('#turmite-write-mode')?.value==='table'&&
+   document.querySelector('#turmite-write-table [data-write-source="0"]')?.value==='3');
+  const [reimportedWrite]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t3Loaded=JSON.parse(await readFile(await reimportedWrite.path(),'utf8'));
+  assert.deepEqual(t3Loaded.world.turmiteAgents,t3After.world.turmiteAgents);
+  assert.equal(t3Loaded.world.arrays.cells,t3After.world.arrays.cells);
+  console.log('PASS T3: real pigment write substitution, negative jumps, true erasure and one-tap ant relocation preserving art and recipes');
+
+
 
   await page.locator('#engine').selectOption('life');
   await page.locator('#resolution').fill(gridBeforeAntGif);

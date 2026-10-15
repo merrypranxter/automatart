@@ -44,6 +44,46 @@ export function turmiteTurnAt(rule:string,state:number,heading:number,species:nu
  return v.speciesMirror&&species%2===1?
   (symbol==='R'?'L':symbol==='L'?'R':symbol):symbol;
 }
+/** T3 independently selects which REAL indexed track pigment gets written.
+ * Unlike the turning genome, this can be changed live without resetting art.
+ */
+export type TurmiteWriteMode='next'|'stride'|'erase'|'table';
+export interface TurmiteWriteProgram{
+ mode:TurmiteWriteMode;
+ stride:number; // -12..12, true modular pigment jump
+ table:readonly number[]; // 24 indexed target pigments, reduced modulo active genome length
+}
+export const DEFAULT_TURMITE_WRITE_PROGRAM:TurmiteWriteProgram={
+ mode:'next',stride:1,table:Array.from({length:24},(_,i)=>(i+1)%24)
+};
+export function validTurmiteWriteProgram(v:TurmiteWriteProgram):boolean{
+ return !!v&&['next','stride','erase','table'].includes(v.mode)&&
+  Number.isInteger(v.stride)&&v.stride>=-12&&v.stride<=12&&
+  Array.isArray(v.table)&&v.table.length===24&&
+  v.table.every(x=>Number.isInteger(x)&&x>=0&&x<=23);
+}
+export function turmiteWriteAt(state:number,length:number,
+ program:TurmiteWriteProgram=DEFAULT_TURMITE_WRITE_PROGRAM):number{
+ if(!Number.isInteger(length)||length<2||length>24||
+    !Number.isInteger(state)||state<0||state>=length||
+    !validTurmiteWriteProgram(program))throw new Error('Invalid T3 Turmite write transition');
+ if(program.mode==='erase')return 0;
+ if(program.mode==='table')return program.table[state]%length;
+ const jump=program.mode==='stride'?program.stride:1;
+ return ((state+jump)%length+length)%length;
+}
+/** Move precisely ONE stable agent identity, retaining every other agent and
+ * every painted pixel. Return a new list, never mutate the saved source.
+ */
+export function relocateTurmiteAgent(agents:readonly TurmiteAgent[],w:number,h:number,
+ agentId:number,x:number,y:number,heading:0|1|2|3):TurmiteAgent[]{
+ if(!Array.isArray(agents)||!agents.length||agents.length>12||!Number.isInteger(w)||!Number.isInteger(h)||
+    w<2||h<2||!Number.isInteger(agentId)||agentId<0||agentId>=agents.length||
+    !Number.isInteger(x)||!Number.isInteger(y)||x<0||x>=w||y<0||y>=h||
+    !Number.isInteger(heading)||heading<0||heading>3)
+  throw new Error('Invalid T3 Turmite placement');
+ return agents.map((a,i)=>i===agentId?{x,y,heading}:{...a});
+}
 export interface TurmiteResult{cells:Uint8Array;agents:TurmiteAgent[]}
 const indexAt=(x:number,y:number,w:number,h:number,wrap:boolean):number=>{
  if(wrap){x=(x+w)%w;y=(y+h)%h;}
@@ -135,9 +175,11 @@ export function seedTurmites(w:number,h:number,count:number,seed:number,
 }
 export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
  rule:string,agents:readonly TurmiteAgent[],steps=1,
- dynamics:TurmiteDynamics=DEFAULT_TURMITE_DYNAMICS):TurmiteResult{
+ dynamics:TurmiteDynamics=DEFAULT_TURMITE_DYNAMICS,
+ write:TurmiteWriteProgram=DEFAULT_TURMITE_WRITE_PROGRAM):TurmiteResult{
  if(!validTurmiteRule(rule)||cells.length!==w*h||!agents.length||agents.length>12||
-    !Number.isInteger(steps)||steps<1||steps>8||!validTurmiteDynamics(dynamics))
+    !Number.isInteger(steps)||steps<1||steps>8||!validTurmiteDynamics(dynamics)||
+    !validTurmiteWriteProgram(write))
   throw new Error('Invalid Turmite world or rule');
  const next=cells.slice();
  let current=agents.map(a=>({...a}));
@@ -163,7 +205,7 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
   const turn=turmiteTurnAt(rule,state,startingHeading,species,dynamics);
   const direction=turn==='R'?1:turn==='L'?3:turn==='U'?2:0;
   let heading=((startingHeading+direction)%4) as 0|1|2|3;
-  next[p]=(state+1)%rule.length;
+  next[p]=turmiteWriteAt(state,rule.length,write);
   let x=a.x+vectors[heading][0],y=a.y+vectors[heading][1];
   if(wrap){x=(x+w)%w;y=(y+h)%h;}
   else if(x<0||x>=w||y<0||y>=h){
