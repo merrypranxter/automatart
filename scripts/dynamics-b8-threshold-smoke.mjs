@@ -106,11 +106,18 @@ try{
    }
   }
  }
- // Genuine metamorphosis: NAE 111 OFF under original rule, ON for 1..3 or exactly3.
+ // Genuine metamorphosis: NAE 111 OFF under original rule, ON at remote port for 1..3; exactly 3 excites only the junction.
  const changed=runWireThresholdSpectrum('nae',9);
  assert.equal(changed[1].rows.at(-1).head,false);
  assert.equal(changed[2].rows.at(-1).head,true);
- assert.equal(changed[4].rows.at(-1).head,true);
+ assert.equal(changed[4].rows.at(-1).head,false,
+  'An EXACT-3 center ignites, but the output wire cannot propagate a single neighboring HEAD');
+ const strict3={...s,wireExciteMin:3,wireExciteMax:3};
+ const strictWorld=createWorld(strict3);strictWorld.cells.fill(0);
+ stampWireLogic(strictWorld,[36,36],{kind:'nae',radius:9,rotation:0,a:1,b:1,c:1});
+ const strictNext=stepWorld(strictWorld,strict3);
+ assert.equal(strictNext.cells[36*strictNext.width+36],2,
+  'True 111 junction ignition occurs under EXACT-3, even while the remote output stays silent');
  // Original recipe & passive scope remain valid for the new three-input gate.
  let stamped=createWorld(s);stamped.cells.fill(0);
  const art=stampWireLogic(stamped,[36,36],{kind:'nae',radius:9,rotation:0,a:0,b:1,c:1});
