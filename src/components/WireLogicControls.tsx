@@ -2,6 +2,7 @@ import {useMemo,useState} from 'react';
 import type {SimSettings,World} from '../engine/types';
 import WireSignalScope from './WireSignalScope';
 import WireInhibitionInspector from './WireInhibitionInspector';
+import WireThresholdSpectrum from './WireThresholdSpectrum';
 import {runWireLogicBench,type WireLogicKind,type WireLogicOptions,type WireLogicPorts,
  type WireLogicBit} from '../engine/wire-logic';
 
@@ -23,14 +24,15 @@ export default function WireLogicControls({world,settings,inspectedCell,monitor,
  const [rotation,setRotation]=useState<0|1|2|3>(0);
  const [a,setA]=useState<WireLogicBit>(1);
  const [b,setB]=useState<WireLogicBit>(1);
+ const [c,setC]=useState<WireLogicBit>(1);
  const bench=useMemo(()=>runWireLogicBench(kind,radius),[kind,radius]);
  const center=[Math.floor(world.width/2),Math.floor(world.height/2)];
- const opts:WireLogicOptions={kind,radius,rotation,a,b};
+ const opts:WireLogicOptions={kind,radius,rotation,a,b,c};
  const current=monitor?.ports.outputs.map(([x,y])=>world.cells[y*world.width+x])??[];
  const currentNames=['VOID','CONDUCTOR','HEAD','TAIL'];
  return <section className="wave-dynamics-lab wire-logic-lab" aria-label="B4/B5 verified mathematical Wireworld logic bench">
   <div className="wave-dynamics-heading">
-   <strong>⊞ B4/B5/B7 · WIREWORLD LOGIC BENCH</strong><span>CANONICAL FOUR-STATE TRUTH TABLES</span>
+   <strong>⊞ B4/B5/B7/B8 · WIREWORLD LOGIC BENCH</strong><span>CANONICAL FOUR-STATE TRUTH TABLES</span>
   </div>
   <p className="module-note">This is a REAL logic test bench. OR and fanout use a head/tail pulse; XOR uses two synchronized initial HEAD contacts per asserted bit. A true output means a HEAD actually reaches the remote output port during the measured time window. Every row is evolved through the exact production Wireworld stepper, without a special gate law, hidden sources, or animation tricks.</p>
   <label htmlFor="logic-device" className="input-label">CERTIFIED CIRCUIT</label>
@@ -38,6 +40,8 @@ export default function WireLogicControls({world,settings,inspectedCell,monitor,
    <option value="or">TWO-INPUT OR · A ∨ B</option>
    <option value="xor">DUAL-CONTACT XOR · A ⊕ B</option>
    <option value="nand">INHIBITION NAND · ¬(A ∧ B)</option>
+   <option value="nor">INHIBITION NOR · ¬(A ∨ B)</option>
+   <option value="nae">3-INPUT NOT-ALL-EQUAL · NAE(A,B,C)</option>
    <option value="not">BIAS CONTACT NOT · ¬A</option>
    <option value="fanout">ONE-INPUT FANOUT · A → 2 outputs</option>
   </select>
@@ -52,9 +56,9 @@ export default function WireLogicControls({world,settings,inspectedCell,monitor,
   <div className="wire-logic-truth-table">
    <strong className="input-label">MEASURED BOOLEAN TRUTH TABLE</strong>
    <table aria-label="Real Wireworld four-state simulation logic truth table" style={{width:'100%',borderCollapse:'collapse',fontSize:'.85rem'}}>
-    <thead><tr><th>A</th>{(kind==='or'||kind==='xor'||kind==='nand')&&<th>B</th>}<th>{kind==='or'?'OUT · A∨B':kind==='xor'?'OUT · A⊕B':kind==='nand'?'OUT · ¬(A∧B)':kind==='not'?'OUT · ¬A':'OUT 1'}</th>{kind==='fanout'&&<th>OUT 2</th>}<th>FIRST HEAD</th><th>TEST</th></tr></thead>
-    <tbody>{bench.cases.map(({a:bitA,b:bitB,hits,firstTick,pass})=><tr key={''+bitA+bitB}>
-     <td>{bitA}</td>{(kind==='or'||kind==='xor'||kind==='nand')&&<td>{bitB}</td>}
+    <thead><tr><th>A</th>{(kind==='or'||kind==='xor'||kind==='nand'||kind==='nor'||kind==='nae')&&<th>B</th>}{kind==='nae'&&<th>C</th>}<th>{kind==='or'?'OUT · A∨B':kind==='xor'?'OUT · A⊕B':kind==='nand'?'OUT · ¬(A∧B)':kind==='nor'?'OUT · ¬(A∨B)':kind==='nae'?'OUT · NAE(A,B,C)':kind==='not'?'OUT · ¬A':'OUT 1'}</th>{kind==='fanout'&&<th>OUT 2</th>}<th>FIRST HEAD</th><th>TEST</th></tr></thead>
+    <tbody>{bench.cases.map(({a:bitA,b:bitB,c:bitC,hits,firstTick,pass})=><tr key={''+bitA+bitB+bitC}>
+     <td>{bitA}</td>{(kind==='or'||kind==='xor'||kind==='nand'||kind==='nor'||kind==='nae')&&<td>{bitB}</td>}{kind==='nae'&&<td>{bitC}</td>}
      {hits.map((hit,i)=><td key={i}>{hit?'1':'0'}</td>)}
      <td>{firstTick.map(t=>t===null?'—':'T'+t).join(' / ')}</td>
      <td>{pass?'✓':'✕'}</td>
@@ -66,8 +70,8 @@ export default function WireLogicControls({world,settings,inspectedCell,monitor,
    </p>
   </div>
   <strong className="input-label">OUTPUT OSCILLOSCOPE · ACTUAL HEAD EVENTS OVER TIME</strong>
-  {bench.cases.map(row=><div key={'scope-'+row.a+row.b} style={{marginBottom:8}}>
-   <div style={{fontSize:'.78rem',marginBottom:2}}>INPUT {kind==='fanout'||kind==='not'?row.a+'0':''+row.a+row.b} · {row.hits.map(v=>v?'PULSE':'QUIET').join(' / ')}</div>
+  {bench.cases.map(row=><div key={'scope-'+row.a+row.b+row.c} style={{marginBottom:8}}>
+   <div style={{fontSize:'.78rem',marginBottom:2}}>INPUT {kind==='fanout'||kind==='not'?row.a+'0':''+row.a+row.b+(kind==='nae'?row.c:'')} · {row.hits.map(v=>v?'PULSE':'QUIET').join(' / ')}</div>
    {row.waveforms.map((values,index)=><div key={index} style={{display:'flex',gap:1,alignItems:'center',marginBottom:3}}>
     <span style={{fontSize:'.65rem',width:39}}>OUT {index+1}</span>
     <div role="img" aria-label={'Output '+(index+1)+' head trace across '+values.length+' true generations'}
@@ -82,17 +86,23 @@ export default function WireLogicControls({world,settings,inspectedCell,monitor,
   <div className="wave-modes">
    <label className="toggle"><input id="logic-input-a" type="checkbox" checked={a===1}
     onChange={e=>setA(e.target.checked?1:0)}/><span>INPUT A pulse</span></label>
-   {(kind==='or'||kind==='xor'||kind==='nand')&&<label className="toggle"><input id="logic-input-b" type="checkbox" checked={b===1}
+   {(kind==='or'||kind==='xor'||kind==='nand'||kind==='nor'||kind==='nae')&&<label className="toggle"><input id="logic-input-b" type="checkbox" checked={b===1}
     onChange={e=>setB(e.target.checked?1:0)}/><span>INPUT B pulse</span></label>}
+   {kind==='nae'&&<label className="toggle"><input id="logic-input-c" type="checkbox" checked={c===1}
+    onChange={e=>setC(e.target.checked?1:0)}/><span>INPUT C pulse</span></label>}
   </div>
   <div className="wave-presets">
    <button type="button" id="logic-install" disabled={!bench.allPass||world.engine!=='wireworld'}
-    onClick={()=>onInstall(opts)}>⊕ INSTALL VERIFIED {kind==='or'?'OR GATE':kind==='xor'?'XOR GATE':kind==='nand'?'NAND GATE':kind==='not'?'NOT GATE':'FANOUT'} AT CENTER</button>
+    onClick={()=>onInstall(opts)}>⊕ INSTALL VERIFIED {kind==='or'?'OR GATE':kind==='xor'?'XOR GATE':kind==='nand'?'NAND GATE':kind==='nor'?'NOR GATE':kind==='nae'?'NAE GATE':kind==='not'?'NOT GATE':'FANOUT'} AT CENTER</button>
   </div>
-  {(kind==='nand'||kind==='not')&&<WireInhibitionInspector kind={kind} radius={radius}/>}
+  {(kind==='nand'||kind==='not'||kind==='nor'||kind==='nae')&&<WireInhibitionInspector kind={kind} radius={radius}/>}
   {(kind==='nand'||kind==='not')&&<p className="neighborhood-note">
    {kind==='nand'?'The NAND junction has ONE always-on electron HEAD. Input A and B each add one. Both input HEADS together bring the true local count to three, blocking the diagonal output.':'The NOT junction has TWO always-on electron HEADS. A third, conditional input head suppresses its output.'} These are pre-seeded single-shot cells, not a free-running clock or a special Boolean rule.
   </p>}
+  {(kind==='nor'||kind==='nae')&&<p className="neighborhood-note">
+    {kind==='nor'?'NOR uses two actual initial bias HEADS; each asserted input adds one, suppressing the output unless both inputs are zero.':'NAE is genuine three-input threshold logic: with 0 or 3 neighboring HEADS it stays quiet; with exactly 1 or 2 it sends a pulse. There are eight tested input combinations.'} These are isolated single-shot devices, not permanent clocked components.
+   </p>}
+  <WireThresholdSpectrum kind={kind} radius={radius}/>
   {kind==='xor'&&<p className="neighborhood-note">XOR uses TWO real initial electron HEAD contacts for A and TWO for B. One bit alone activates the diagonal conductor; both bits create four adjacent heads at the junction and block ignition via the authentic Wireworld threshold. This is a dual-contact single-shot XOR, not a standard single-rail clocked gate. It requires isolated geometry and canonical 1–2 physics.</p>}
   <p className="neighborhood-note">The installer clears a small local buffer before writing a conductor device and selected input pulses directly into your current universe. Outside that local region your artwork is untouched. The simulation pauses so you can inspect the result; PLAY advances the actual circuit from the current generation.</p>
   {monitor&&<div className="neighborhood-note" id="wire-logic-live-probe">
@@ -103,6 +113,6 @@ export default function WireLogicControls({world,settings,inspectedCell,monitor,
    <small>These sample the actual current-world cells. Moving/painting nearby, adding electrodes, or changing the physics can change the output; the certification above applies to isolated canonical Wireworld only.</small>
   </div>}
   <WireSignalScope world={world} settings={settings} monitor={monitor} inspectedCell={inspectedCell}/>
-  <p className="neighborhood-note">AND and insulated crossings are NOT certified yet. NAND and NOT are certified single-shot inhibition gates using the unchanged four-state Wireworld engine. No new local physics is being invented. A visually plausible junction is not a verified logic device. Those will enter the library only when each one passes full 00/01/10/11 output tests under the original physics.</p>
+  <p className="neighborhood-note">AND and insulated crossings are NOT certified yet. NOR and three-input NAE are now independently validated under canonical 1–2-head physics. NAND and NOT are certified single-shot inhibition gates using the unchanged four-state Wireworld engine. No new local physics is being invented. A visually plausible junction is not a verified logic device. Those will enter the library only when each one passes full 00/01/10/11 output tests under the original physics.</p>
  </section>;
 }
