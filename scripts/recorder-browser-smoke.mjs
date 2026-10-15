@@ -1253,6 +1253,62 @@ try{
    'Encoded Turmite GIF actually retains a bright yellow agent at its saved grid coordinate: '+rgba.join(','));
   await page.locator('.stage-capture-success .dismiss-export').click();
   console.log('PASS: C3 real animated GIF encodes a visible ant marker at its saved coordinate');
+  // T1: authentic four-command DNA, track states and physically accelerated moves.
+  assert.equal(await page.locator('#turmite-steps').inputValue(),'1');
+  const [t1Before]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t1Prev=JSON.parse(await readFile(await t1Before.path(),'utf8'));
+  await page.locator('#turmite-steps').fill('6');
+  assert.equal(await page.locator('#turmite-visits-per-generation').innerText(),'6');
+  const [t1After]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t1Rate=JSON.parse(await readFile(await t1After.path(),'utf8'));
+  assert.equal(t1Rate.settings.turmiteSteps,6);
+  assert.equal(t1Rate.world.generation,t1Prev.world.generation);
+  assert.deepEqual(t1Rate.world.turmiteAgents,t1Prev.world.turmiteAgents);
+  assert.equal(t1Rate.world.arrays.cells,t1Prev.world.arrays.cells,
+   'Changing physical ant substeps must NOT erase living artwork');
+  await page.locator('#turmite-rule').fill('RSUL');
+  await page.locator('#turmite-use-rule').click();
+  assert.equal(await page.locator('#turmite-color-count').innerText(),'4');
+  assert.equal(await page.locator('#turmite-genome-strip > div').count(),4);
+  assert.equal(await page.locator('#turmite-count-u').innerText(),'1');
+  await page.locator('#turmite-mirror-rule').click();
+  assert.equal(await page.locator('#turmite-rule').inputValue(),'LSUR');
+  await page.locator('#turmite-reverse-rule').click();
+  assert.equal(await page.locator('#turmite-rule').inputValue(),'RUSL');
+  await page.locator('#turmite-rotate-rule').click();
+  assert.equal(await page.locator('#turmite-rule').inputValue(),'USLR');
+  await page.locator('#turmite-grow-rule').click();
+  assert.equal(await page.locator('#turmite-rule').inputValue(),'USLRL');
+  await page.locator('#turmite-trim-rule').click();
+  assert.equal(await page.locator('#turmite-rule').inputValue(),'USLR');
+  await page.locator('#turmite-rule').fill('RSLU'.repeat(6));
+  await page.locator('#turmite-use-rule').click();
+  assert.equal(await page.locator('#turmite-color-count').innerText(),'24');
+  assert.equal(await page.locator('#turmite-genome-strip > div').count(),24);
+  assert(await page.locator('#turmite-grow-rule').isDisabled());
+  await page.locator('#turmite-brush').fill('23');
+  const [t1File]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t1Data=JSON.parse(await readFile(await t1File.path(),'utf8'));
+  assert.equal(t1Data.settings.turmiteRule,'RSLU'.repeat(6));
+  assert.equal(t1Data.settings.turmiteSteps,6);
+  assert.equal(t1Data.settings.turmiteBrush,23);
+  assert.equal(t1Data.world.turmiteAgents.length,1);
+  await page.locator('#turmite-mirror-rule').click();
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t1-mathematical-ant-rule.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(t1Data))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-rule')?.value==='RSLURSLURSLURSLURSLURSLU');
+  assert.equal(await page.locator('#turmite-brush').inputValue(),'23');
+  assert.equal(await page.locator('#turmite-steps').inputValue(),'6');
+  console.log('PASS T1: true four-turn genome, real speed control, mirror/rotation and 24-state recipe');
+
   await page.locator('#engine').selectOption('life');
   await page.locator('#resolution').fill(gridBeforeAntGif);
   console.log('PASS: C3 actual Ising and Turmite controls, L/R rules, agent snapshot and invalid load');

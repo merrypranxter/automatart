@@ -32,7 +32,9 @@ try{
  assert(validTurmiteRule('LRRRRRLLR'));
  assert(!validTurmiteRule('R'));
  assert(!validTurmiteRule('LRX'));
- assert(!validTurmiteRule('LR'.repeat(7)));
+ assert(validTurmiteRule('LR'.repeat(7)),'New 14-state genomes are valid');
+ assert(!validTurmiteRule('LR'.repeat(13)),'Maximum 24 true track states');
+ assert(validTurmiteRule('LRSU'.repeat(6)),'Four real turns and 24 states');
  const ants=seedTurmites(32,32,12,818);
  assert.equal(ants.length,12);
  assert.deepEqual(seedTurmites(32,32,12,818),ants,'Agent placement is seed-stable');

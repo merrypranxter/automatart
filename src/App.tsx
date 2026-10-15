@@ -35,6 +35,7 @@ import {stampWireLogic,type WireLogicOptions} from './engine/wire-logic';
 import {stampWireCircuit,wireStampFootprint,type WireStampOptions} from './engine/wire-circuit-lab';
 import ReactionControls from './components/ReactionControls';
 import SpinTurmiteControls from './components/SpinTurmiteControls';
+import {validTurmiteRule} from './engine/spins-turmites';
 import CyclicDynamicsControls from './components/CyclicDynamicsControls';
 import WaveDynamicsControls from './components/WaveDynamicsControls';
 import BrainDynamicsControls from './components/BrainDynamicsControls';
@@ -911,9 +912,10 @@ export default function App(){
       s.isingField=finite(s.isingField,-2,2,0);
       s.isingSweeps=bounded(s.isingSweeps,1,4,1);
       s.isingBrush=bounded(s.isingBrush,0,1,1) as 0|1;
-      if(typeof s.turmiteRule!=="string"||!/^[LR]{2,12}$/.test(s.turmiteRule))
+      if(!validTurmiteRule(s.turmiteRule))
         throw new Error("Invalid Turmite turning rule");
       s.turmiteCount=bounded(s.turmiteCount,1,12,1);
+      s.turmiteSteps=bounded(s.turmiteSteps,1,8,1);
       s.turmiteBrush=bounded(s.turmiteBrush,0,s.turmiteRule.length-1,1);
       s.hppBrush=bounded(s.hppBrush,1,15,15);
       if(!['particles','walls'].includes(s.hppTool))throw new Error('Invalid HPP brush material');
