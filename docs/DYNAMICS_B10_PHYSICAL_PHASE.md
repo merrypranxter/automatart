@@ -2,7 +2,7 @@
 
 ## Philosophy: math changes time, not animation speed
 
-B10 takes the actual **two-stage Wireworld NAND→synchronized NOT→AND specimen** from B9 and alters its **discrete spatial wire lengths**. Each extra conductor cell is an extra real state transition for a traveling electron wave. No Boolean shortcuts, separate animation clocks, fake output injection, or renderer tricks.
+B10 takes the actual **two-stage Wireworld NAND→synchronized NOT→AND specimen** from B9 and alters its **discrete spatial wire lengths**. Each extra conductor cell changes the actual **path geometry** experienced by a traveling electron wave. Importantly, other nearby heads can couple through the Moore neighborhood, so a signal may arrive EARLIER than the naive wire length predicts. The UI displays exact simulated arrival ticks rather than promising one generation per added cell in interacting layouts. No Boolean shortcuts, separate animation clocks, fake output injection, or renderer tricks.
 
 Users have **two independent controls** from **−3 to +3 cells**: the northwest and northeast bias arm length. If the original B9 bias source is r+1 conducting steps upstream of the second junction, B10 starts that source r+1+shift steps upstream. **0/0 recovers B9 exactly.** Both controls manipulate the original canonical four-state Wireworld lattice (0 EMPTY, 1 CONDUCTOR, 2 ELECTRON HEAD, 3 TAIL), whose conductor excitation remains 1–2 Moore-neighbor HEADS.
 
@@ -27,7 +27,7 @@ A full four-state circuit can become silent or produce additional pulses when co
 
 The NAND port can exhibit a returning HEAD (reverse propagation) after stage two fires, as discovered during B9. B10's measurements include that genuine feedback rather than concealing it.
 
-The change in geometry can alter or destroy AND behavior even though every site still follows exactly the same original Wireworld law. No arbitrary asynchronous input gates, self-resetting latches, periodic clocks or isolated two-wire crossover are claimed.
+The change in geometry can alter or destroy AND behavior even though every site still follows exactly the same original Wireworld law. At radius 9 and output length 8, NW +2 / NE −1 produces a physically simulated **1111** four-input fingerprint (instead of baseline 0001); the NW contact can emit a head at tick 11 rather than the naive tick 12 because the two real wave fronts couple. This is a measured limited specimen, not a universal identity or a freely reusable logic gate. No arbitrary asynchronous input gates, self-resetting latches, periodic clocks or isolated two-wire crossover are claimed.
 
 ## Acceptance gates
 
