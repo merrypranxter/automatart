@@ -38,6 +38,7 @@ import SpinTurmiteControls,{type TurmitePlacement} from './components/SpinTurmit
 import {validTurmiteRule,validTurmiteWriteProgram,validTurmiteAlchemy,DEFAULT_TURMITE_ALCHEMY,validTurmiteMemory,DEFAULT_TURMITE_MEMORY,normalizeTurmiteAgentMemories,relocateTurmiteAgent}
   from './engine/spins-turmites';
 import {DEFAULT_TURMITE_PHEROMONES,validTurmitePheromones} from './engine/turmite-pheromones';
+import {DEFAULT_TURMITE_DUET,validTurmiteDuet} from './engine/turmite-duet';
 import CyclicDynamicsControls from './components/CyclicDynamicsControls';
 import WaveDynamicsControls from './components/WaveDynamicsControls';
 import BrainDynamicsControls from './components/BrainDynamicsControls';
@@ -137,7 +138,8 @@ function cloneWorld(world:World):World{
   return {...world,
     cells:world.cells.slice(),grains:world.grains?.slice(),hppWalls:world.hppWalls?.slice(),
     turmiteAgents:world.turmiteAgents?.map(a=>({...a})),
-    turmitePheromones:world.turmitePheromones?.slice(),ages:world.ages.slice(),
+    turmitePheromones:world.turmitePheromones?.slice(),
+    turmiteRivalPheromones:world.turmiteRivalPheromones?.slice(),ages:world.ages.slice(),
     neighbors:world.neighbors.slice(),events:world.events.slice(),
     traces:world.traces.slice(),previousCells:world.previousCells?.slice(),
     olderCells:world.olderCells?.slice(),fossils:world.fossils?.slice(),
@@ -964,6 +966,8 @@ export default function App(){
       if(!validTurmiteMemory(s.turmiteMemory))throw new Error('Invalid T5 ant memory program');
       s.turmitePheromoneRules=s.turmitePheromoneRules??{...DEFAULT_TURMITE_PHEROMONES};
       if(!validTurmitePheromones(s.turmitePheromoneRules))throw new Error('Invalid T6 chemical field program');
+      s.turmiteDuet=s.turmiteDuet??{...DEFAULT_TURMITE_DUET};
+      if(!validTurmiteDuet(s.turmiteDuet))throw new Error('Invalid T7 dual chemistry program');
       s.turmiteWriteMode=s.turmiteWriteMode??'next';
       s.turmiteWriteStride=s.turmiteWriteStride??1;
       s.turmiteWriteTable=s.turmiteWriteTable??Array.from({length:24},(_,i)=>(i+1)%24);
