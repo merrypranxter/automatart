@@ -20,11 +20,18 @@ export interface WireCascadeOptions {
  rotation:0|1|2|3;
  a:WireLogicBit;
  b:WireLogicBit;
+ /** B10: actual upstream bias-wire length adjustments, in lattice cells. */
+ biasNWShift?:number;
+ biasNEShift?:number;
+ /** B11: specialized two-rail timed collision shield calibrated ONLY for r=9 and zero B10 phase. */
+ feedbackShield?:boolean;
+ guardWestShift?:number; // relative physical length change, -1..1
+ guardDiagonalShift?:number;
 }
 export interface WireCascadeLayout {
  conductors:LogicPoint[];
  heads:LogicPoint[];
- stages:{nand:LogicPoint; nandPort:LogicPoint; inverter:LogicPoint; biasPorts:LogicPoint[]; output:LogicPoint};
+ stages:{nand:LogicPoint; nandPort:LogicPoint; inverter:LogicPoint; biasPorts:LogicPoint[]; output:LogicPoint; guardPorts?:LogicPoint[]};
 }
 export interface WireCascadeCase {
  a:WireLogicBit;b:WireLogicBit;
@@ -39,7 +46,7 @@ export interface WireCascadeBench {
 }
 export interface WireCascadeStamp {
  touched:number[];
- ports:{nand:LogicPoint;inverter:LogicPoint;biases:LogicPoint[];output:LogicPoint};
+ ports:{nand:LogicPoint;inverter:LogicPoint;biases:LogicPoint[];output:LogicPoint;guardPorts?:LogicPoint[]};
 }
 const r90=([x,y]:LogicPoint,k:0|1|2|3):LogicPoint=>
  k===1?[-y,x]:k===2?[-x,-y]:k===3?[y,-x]:[x,y];
@@ -48,11 +55,18 @@ export const validWireCascade=(v:WireCascadeOptions):boolean=>
  Number.isInteger(v.radius)&&v.radius>=7&&v.radius<=12&&
  Number.isInteger(v.outputLength)&&v.outputLength>=5&&v.outputLength<=12&&
  [0,1,2,3].includes(v.rotation)&&
- (v.a===0||v.a===1)&&(v.b===0||v.b===1);
+ (v.a===0||v.a===1)&&(v.b===0||v.b===1)&&
+ Number.isInteger(v.biasNWShift??0)&&Math.abs(v.biasNWShift??0)<=3&&
+ Number.isInteger(v.biasNEShift??0)&&Math.abs(v.biasNEShift??0)<=3&&
+ Number.isInteger(v.guardWestShift??0)&&Math.abs(v.guardWestShift??0)<=1&&
+ Number.isInteger(v.guardDiagonalShift??0)&&Math.abs(v.guardDiagonalShift??0)<=1&&
+ (!v.feedbackShield||(v.radius===9&&(v.biasNWShift??0)===0&&(v.biasNEShift??0)===0));
 
 export function wireCascadeLayout(v:WireCascadeOptions):WireCascadeLayout{
  if(!validWireCascade(v))throw Error('Invalid certified two-stage AND circuit');
- const {radius:r,outputLength:d,rotation:k,a,b}=v;
+ const {radius:r,outputLength:d,rotation:k,a,b,
+  biasNWShift=0,biasNEShift=0,feedbackShield=false,
+  guardWestShift=0,guardDiagonalShift=0}=v;
  const wires:LogicPoint[]=[],heads:LogicPoint[]=[];
  // Stage one — NAND. Off contacts are actually VOID, not parasitic stubs.
  for(let i=0;i<=r;i++)wires.push([i,-i]);
@@ -66,11 +80,35 @@ export function wireCascadeLayout(v:WireCascadeOptions):WireCascadeLayout{
  const biasPorts:LogicPoint[]=[];
  for(const slope of [-1,1]){
   const endpoint:LogicPoint=[j[0]+slope,j[1]-1];
+  const length=r+1+(slope===-1?biasNWShift:biasNEShift);
   biasPorts.push(endpoint);
-  for(let i=0;i<=r+1;i++){
+  for(let i=0;i<=length;i++){
    const point:LogicPoint=[endpoint[0]+slope*i,endpoint[1]-i];
    wires.push(point);
-   if(i===r+1)heads.push(point); // physically travels r+1 actual steps
+   // B10: shifting a source actually changes the NUMBER of conducting
+   // cells traversed. It is not a tick offset or altered renderer.
+   if(i===length)heads.push(point);
+  }
+ }
+ // B11 research specimen (r=9 ONLY): two actual transmitting guard rails
+ // approach the upstream return-wave corridor. Physical guard HEADS are
+ // seeded at the remote conductor ends, not injected at a magic tick.
+ // The fixed calibrated pair blocks the t=r+3 RETURN at NAND-port for 11,
+ // while preserving the final AND output. This does not establish a
+ // general one-way diode, reusable logic, or phase-shift robustness.
+ const guardPorts:LogicPoint[]=[];
+ if(feedbackShield){
+  const guards=[
+   {tip:[r-2,-r] as LogicPoint,dx:-1,dy:0,length:r+1+guardWestShift},
+   {tip:[r-1,-r] as LogicPoint,dx:-1,dy:-1,length:r+2+guardDiagonalShift}
+  ];
+  for(const guard of guards){
+   guardPorts.push(guard.tip);
+   for(let i=0;i<=guard.length;i++){
+    const point:LogicPoint=[guard.tip[0]+guard.dx*i,guard.tip[1]+guard.dy*i];
+    wires.push(point);
+    if(i===guard.length)heads.push(point);
+   }
   }
  }
  // The outgoing SE rail is not adjacent to any of the THREE incoming
@@ -87,7 +125,8 @@ export function wireCascadeLayout(v:WireCascadeOptions):WireCascadeLayout{
    nandPort:r90([r,-r],k),
    inverter:r90(j,k),
    biasPorts:biasPorts.map(p=>r90(p,k)),
-   output:r90([j[0]+d,j[1]+d],k)
+   output:r90([j[0]+d,j[1]+d],k),
+   ...(feedbackShield?{guardPorts:guardPorts.map(p=>r90(p,k))}:{})
   }
  };
 }
@@ -173,6 +212,7 @@ export function stampWireCascade(world:World,anchor:LogicPoint,v:WireCascadeOpti
   nand:translate(shape.stages.nandPort,anchor),
   inverter:translate(shape.stages.inverter,anchor),
   biases:shape.stages.biasPorts.map(p=>translate(p,anchor)),
-  output:translate(shape.stages.output,anchor)
+  output:translate(shape.stages.output,anchor),
+  ...(shape.stages.guardPorts?{guardPorts:shape.stages.guardPorts.map(p=>translate(p,anchor))}:{})
  }};
 }
