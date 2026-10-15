@@ -6,6 +6,8 @@
  * (including both periodic axes), give valid conditional Gibbs transitions.
  */
 import {random01} from './reaction-worlds';
+import {DEFAULT_TURMITE_PHEROMONES,validTurmitePheromones,stepTurmitePheromones,pheromoneSteerHeading} from './turmite-pheromones';
+import type {TurmitePheromones} from './turmite-pheromones';
 
 const CARDINAL:readonly (readonly [number,number])[]=[[0,-1],[1,0],[0,1],[-1,0]];
 export interface IsingRule{
@@ -180,7 +182,7 @@ export function relocateTurmiteAgent(agents:readonly TurmiteAgent[],w:number,h:n
   throw new Error('Invalid T3 Turmite placement');
  return agents.map((a,i)=>i===agentId?{...a,x,y,heading}:{...a});
 }
-export interface TurmiteResult{cells:Uint8Array;agents:TurmiteAgent[]}
+export interface TurmiteResult{cells:Uint8Array;agents:TurmiteAgent[];pheromones?:Uint8Array}
 const indexAt=(x:number,y:number,w:number,h:number,wrap:boolean):number=>{
  if(wrap){x=(x+w)%w;y=(y+h)%h;}
  else if(x<0||y<0||x>=w||y>=h)return -1;
@@ -274,14 +276,20 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
  dynamics:TurmiteDynamics=DEFAULT_TURMITE_DYNAMICS,
  write:TurmiteWriteProgram=DEFAULT_TURMITE_WRITE_PROGRAM,
  alchemy:TurmiteAlchemy=DEFAULT_TURMITE_ALCHEMY,
- memory:TurmiteMemory=DEFAULT_TURMITE_MEMORY):TurmiteResult{
+ memory:TurmiteMemory=DEFAULT_TURMITE_MEMORY,
+ chem:TurmitePheromones=DEFAULT_TURMITE_PHEROMONES,
+ pheromones?:Uint8Array):TurmiteResult{
  if(!validTurmiteRule(rule)||cells.length!==w*h||!agents.length||agents.length>12||
     !Number.isInteger(steps)||steps<1||steps>8||!validTurmiteDynamics(dynamics)||
     !validTurmiteWriteProgram(write)||!validTurmiteAlchemy(alchemy)||
-    !validTurmiteMemory(memory))
+    !validTurmiteMemory(memory)||!validTurmitePheromones(chem)||
+    (pheromones!==undefined&&pheromones.length!==w*h))
   throw new Error('Invalid Turmite world or rule');
  const next=cells.slice();
  let current=agents.map(a=>({...a}));
+ // Optional independent true Uint8 chemical lattice. Disabled legacy calls
+ // never create this field and have identical T1–T5 result shapes.
+ let field=pheromones?.slice()??(chem.enabled?new Uint8Array(w*h):undefined);
  const vectors:readonly (readonly [number,number])[]=[[0,-1],[1,0],[0,1],[-1,0]];
  for(let substep=0;substep<steps;substep++){
  const moved:TurmiteAgent[]=[];
@@ -308,6 +316,10 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
   const turn=turmiteTurnAt(rule,lookup,startingHeading,species,dynamics);
   const direction=turn==='R'?1:turn==='L'?3:turn==='U'?2:0;
   let heading=((startingHeading+direction)%4) as 0|1|2|3;
+  // Every ant senses the identical pre-round chemistry; painting and T5
+  // remain in legacy stable agent order, and deposits happen afterward.
+  if(field&&chem.enabled)
+   heading=pheromoneSteerHeading(field,w,h,wrap,a.x,a.y,heading,species,chem);
   const base=turmiteAlchemyWriteAt(state,rule.length,species,occupancy.get(p)??1,write,alchemy);
   const pigment=memory.enabled?
    ((base+phase*memory.writeBias)%rule.length+rule.length)%rule.length:base;
@@ -322,7 +334,9 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
   }
   moved.push(nextMemory===undefined?{x,y,heading}:{x,y,heading,memory:nextMemory});
  }
+ if(field&&chem.enabled)
+  field=stepTurmitePheromones(field,w,h,wrap,current,chem);
  current=moved;
  }
- return {cells:next,agents:current};
+ return field?{cells:next,agents:current,pheromones:field}:{cells:next,agents:current};
 }
