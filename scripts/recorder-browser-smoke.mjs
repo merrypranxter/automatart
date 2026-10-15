@@ -628,9 +628,54 @@ try{
    buffer:Buffer.from(JSON.stringify(b9Recipe))
   });
   await page.waitForFunction(()=>document.querySelector('#engine')?.value==='wireworld');
+  // B10: physically adjustable independently timed bias waves, not an animation.
+  assert(await page.locator('#wire-phase-bits').isVisible());
+  assert.equal(await page.locator('#wire-phase-bits').innerText(),'0001',
+   'Perfectly synchronized original B9 AND geometry remains byte-for-byte intact');
+  assert.match(await page.locator('#wire-phase-certification').innerText(),/EXACT B9 CERTIFIED AND/);
+  await page.locator('#wire-phase-nw').fill('2');
+  await page.locator('#wire-phase-ne').fill('-1');
+  assert.equal(await page.locator('#wire-phase-nw-time').innerText(),'T12');
+  assert.equal(await page.locator('#wire-phase-ne-time').innerText(),'T9');
+  assert.match(await page.locator('#wire-phase-certification').innerText(),/EXPERIMENTAL PHASE SPECIMEN/);
+  assert.equal(await page.locator('#wire-phase-truth tbody tr').count(),4);
+  const beforeScan=await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL());
+  await page.locator('#wire-phase-scan').click();
+  assert.equal(await page.locator('#wire-phase-scan-results tbody tr').count(),5);
+  assert.equal(await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL()),beforeScan,
+   'Phase spectrum must measure separate copied universes and leave the artwork untouched');
+  await page.locator('#wire-phase-rotation').selectOption('0');
+  await page.locator('#wire-phase-a').check();
+  await page.locator('#wire-phase-b').check();
+  const phaseStart=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  assert(await page.locator('#wire-phase-install').isEnabled());
+  await page.locator('#wire-phase-install').click();
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),phaseStart,
+   'Mutating rail length is an art edit, not a simulated generation advancement');
+  assert(await page.locator('#wire-phase-live').isVisible());
+  const b10Pixels=await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL());
+  await page.locator('#wire-phase-measure').click();
+  const phaseReport=await page.locator('#wire-phase-measurement').innerText();
+  assert.match(phaseReport,/NW BIAS:.*T12/);
+  assert.match(phaseReport,/NE BIAS:.*T9/);
+  assert.equal(await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL()),b10Pixels,
+   'Four actual phase probes cannot mutate the real stage');
+  const [b10File]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const b10Recipe=JSON.parse(await readFile(await b10File.path(),'utf8'));
+  assert.equal(b10Recipe.world.kind,'automatart-world-v1');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'b10-physical-wire-phase-specimen.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(b10Recipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='wireworld');
+  await page.locator('#wire-phase-reset').click();
+  assert.equal(await page.locator('#wire-phase-bits').innerText(),'0001');
+  assert.match(await page.locator('#wire-phase-certification').innerText(),/EXACT B9 CERTIFIED AND/);
   await page.locator('#engine').selectOption('cyclic');
   await openTab(page,'world');
-  console.log('PASS B9: true traveling NAND→NOT AND, synchronized independent biases, read-only live probes, recipe and GIF/video');
+  console.log('PASS B10: true physical ±bias-rail phase mutation, five full-universe scans, read-only scope and exact portable recipe');
 
   // Funhouse F1 regression: precise stepping, authentic B/S roulette, and two
   // unmistakably different random color buttons.
