@@ -53,7 +53,7 @@ try{
  assert.deepEqual(ants,copy,'Relocation cannot mutate saved source agent identities');
  assert.deepEqual(moved,[ants[0],{x:11,y:0,heading:3},ants[2]],
   'Exactly one existing agent is relocated and heading changed');
- for(const args of [[3,12,0,2,3,0],[12,12,1,12,0,0],
+ for(const args of [[1,12,0,2,3,0],[12,12,1,12,0,0],
   [12,12,1,-1,0,0],[12,12,1,0,0,4]]){
   assert.throws(()=>relocateTurmiteAgent(ants,...args),/Invalid T3/);
  }
