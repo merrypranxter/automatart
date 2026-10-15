@@ -37,6 +37,7 @@ import ReactionControls from './components/ReactionControls';
 import SpinTurmiteControls,{type TurmitePlacement} from './components/SpinTurmiteControls';
 import {validTurmiteRule,validTurmiteWriteProgram,validTurmiteAlchemy,DEFAULT_TURMITE_ALCHEMY,validTurmiteMemory,DEFAULT_TURMITE_MEMORY,normalizeTurmiteAgentMemories,relocateTurmiteAgent}
   from './engine/spins-turmites';
+import {DEFAULT_TURMITE_PHEROMONES,validTurmitePheromones} from './engine/turmite-pheromones';
 import CyclicDynamicsControls from './components/CyclicDynamicsControls';
 import WaveDynamicsControls from './components/WaveDynamicsControls';
 import BrainDynamicsControls from './components/BrainDynamicsControls';
@@ -135,7 +136,8 @@ function download(name:string, content:Blob | string):void{
 function cloneWorld(world:World):World{
   return {...world,
     cells:world.cells.slice(),grains:world.grains?.slice(),hppWalls:world.hppWalls?.slice(),
-    turmiteAgents:world.turmiteAgents?.map(a=>({...a})),ages:world.ages.slice(),
+    turmiteAgents:world.turmiteAgents?.map(a=>({...a})),
+    turmitePheromones:world.turmitePheromones?.slice(),ages:world.ages.slice(),
     neighbors:world.neighbors.slice(),events:world.events.slice(),
     traces:world.traces.slice(),previousCells:world.previousCells?.slice(),
     olderCells:world.olderCells?.slice(),fossils:world.fossils?.slice(),
@@ -960,6 +962,8 @@ export default function App(){
       if(!validTurmiteAlchemy(s.turmiteAlchemy))throw new Error('Invalid per-species Turmite alchemy');
       s.turmiteMemory=s.turmiteMemory??{...DEFAULT_TURMITE_MEMORY};
       if(!validTurmiteMemory(s.turmiteMemory))throw new Error('Invalid T5 ant memory program');
+      s.turmitePheromoneRules=s.turmitePheromoneRules??{...DEFAULT_TURMITE_PHEROMONES};
+      if(!validTurmitePheromones(s.turmitePheromoneRules))throw new Error('Invalid T6 chemical field program');
       s.turmiteWriteMode=s.turmiteWriteMode??'next';
       s.turmiteWriteStride=s.turmiteWriteStride??1;
       s.turmiteWriteTable=s.turmiteWriteTable??Array.from({length:24},(_,i)=>(i+1)%24);
