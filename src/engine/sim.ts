@@ -70,7 +70,7 @@ export function createWorld(s:SimSettings):World{
     }else cells[p]=rand()<chance?1:0;
     if(cells[p]>0||s.engine==='cyclic'){ages[p]=1;traces[p]=1;}
   }
-  const turmiteAgents=s.engine==='turmites'?seedTurmites(width,height,s.turmiteCount,s.seed):undefined;
+  const turmiteAgents=s.engine==='turmites'?seedTurmites(width,height,s.turmiteCount,s.seed,s.turmiteFormation??'orbit'):undefined;
   return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,hppWalls,turmiteAgents,
@@ -121,7 +121,10 @@ export function stepWorld(prev:World,s:SimSettings):World{
     }
   }else if(s.engine==='turmites'){
     if(!prev.turmiteAgents)throw new Error('Missing Turmite agents');
-    const result=stepTurmites(cells,w,h,s.wrap,s.turmiteRule,prev.turmiteAgents,s.turmiteSteps??1);
+    const result=stepTurmites(cells,w,h,s.wrap,s.turmiteRule,prev.turmiteAgents,s.turmiteSteps??1,{
+      speciesCount:s.turmiteSpeciesCount??1,speciesStride:s.turmiteSpeciesStride??0,
+      speciesMirror:s.turmiteSpeciesMirror??false,headingShear:s.turmiteHeadingShear??0,
+      contact:s.turmiteContact??'shared'});
     next.set(result.cells);nextAgents=result.agents;
     const cardinal=neighborOffsets('square',0,0,'vonNeumann');
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
