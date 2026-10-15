@@ -26,6 +26,8 @@ import CircuitControls from './components/CircuitControls';
 import WireDynamicsControls from './components/WireDynamicsControls';
 import WireLogicControls,{type WireLogicMonitor} from './components/WireLogicControls';
 import WireTimingControls,{type WireTimingMonitor} from './components/WireTimingControls';
+import WireCascadeControls,{type WireCascadeMonitor} from './components/WireCascadeControls';
+import {stampWireCascade,type WireCascadeOptions} from './engine/wire-cascade';
 import {stampWireTiming,type WireTimingOptions} from './engine/wire-timing';
 import {stampWireLogic,type WireLogicOptions} from './engine/wire-logic';
 import {stampWireCircuit,wireStampFootprint,type WireStampOptions} from './engine/wire-circuit-lab';
@@ -168,7 +170,8 @@ export default function App(){
   const [wireStampArmed,setWireStampArmed]=useState(false);
   const [wireLogicMonitor,setWireLogicMonitor]=useState<WireLogicMonitor|null>(null);
   const [wireTimingMonitor,setWireTimingMonitor]=useState<WireTimingMonitor|null>(null);
-  useEffect(()=>{setWireStampArmed(false);setWireLogicMonitor(null);setWireTimingMonitor(null);},[settings.engine]);
+  const [wireCascadeMonitor,setWireCascadeMonitor]=useState<WireCascadeMonitor|null>(null);
+  useEffect(()=>{setWireStampArmed(false);setWireLogicMonitor(null);setWireTimingMonitor(null);setWireCascadeMonitor(null);},[settings.engine]);
   const [inspectedCell,setInspectedCell]=useState<[number,number]|null>(null);
   const [mutationStrength,setMutationStrength]=useState<MutationStrength>('weird');
   const [mutationLocks,setMutationLocks]=useState<MutationLocks>({...INITIAL_MUTATION_LOCKS});
@@ -578,6 +581,26 @@ export default function App(){
     draw();
     drawStampPreview(point);
   }
+  function installWireCascade(opts:WireCascadeOptions){
+    if(settings.engine!=='wireworld'||recordingRef.current)return;
+    if(settings.wireDrive!=='off'||settings.wireExciteMin!==1||settings.wireExciteMax!==2||
+       worldRef.current.lattice!=='square'){
+      setMessage('Real AND cascade needs original square-lattice Wireworld 1–2 HEADS and PURE/OFF electrodes.');
+      return;
+    }
+    const anchor:[number,number]=[Math.floor(worldRef.current.width/2),Math.floor(worldRef.current.height/2)];
+    // Ensure the entire cascade fits before pausing or changing anything.
+    try{
+      const result=stampWireCascade(worldRef.current,anchor,opts);
+      cancelBatch();setPlaying(false);setWireStampArmed(false);
+      setWireCascadeMonitor({ports:result.ports,radius:opts.radius,outputLength:opts.outputLength,
+        a:opts.a,b:opts.b,installedAt:worldRef.current.generation});
+      setWireLogicMonitor(null);setWireTimingMonitor(null);
+      setInspectedCell(anchor);setPopulation(stat(worldRef.current));
+      setMessage('Installed REAL NAND→NOT AND cascade · '+result.touched.length+' local true lattice cells.');
+      draw();
+    }catch(error){setMessage('AND cascade rejected: '+(error instanceof Error?error.message:String(error)));}
+  }
   function installWireTiming(opts:WireTimingOptions){
     if(settings.engine!=='wireworld'||recordingRef.current)return;
     if(settings.wireDrive!=='off'||settings.wireExciteMin!==1||settings.wireExciteMax!==2){
@@ -591,7 +614,7 @@ export default function App(){
       setWireTimingMonitor({kind:opts.kind,radius:opts.radius,offset:opts.offset,
         a:opts.a,b:opts.b,outputs:result.outputs,inputs:result.inputs,
         installedAt:worldRef.current.generation});
-      setWireLogicMonitor(null);
+      setWireLogicMonitor(null);setWireCascadeMonitor(null);
       setInspectedCell(anchor);setPopulation(stat(worldRef.current));
       setMessage('Installed real '+opts.kind+' routing · '+result.touched.length+' local cell updates.');
       draw();
@@ -604,7 +627,7 @@ export default function App(){
     try{
       const result=stampWireLogic(worldRef.current,anchor,opts);
       setWireLogicMonitor({kind:opts.kind,ports:result.ports,installedAt:worldRef.current.generation});
-      setWireTimingMonitor(null);
+      setWireTimingMonitor(null);setWireCascadeMonitor(null);
       setInspectedCell(anchor);setPopulation(stat(worldRef.current));
       setMessage('Installed verified '+opts.kind.toUpperCase()+' · '+result.touched.length+' true lattice-cell updates.');
       draw();
@@ -1183,6 +1206,8 @@ export default function App(){
             onInstall={installVerifiedLogic}/>}
           {settings.engine==='wireworld'&&<WireTimingControls world={worldRef.current}
             settings={settings} monitor={wireTimingMonitor} onInstall={installWireTiming}/>}
+          {settings.engine==='wireworld'&&<WireCascadeControls world={worldRef.current}
+            settings={settings} monitor={wireCascadeMonitor} onInstall={installWireCascade}/>}
           {(settings.engine==='hodgepodge'||settings.engine==='forestfire')&&
             <ReactionControls settings={settings} setSettings={setSettings}/>}
           {settings.engine==='hpp'&&<LatticeGasControls settings={settings}
