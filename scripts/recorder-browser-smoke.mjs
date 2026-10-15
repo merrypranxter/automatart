@@ -527,9 +527,61 @@ try{
    buffer:Buffer.from(JSON.stringify(b7Saved))
   });
   await page.waitForFunction(()=>document.querySelector('#engine')?.value==='wireworld');
+  // B8: NOR + true 3-input NAE with live stage, physics spectrum, and save.
+  await page.locator('#logic-device').selectOption('nor');
+  assert.equal(await page.locator('.wire-logic-lab .wire-logic-truth-table tbody tr').count(),4);
+  assert.equal(await page.locator('.wire-inhibition-inspector tbody tr').count(),4);
+  assert.match(await page.locator('#logic-certification').innerText(),/ALL CASES VERIFIED/);
+  assert.match(await page.locator('#wire-threshold-fingerprint').innerText(),/1000/);
+  await page.locator('#logic-input-a').check();
+  await page.locator('#logic-input-b').check();
+  await page.locator('#logic-install').click();
+  await page.locator('#wire-scope-scan').click();
+  assert.match(await page.locator('#wire-scope-result').innerText(),
+   /No electron HEAD reached this site within the measured horizon/,
+   'NOR 11 physically suppresses the remote port');
+  await page.locator('#logic-input-a').uncheck();
+  await page.locator('#logic-input-b').uncheck();
+  await page.locator('#logic-install').click();
+  await page.locator('#wire-scope-scan').click();
+  assert.match(await page.locator('#wire-scope-result').innerText(),/HEAD on tick\(s\) 13/,
+   'NOR 00 emits a genuine HEAD at the expected wire distance');
+  await page.locator('#logic-device').selectOption('nae');
+  assert.equal(await page.locator('.wire-logic-lab .wire-logic-truth-table tbody tr').count(),8);
+  assert.equal(await page.locator('.wire-inhibition-inspector tbody tr').count(),8);
+  assert.match(await page.locator('#wire-threshold-fingerprint').innerText(),/01111110/);
+  assert.equal(await page.locator('#wire-threshold-spectrum tr[data-law="surge"] td').last().innerText(),'1',
+   'Under true 1..3-head alternate physics, saturated 111 now emits a head');
+  assert(await page.locator('#logic-input-c').isVisible(),
+   'NAE introduces an actual third independent physical input contact');
+  await page.locator('#logic-input-a').check();
+  await page.locator('#logic-input-b').check();
+  await page.locator('#logic-input-c').check();
+  const b8Start=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  await page.locator('#logic-install').click();
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),b8Start);
+  await page.locator('#wire-scope-scan').click();
+  assert.match(await page.locator('#wire-scope-result').innerText(),
+   /No electron HEAD reached this site within the measured horizon/,
+   'NAE 111 is silent because 3 heads physically inhibit the conductor');
+  await page.locator('#logic-input-c').uncheck();
+  await page.locator('#logic-install').click();
+  await page.locator('#wire-scope-scan').click();
+  assert.match(await page.locator('#wire-scope-result').innerText(),/HEAD on tick\(s\) 13/,
+   'NAE 110 physically excites the conductor and reaches the output');
+  const [b8File]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const b8Recipe=JSON.parse(await readFile(await b8File.path(),'utf8'));
+  assert.equal(b8Recipe.world.kind,'automatart-world-v1');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'b8-real-three-input-threshold.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(b8Recipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='wireworld');
   await page.locator('#engine').selectOption('cyclic');
   await openTab(page,'world');
-  console.log('PASS B7: physical NAND/NOT suppression, actual head census, real-world scope, and exact circuit recipe');
+  console.log('PASS B7/B8: true NAND/NOT/NOR/NAE signal physics, 8-case collision microscope, alternate law spectrum, and saved recipe');
 
   // Funhouse F1 regression: precise stepping, authentic B/S roulette, and two
   // unmistakably different random color buttons.
