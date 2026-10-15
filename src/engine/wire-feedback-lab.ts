@@ -63,9 +63,11 @@ export function measureWireFeedback(outputLength:number,enabled:boolean,
  // Probe the RETURN after it ought to have appeared at t=r+3=12.
  // Gate calibration additionally ensures forward NAND arrives at t=10
  // for every other input, and the actual two-stage output is still AND.
- const blocksKnownReturn=preservesAND&&
-  !rows[3].nandPort.includes(12)&&
-  rows.slice(0,3).every(row=>row.nandPort.includes(10));
+ const blocksKnownReturn=enabled&&preservesAND&&
+  // The calibrated shield makes the NAND port COMPLETELY silent for 11;
+  // a premature unintended HEAD is not allowed to earn certification.
+  rows[3].nandPort.length===0&&
+  rows.slice(0,3).every(row=>JSON.stringify(row.nandPort)==='[10]');
  return {enabled,westShift,diagonalShift,outputLength,rows,
   truth:rows.map(row=>row.output.length?'1':'0').join(''),
   preservesAND,blocksKnownReturn,
