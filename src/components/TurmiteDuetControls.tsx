@@ -1,3 +1,4 @@
+import {useState} from 'react';
 import type {Dispatch,SetStateAction} from 'react';
 import type {SimSettings,World} from '../engine/types';
 import type {TurmiteDuet} from '../engine/turmite-duet';
@@ -12,16 +13,24 @@ interface Props{
 }
 export default function TurmiteDuetControls({settings:s,setSettings,world,selectedAgent}:Props){
  const d=s.turmiteDuet??DEFAULT_TURMITE_DUET;
+ const [restartArmed,setRestartArmed]=useState(false);
+ const realAntCount=world.turmiteAgents?.length??s.turmiteCount;
+ const needsRival=realAntCount<2;
  const chem=s.turmitePheromoneRules??DEFAULT_TURMITE_PHEROMONES;
  const statsA=pheromoneStats(world.turmitePheromones);
  const statsB=pheromoneStats(world.turmiteRivalPheromones);
- const set=(patch:Partial<TurmiteDuet>,activate=false)=>setSettings(old=>({
-  ...old,turmiteDuet:{...(old.turmiteDuet??DEFAULT_TURMITE_DUET),...patch},
-  ...(activate?{
-   turmitePheromoneRules:{...(old.turmitePheromoneRules??DEFAULT_TURMITE_PHEROMONES),enabled:true},
-   turmiteSpeciesCount:Math.max(2,old.turmiteSpeciesCount)
-  }:{})
- }));
+ const set=(patch:Partial<TurmiteDuet>,activate=false)=>{
+  // A single ant cannot create two chemical factions. The activation is
+  // strictly gated on the REAL live world, not settings/species labels.
+  if(activate&&needsRival)return;
+  setSettings(old=>({
+   ...old,turmiteDuet:{...(old.turmiteDuet??DEFAULT_TURMITE_DUET),...patch},
+   ...(activate?{
+    turmitePheromoneRules:{...(old.turmitePheromoneRules??DEFAULT_TURMITE_PHEROMONES),enabled:true},
+    turmiteSpeciesCount:Math.max(2,old.turmiteSpeciesCount)
+   }:{})
+  }));
+ };
  const setMode=(patch:Partial<TurmiteDuet>)=>set(patch);
  const ant=world.turmiteAgents?.[Math.min(selectedAgent,(world.turmiteAgents?.length??1)-1)];
  const active=d.enabled&&chem.enabled;
@@ -31,12 +40,30 @@ export default function TurmiteDuetControls({settings:s,setSettings,world,select
    <span>ANTAGONISTIC FIELDS · REACTION · SPLIT SPECIES</span></div>
   <p className="module-note">Two real 0–255 chemical lattices now compete. Even-numbered ant species deposit A; odd-numbered species deposit B. Each can diffuse and decay differently. Wherever both arrive, they can annihilate or convert each other. Ants physically steer according to the signed gradient of A − B, or its inverse. It's a genuine coupled dynamical system.</p>
   <label className="toggle"><input id="turmite-duet-enabled" type="checkbox"
-   checked={d.enabled} onChange={e=>set({enabled:e.target.checked},e.target.checked)}/>
+   checked={d.enabled} disabled={needsRival&&!d.enabled}
+   onChange={e=>set({enabled:e.target.checked},e.target.checked)}/>
    <span>ENABLE DUAL CHEMICAL ECOLOGY</span></label>
+  {needsRival&&<div id="turmite-duet-needs-rival" className="neighborhood-note" role="status">
+   <strong>ONE ANT CANNOT START A TWO-FACTION WAR.</strong> T7 activation and chemistry presets are disabled until a second real ant exists. You can increase Ant Population in the T1 section above (which intentionally restarts the universe), or use the explicit confirmed fresh-start control below.
+   <div className="c3-presets">
+    {!restartArmed?<button id="turmite-duet-arm-restart" type="button" onClick={()=>setRestartArmed(true)}>
+     + START 2-ANT DUET · RESTART REQUIRED</button>:<>
+     <button id="turmite-duet-confirm-restart" type="button" onClick={()=>{
+      setSettings(old=>({...old,turmiteCount:Math.max(2,old.turmiteCount),
+       turmiteSpeciesCount:Math.max(2,old.turmiteSpeciesCount),
+       turmitePheromoneRules:{...(old.turmitePheromoneRules??DEFAULT_TURMITE_PHEROMONES),enabled:true},
+       turmiteDuet:{...(old.turmiteDuet??DEFAULT_TURMITE_DUET),enabled:true}}));
+      setRestartArmed(false);
+     }}>YES · RESTART FRESH WITH 2 ANTS</button>
+     <button id="turmite-duet-cancel-restart" type="button" onClick={()=>setRestartArmed(false)}>
+      ✕ KEEP MY CURRENT ARTWORK</button>
+    </>}
+   </div>
+  </div>}
   <p className="neighborhood-note" id="turmite-duet-status" role="status">
    {active?'TWO CHEMICAL FIELDS ACTIVE':d.enabled?'DUET PAUSED · enable T6 chemistry to evolve':'DUAL FIELD BYPASSED · EXACT T6 BEHAVIOR'}
    {' · '}T7 requires T6 and at least two actual ants for both chemicals. Enabling selects two species without moving ants or restarting artwork.
-   {s.turmiteCount<2?' ONLY ONE ANT IS PRESENT: the B field stays empty until you increase Ant Population above to 2 or more (that population change intentionally reseeds the world).':''}
+   {needsRival?' T7 cannot activate from this one-ant world without the explicit population restart.':''}
   </p>
   <label className="input-label" htmlFor="turmite-duet-navigation">Navigation by combined chemical gradient</label>
   <select id="turmite-duet-navigation" value={d.navigation}
@@ -72,19 +99,19 @@ export default function TurmiteDuetControls({settings:s,setSettings,world,select
   <input id="turmite-duet-threshold" type="range" min="1" max="64" step="1"
    value={d.threshold} onChange={e=>setMode({threshold:Number(e.target.value)})}/>
   <div className="c3-presets">
-   <button id="turmite-duet-war" type="button" onClick={()=>set({
+   <button id="turmite-duet-war" type="button" disabled={needsRival} onClick={()=>set({
     enabled:true,navigation:'territories',reaction:'neutralize',reactionRate:10,
     deposit:28,diffusion:4,evaporation:1,strength:2,threshold:1
    },true)}>☣ CHEMICAL FRONT LINES</button>
-   <button id="turmite-duet-parasite" type="button" onClick={()=>set({
+   <button id="turmite-duet-parasite" type="button" disabled={needsRival} onClick={()=>set({
     enabled:true,navigation:'inverted',reaction:'convertB',reactionRate:16,
     deposit:30,diffusion:6,evaporation:0,strength:2,threshold:1
    },true)}>🦠 B EATS A</button>
-   <button id="turmite-duet-bloom" type="button" onClick={()=>set({
+   <button id="turmite-duet-bloom" type="button" disabled={needsRival} onClick={()=>set({
     enabled:true,navigation:'territories',reaction:'convertA',reactionRate:12,
     deposit:25,diffusion:8,evaporation:0,strength:1,threshold:2
    },true)}>🧬 A BLOOM</button>
-   <button id="turmite-duet-ceasefire" type="button" onClick={()=>set({
+   <button id="turmite-duet-ceasefire" type="button" disabled={needsRival} onClick={()=>set({
     enabled:true,navigation:'off',reaction:'none',reactionRate:0,
     deposit:18,diffusion:4,evaporation:1,strength:0,threshold:1
    },true)}>☮ CHEMICAL CEASEFIRE</button>
