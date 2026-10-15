@@ -2,9 +2,9 @@ import {useEffect,useState} from 'react';
 import type {Dispatch,SetStateAction} from 'react';
 import type {SimSettings,World} from '../engine/types';
 import {isingEnergy,isingMagnetization,validTurmiteRule,turmiteTurnAt,turmiteWriteAt,
- turmiteAlchemyWriteAt,DEFAULT_TURMITE_WRITE_PROGRAM,DEFAULT_TURMITE_ALCHEMY}
+ turmiteAlchemyWriteAt,DEFAULT_TURMITE_WRITE_PROGRAM,DEFAULT_TURMITE_ALCHEMY,DEFAULT_TURMITE_MEMORY}
  from '../engine/spins-turmites';
-import type {TurmiteWriteProgram,TurmiteAlchemy} from '../engine/spins-turmites';
+import type {TurmiteWriteProgram,TurmiteAlchemy,TurmiteMemory} from '../engine/spins-turmites';
 export interface TurmitePlacement{agentId:number;heading:0|1|2|3}
 interface Props {settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSettings>>;
  world:World;resetNumber:number;onReseed:()=>void;placement:TurmitePlacement|null;
@@ -30,6 +30,7 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
   table:s.turmiteWriteTable??DEFAULT_TURMITE_WRITE_PROGRAM.table};
  const alchemy=s.turmiteAlchemy??DEFAULT_TURMITE_ALCHEMY;
  const speciesWrite=alchemy.species[alchemySpecies];
+ const memory=s.turmiteMemory??DEFAULT_TURMITE_MEMORY;
  const updateAlchemy=(patch:Partial<TurmiteAlchemy>)=>setSettings(old=>({
   ...old,turmiteAlchemy:{...(old.turmiteAlchemy??DEFAULT_TURMITE_ALCHEMY),...patch}
  }));
@@ -38,6 +39,9 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
   return {...old,turmiteAlchemy:{...oldAlchemy,species:oldAlchemy.species.map((v,i)=>
    i===alchemySpecies?{...v,...patch}:v)}};
  });
+ const updateMemory=(patch:Partial<TurmiteMemory>)=>setSettings(old=>({
+  ...old,turmiteMemory:{...(old.turmiteMemory??DEFAULT_TURMITE_MEMORY),...patch}
+ }));
  const [typed,setTyped]=useState(s.turmiteRule);
  // Recipes may replace the committed rule while the editor stays mounted.
  // Don't let a stale draft overwrite the freshly restored world.
@@ -377,6 +381,65 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
    }}>⚗ FOUR-SPECIES FUSION PILEUP</button>
   </div>
   <p className="neighborhood-note">Four-species fusion starts a pileup so you can see actual chemistry right away. Changing the physical starting formation or number of ants intentionally restarts the world. Switching writers and collision reactions during play does NOT restart it. Original recipes still work with alchemy disabled.</p>
+  <div className="c3-header"><strong>🧠 T5 · MEMORY ANTS</strong>
+   <span>AN INTERNAL FINITE-STATE REGISTER FOR EVERY ANT</span></div>
+  <p className="module-note">These ants remember. Every agent carries its own mathematical phase, which changes the ACTUAL turning-rule index and/or outgoing track pigment. The register updates after each genuine physical move according to the cell it read, the pigment it wrote, the passage of time, or a real same-cell collision. This is history-dependent ant behavior, not a color overlay.</p>
+  <label className="toggle"><input id="turmite-memory-enabled" type="checkbox"
+   checked={memory.enabled} onChange={e=>updateMemory({enabled:e.target.checked})}/>
+   <span>ENABLE PER-ANT MEMORY FEEDBACK</span></label>
+  <label className="input-label" htmlFor="turmite-memory-mode">How does each ant update its memory?</label>
+  <select id="turmite-memory-mode" value={memory.mode}
+   onChange={e=>updateMemory({mode:e.target.value as TurmiteMemory['mode']})}>
+   <option value="tick">CLOCK · +1 every move</option>
+   <option value="read">PIGMENT ECHO · +(track color read + 1)</option>
+   <option value="write">INK ECHO · +(actual pigment written + 1)</option>
+   <option value="collision">CONTACT SCARS · +occupants only at same-cell meetings</option>
+  </select>
+  <label className="input-label" htmlFor="turmite-memory-states">Internal memory cycle <em>{memory.states} genuine register states</em></label>
+  <input id="turmite-memory-states" type="range" min="2" max="24" step="1"
+   value={memory.states} onChange={e=>updateMemory({states:Number(e.target.value)})}/>
+  <label className="input-label" htmlFor="turmite-memory-turn-bias">
+   History changes real turn-rule lookup <em>+{memory.turnBias} × memory phase</em></label>
+  <input id="turmite-memory-turn-bias" type="range" min="0" max="3" step="1"
+   value={memory.turnBias} onChange={e=>updateMemory({turnBias:Number(e.target.value)})}/>
+  <label className="input-label" htmlFor="turmite-memory-write-bias">
+   History changes actual pigment write <em>{memory.writeBias>0?'+':''}{memory.writeBias} × memory phase (modulo track colors)</em></label>
+  <input id="turmite-memory-write-bias" type="range" min="-3" max="3" step="1"
+   value={memory.writeBias} onChange={e=>updateMemory({writeBias:Number(e.target.value)})}/>
+  <div className="c3-presets">
+   <button id="turmite-memory-echo" type="button" onClick={()=>updateMemory({
+    enabled:true,states:8,mode:'read',turnBias:1,writeBias:1
+   })}>🧠 PIGMENT ECHO</button>
+   <button id="turmite-memory-clock" type="button" onClick={()=>updateMemory({
+    enabled:true,states:12,mode:'tick',turnBias:1,writeBias:-1
+   })}>⌛ CLOCKWORK ANT</button>
+   <button id="turmite-memory-scar" type="button" onClick={()=>updateMemory({
+    enabled:true,states:7,mode:'collision',turnBias:2,writeBias:1
+   })}>⚡ COLLISION SCARS</button>
+   <button id="turmite-memory-off" type="button" onClick={()=>updateMemory({enabled:false})}>
+    ↺ BYPASS MEMORY · ORIGINAL T4 MATH</button>
+  </div>
+  <div id="turmite-memory-readout" className="neighborhood-note" role="status">
+   {memory.enabled?'REAL FEEDBACK ACTIVE':'MEMORY BYPASSED · T4 TRAJECTORIES EXACTLY PRESERVED'} ·
+   These registers are independent for each ant, not for each species.
+   <div style={{overflowX:'auto'}}>
+    <table id="turmite-memory-matrix" style={{width:'100%',minWidth:270,fontSize:'.78rem'}}>
+     <thead><tr><th>ANT</th><th>SPECIES</th><th>SAVED MEMORY</th><th>TRACK NOW</th><th>NEXT TURN INDEX*</th></tr></thead>
+     <tbody>{(world.turmiteAgents??[]).map((ant,id)=>{
+      const state=world.cells[ant.y*world.width+ant.x]??0;
+      const phase=(ant.memory??0)%memory.states;
+      const species=id%(s.turmiteSpeciesCount??1);
+      const index=memory.enabled?(state+phase*memory.turnBias)%s.turmiteRule.length:state;
+      return <tr key={id}>
+       <th>#{id+1}</th><td>{species+1}</td><td data-memory-agent={id}>{phase}</td>
+       <td>#{state}</td><td data-memory-lookup={id}>#{index}</td>
+      </tr>;
+     })}</tbody>
+    </table>
+   </div>
+   *Memory-adjusted pigment index before existing T2 heading/species offsets and any REPEL turn.
+  </div>
+  <p className="neighborhood-note">LIVE editing never clears artwork, moves ants, or resets time. Turning memory OFF bypasses the feedback without forgetting saved registers; turning it ON resumes those registers. Changing the number of register states maps each stored phase modulo the selected cycle. Restarting the universe starts fresh, and recipes/recordings retain the actual registers.</p>
   <div className="c3-header"><strong>⌖ T3 · PUT AN ANT WHERE YOU WANT IT</strong>
    <span>ONE TAP · NO BRUSH MARKS · NO RESET</span></div>
   <p className="module-note">Choose a real existing ant identity and its new heading. Arm one placement, tap the stage once, and that ant moves onto the selected grid cell without erasing the path or changing the generation. Other ants stay where they are. Cancel to return to painting.</p>
