@@ -33,14 +33,14 @@ export default function TurmiteDuetControls({settings:s,setSettings,world,select
  };
  const setMode=(patch:Partial<TurmiteDuet>)=>set(patch);
  const ant=world.turmiteAgents?.[Math.min(selectedAgent,(world.turmiteAgents?.length??1)-1)];
- const active=d.enabled&&chem.enabled;
+ const active=d.enabled&&chem.enabled&&!needsRival;
  const [a,b]=[world.turmitePheromones,world.turmiteRivalPheromones];
  return <div aria-label="T7 real competing chemical fields">
   <div className="c3-header"><strong>☣ T7 · CHEMICAL CIVIL WAR</strong>
    <span>ANTAGONISTIC FIELDS · REACTION · SPLIT SPECIES</span></div>
   <p className="module-note">Two real 0–255 chemical lattices now compete. Even-numbered ant species deposit A; odd-numbered species deposit B. Each can diffuse and decay differently. Wherever both arrive, they can annihilate or convert each other. Ants physically steer according to the signed gradient of A − B, or its inverse. It's a genuine coupled dynamical system.</p>
   <label className="toggle"><input id="turmite-duet-enabled" type="checkbox"
-   checked={d.enabled} disabled={needsRival&&!d.enabled}
+   checked={d.enabled&&!needsRival} disabled={needsRival}
    onChange={e=>set({enabled:e.target.checked},e.target.checked)}/>
    <span>ENABLE DUAL CHEMICAL ECOLOGY</span></label>
   {needsRival&&<div id="turmite-duet-needs-rival" className="neighborhood-note" role="status">
