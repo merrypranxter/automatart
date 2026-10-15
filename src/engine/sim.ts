@@ -74,7 +74,9 @@ export function createWorld(s:SimSettings):World{
   return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,hppWalls,turmiteAgents,
-    turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,ages,
+    turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,
+    turmitePheromones:s.engine==='turmites'&&s.turmitePheromoneRules?.enabled?new Uint8Array(n):undefined,
+    hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,ages,
     neighbors:new Uint8Array(n),events:new Uint8Array(n),traces,
     previousCells:cells.slice(),olderCells:cells.slice(),fossils:new Float32Array(n),
     margolusEpochs:s.engine==='margolus'?[]:undefined};
@@ -93,6 +95,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
   const neighbors=new Uint8Array(n),events=new Uint8Array(n),nextTraces=new Float32Array(n);
   const nextFossils=new Float32Array(n);
   let nextAgents=prev.turmiteAgents;
+  let nextPheromones=prev.turmitePheromones;
   let waveStimulusCount=0;
   let margolusEpochs:MargolusEpoch[]|undefined=prev.margolusEpochs;
   const brainParams={mode:s.brainStimulus??'off',source:s.brainClockSource??'center',
@@ -127,8 +130,8 @@ export function stepWorld(prev:World,s:SimSettings):World{
       contact:s.turmiteContact??'shared'},{
       mode:s.turmiteWriteMode??'next',stride:s.turmiteWriteStride??1,
       table:s.turmiteWriteTable??Array.from({length:24},(_,i)=>(i+1)%24)},
-      s.turmiteAlchemy,s.turmiteMemory);
-    next.set(result.cells);nextAgents=result.agents;
+      s.turmiteAlchemy,s.turmiteMemory,s.turmitePheromoneRules,prev.turmitePheromones);
+    next.set(result.cells);nextAgents=result.agents;nextPheromones=result.pheromones;
     const cardinal=neighborOffsets('square',0,0,'vonNeumann');
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
       const p=y*w+x;
@@ -330,6 +333,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,stepChanged,stepStructural,waveStimulusCount,margolusEpochs,
     cells:next,grains:nextGrains,hppWalls:prev.hppWalls?.slice(),turmiteAgents:nextAgents?.map(a=>({...a})),
+    turmitePheromones:nextPheromones?.slice(),
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,
     ages:nextAges,neighbors,events,traces:nextTraces,
     previousCells:cells.slice(),

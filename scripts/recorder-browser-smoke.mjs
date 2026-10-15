@@ -1613,6 +1613,78 @@ try{
   console.log('PASS T5: real saved memory shrinks 10 → 3 and remains 3 after regrowth, without resetting artwork');
   console.log('PASS T5: live history controls, four feedback programs, actual saved ant registers, no reset, exact recipe restore');
 
+  // T6: real independently stored chemical field and physical motion controls.
+  const [t6BeforeFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t6Before=JSON.parse(await readFile(await t6BeforeFile.path(),'utf8'));
+  assert.equal(await page.locator('#turmite-scent-enabled').isChecked(),false);
+  assert.equal(await page.locator('#turmite-scent-heatmap [data-scent-site]').count(),25);
+  await page.locator('#turmite-scent-follow').click();
+  assert.equal(await page.locator('#turmite-scent-enabled').isChecked(),true);
+  assert.equal(await page.locator('#turmite-scent-steering').inputValue(),'attract');
+  await page.locator('#turmite-scent-deposit').fill('32');
+  await page.locator('#turmite-scent-diffusion').fill('0');
+  await page.locator('#turmite-scent-evaporation').fill('0');
+  await page.locator('#turmite-scent-strength').fill('2');
+  await page.locator('#turmite-scent-threshold').fill('1');
+  const [t6EditedFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t6Edited=JSON.parse(await readFile(await t6EditedFile.path(),'utf8'));
+  assert.equal(t6Edited.world.generation,t6Before.world.generation,
+   'T6 edits must not reset generation');
+  assert.equal(t6Edited.world.arrays.cells,t6Before.world.arrays.cells,
+   'T6 edits must not erase or repaint actual tracks');
+  assert.deepEqual(t6Edited.world.turmiteAgents,t6Before.world.turmiteAgents,
+   'T6 edits must not move actual ants');
+  assert.equal(t6Edited.settings.turmitePheromoneRules.deposit,32);
+  assert.equal(t6Edited.settings.turmitePheromoneRules.diffusion,0);
+  assert.equal(t6Edited.settings.turmitePheromoneRules.evaporation,0);
+  await page.getByRole('button',{name:'STEP +1'}).click();
+  const [t6SteppedFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t6Stepped=JSON.parse(await readFile(await t6SteppedFile.path(),'utf8'));
+  assert.equal(t6Stepped.world.generation,t6Before.world.generation+1);
+  assert.equal(typeof t6Stepped.world.arrays.turmitePheromones,'string');
+  assert(t6Stepped.world.arrays.turmitePheromones.length>0,
+   'Simulation must save a separately encoded real chemical grid');
+  assert(Number(await page.locator('#turmite-scent-cells').innerText())>0,
+   'Actual browser world measured multiple chemically active sites');
+  await page.locator('#turmite-scent-flee').click();
+  assert.equal(await page.locator('#turmite-scent-steering').inputValue(),'repel');
+  await page.locator('#turmite-scent-split').click();
+  assert.equal(await page.locator('#turmite-scent-steering').inputValue(),'alternating');
+  await page.locator('#turmite-scent-fog').click();
+  assert.equal(await page.locator('#turmite-scent-evaporation').inputValue(),'0');
+  await page.locator('#turmite-scent-off').click();
+  const [t6FrozenFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t6Frozen=JSON.parse(await readFile(await t6FrozenFile.path(),'utf8'));
+  assert.equal(t6Frozen.settings.turmitePheromoneRules.enabled,false);
+  assert.equal(t6Frozen.world.arrays.turmitePheromones,
+   t6Stepped.world.arrays.turmitePheromones,
+   'Disabling T6 must freeze, never delete, real chemical history');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t6-real-pheromone-physics.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(t6Stepped))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-scent-enabled')?.checked===true&&
+   document.querySelector('#turmite-scent-deposit')?.value==='32');
+  const [t6RestoredFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t6Restored=JSON.parse(await readFile(await t6RestoredFile.path(),'utf8'));
+  assert.deepEqual(t6Restored.settings.turmitePheromoneRules,
+   t6Stepped.settings.turmitePheromoneRules);
+  assert.equal(t6Restored.world.arrays.turmitePheromones,
+   t6Stepped.world.arrays.turmitePheromones);
+  assert.equal(t6Restored.world.arrays.cells,t6Stepped.world.arrays.cells);
+  assert.deepEqual(t6Restored.world.turmiteAgents,t6Stepped.world.turmiteAgents);
+  console.log('PASS T6: four live chemical presets, physical saved scent grid, source-frame immutability and exact JSON replay');
+
 
 
   await page.locator('#engine').selectOption('life');
