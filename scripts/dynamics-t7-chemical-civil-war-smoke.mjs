@@ -166,6 +166,7 @@ try{
  const bogus=structuredClone(packed);bogus.arrays.turmiteRivalPheromones='AA==';
  assert.throws(()=>restoreWorldSnapshot(bogus,settings),/wrong length/);
  const t6={...INITIAL_SETTINGS,engine:'turmites',cellCount:32,
+  turmiteCount:2,turmiteSpeciesCount:2,
   turmitePheromoneRules:{...c}};
  const oldWorld=createWorld(t6);let old=stepWorld(oldWorld,t6);
  const migrated={...t6,turmiteDuet:{...d,enabled:true}};
