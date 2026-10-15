@@ -1301,7 +1301,12 @@ export default function App(){
           {(settings.engine==='ising'||settings.engine==='turmites')&&
             <SpinTurmiteControls settings={settings} setSettings={setSettings}
               world={worldRef.current} resetNumber={resetNumber}
-              placement={turmitePlacement} onPlacementChange={setTurmitePlacement}/>}
+              placement={turmitePlacement} onPlacementChange={setTurmitePlacement}
+              onReseed={()=>{
+                cancelBatch();setPlaying(false);setTurmitePlacement(null);
+                setResetNumber(n=>n+1);
+                setMessage('Four-species fusion pileup reseeded: every ant starts together at the center.');
+              }}/>} 
           {settings.engine==='brians'&&<BrainDynamicsControls settings={settings}
             setSettings={setSettings} world={worldRef.current} neighborMax={neighborMax}/>}
           {settings.engine==='cyclic'&&

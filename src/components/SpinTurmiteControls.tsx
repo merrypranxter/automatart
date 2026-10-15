@@ -7,7 +7,7 @@ import {isingEnergy,isingMagnetization,validTurmiteRule,turmiteTurnAt,turmiteWri
 import type {TurmiteWriteProgram,TurmiteAlchemy} from '../engine/spins-turmites';
 export interface TurmitePlacement{agentId:number;heading:0|1|2|3}
 interface Props {settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSettings>>;
- world:World;resetNumber:number;placement:TurmitePlacement|null;
+ world:World;resetNumber:number;onReseed:()=>void;placement:TurmitePlacement|null;
  onPlacementChange:Dispatch<SetStateAction<TurmitePlacement|null>>}
 const RULES=[
  {rule:'RL',label:"LANGTON'S ANT · 2"},
@@ -22,7 +22,7 @@ const RULES=[
 const COMMANDS:Record<string,string>={R:'↻ RIGHT',L:'↺ LEFT',S:'↑ STRAIGHT',U:'↩ REVERSE'};
 const mirror=(rule:string)=>[...rule].map(t=>t==='L'?'R':t==='R'?'L':t).join('');
 export default function SpinTurmiteControls({settings:s,setSettings,world,resetNumber,
- placement,onPlacementChange}:Props){
+ placement,onPlacementChange,onReseed}:Props){
  const [selectedAgent,setSelectedAgent]=useState(0);
  const [alchemySpecies,setAlchemySpecies]=useState(0);
  const [selectedHeading,setSelectedHeading]=useState<0|1|2|3>(0);
@@ -364,11 +364,17 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
    <button id="turmite-alchemy-reset" type="button" onClick={()=>updateAlchemy({enabled:false,collision:'none'})}>
     ↺ RESTORE T3 CLASSIC WRITERS
    </button>
-   <button id="turmite-alchemy-preset" type="button" onClick={()=>setSettings(old=>({
-    ...old,turmiteCount:Math.max(old.turmiteCount,4),turmiteSpeciesCount:4,
-    turmiteFormation:'stack',turmiteSteps:Math.max(2,old.turmiteSteps),
-    turmiteAlchemy:{...structuredClone(DEFAULT_TURMITE_ALCHEMY),enabled:true,collision:'fuse'}
-   }))}>⚗ FOUR-SPECIES FUSION PILEUP</button>
+   <button id="turmite-alchemy-preset" type="button" onClick={()=>{
+    setSettings(old=>({
+     ...old,turmiteCount:Math.max(old.turmiteCount,4),turmiteSpeciesCount:4,
+     turmiteFormation:'stack',turmiteSteps:Math.max(2,old.turmiteSteps),
+     turmiteAlchemy:{...structuredClone(DEFAULT_TURMITE_ALCHEMY),enabled:true,collision:'fuse'}
+    }));
+    // T4 means a FRESH collision experiment on EVERY press, even when the
+    // old formation/count were already "stack" and 4. Never silently
+    // leave ants scattered across the current artwork.
+    onReseed();
+   }}>⚗ FOUR-SPECIES FUSION PILEUP</button>
   </div>
   <p className="neighborhood-note">Four-species fusion starts a pileup so you can see actual chemistry right away. Changing the physical starting formation or number of ants intentionally restarts the world. Switching writers and collision reactions during play does NOT restart it. Original recipes still work with alchemy disabled.</p>
   <div className="c3-header"><strong>⌖ T3 · PUT AN ANT WHERE YOU WANT IT</strong>
