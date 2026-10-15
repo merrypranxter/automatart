@@ -1309,6 +1309,65 @@ try{
   assert.equal(await page.locator('#turmite-steps').inputValue(),'6');
   console.log('PASS T1: true four-turn genome, real speed control, mirror/rotation and 24-state recipe');
 
+  // T2: Species-conditioned, heading-sensitive rules and REAL co-location.
+  await page.locator('#turmite-rule').fill('RSUL');
+  await page.locator('#turmite-use-rule').click();
+  await page.locator('#turmite-brush').fill('0');
+  await page.locator('#turmite-count').fill('4');
+  await page.locator('#turmite-formation').selectOption('stack');
+  const [t2BaseFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t2Base=JSON.parse(await readFile(await t2BaseFile.path(),'utf8'));
+  assert.equal(t2Base.settings.turmiteFormation,'stack');
+  assert.equal(t2Base.world.turmiteAgents.length,4);
+  const startX=t2Base.world.turmiteAgents[0].x,startY=t2Base.world.turmiteAgents[0].y;
+  assert(t2Base.world.turmiteAgents.every(a=>a.x===startX&&a.y===startY),
+   'Physical T2 starting stack must place all four real ants on one cell');
+  await page.locator('#turmite-species-count').fill('4');
+  await page.locator('#turmite-species-stride').fill('1');
+  await page.locator('#turmite-heading-shear').fill('1');
+  await page.locator('#turmite-species-mirror').check();
+  await page.locator('#turmite-contact').selectOption('repel');
+  assert.equal(await page.locator('#turmite-species-matrix tbody tr').count(),4);
+  assert.deepEqual(await page.locator('#turmite-species-matrix [data-heading="0"]').allInnerTexts(),
+   ['R','S','U','R'],
+   'Same track pigment must give four physically different species commands');
+  assert.deepEqual(await page.locator('#turmite-species-matrix [data-heading="2"]').allInnerTexts(),
+   ['U','R','R','S'],
+   'Heading shear changes TRUE rule lookups rather than visual ant colors');
+  const [t2MixedFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t2Mixed=JSON.parse(await readFile(await t2MixedFile.path(),'utf8'));
+  assert.equal(t2Mixed.world.generation,t2Base.world.generation,
+   'Live species and contact changes may NOT restart current generation');
+  assert.deepEqual(t2Mixed.world.turmiteAgents,t2Base.world.turmiteAgents);
+  assert.equal(t2Mixed.world.arrays.cells,t2Base.world.arrays.cells,
+   'Live rule mutations preserve the entire real painted track');
+  assert.equal(t2Mixed.settings.turmiteSpeciesCount,4);
+  assert.equal(t2Mixed.settings.turmiteSpeciesStride,1);
+  assert.equal(t2Mixed.settings.turmiteHeadingShear,1);
+  assert.equal(t2Mixed.settings.turmiteContact,'repel');
+  assert.equal(t2Mixed.settings.turmiteSpeciesMirror,true);
+  await page.locator('#turmite-t2-classic').click();
+  assert.equal(await page.locator('#turmite-species-count').inputValue(),'1');
+  assert.equal(await page.locator('#turmite-formation').inputValue(),'orbit');
+  await page.locator('#turmite-t2-mutate').click();
+  assert.equal(await page.locator('#turmite-species-count').inputValue(),'4');
+  assert.equal(await page.locator('#turmite-formation').inputValue(),'stack');
+  assert.equal(await page.locator('#turmite-contact').inputValue(),'repel');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t2-real-species-contact-ants.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(t2Mixed))
+  });
+  await page.waitForFunction(()=>
+   document.querySelector('#turmite-species-count')?.value==='4'&&
+   document.querySelector('#turmite-formation')?.value==='stack');
+  assert.equal(await page.locator('#turmite-species-matrix [data-heading="0"][data-species="3"]').innerText(),'R');
+  console.log('PASS T2: four physical species and heading-conditioned commands, collision stacks, live settings and legacy recipe');
+
+
   await page.locator('#engine').selectOption('life');
   await page.locator('#resolution').fill(gridBeforeAntGif);
   console.log('PASS: C3 actual Ising and Turmite controls, L/R rules, agent snapshot and invalid load');

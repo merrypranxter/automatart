@@ -457,7 +457,7 @@ export default function App(){
   },[settings.engine,settings.cellCount,settings.aspect,settings.seed,
       settings.pattern,settings.density,settings.cyclicStates,
       settings.genStates,settings.exciteStates,settings.speciesCount,settings.hodgeStates,
-      settings.turmiteRule,settings.turmiteCount,
+      settings.turmiteRule,settings.turmiteCount,settings.turmiteFormation,
       settings.lattice,resetNumber]);
   useEffect(()=>{
     // Rule-only neighborhood changes preserve living cells and generation,
@@ -916,6 +916,12 @@ export default function App(){
         throw new Error("Invalid Turmite turning rule");
       s.turmiteCount=bounded(s.turmiteCount,1,12,1);
       s.turmiteSteps=bounded(s.turmiteSteps,1,8,1);
+      s.turmiteSpeciesCount=bounded(s.turmiteSpeciesCount,1,4,1);
+      s.turmiteSpeciesStride=bounded(s.turmiteSpeciesStride,0,5,0);
+      s.turmiteHeadingShear=bounded(s.turmiteHeadingShear,0,3,0);
+      if(typeof s.turmiteSpeciesMirror!=='boolean')throw new Error('Invalid Turmite mirror setting');
+      if(!['shared','repel'].includes(s.turmiteContact))throw new Error('Invalid Turmite collision mode');
+      if(!['orbit','stack','cross'].includes(s.turmiteFormation))throw new Error('Invalid Turmite starting formation');
       s.turmiteBrush=bounded(s.turmiteBrush,0,s.turmiteRule.length-1,1);
       s.hppBrush=bounded(s.hppBrush,1,15,15);
       if(!['particles','walls'].includes(s.hppTool))throw new Error('Invalid HPP brush material');

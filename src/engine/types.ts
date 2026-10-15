@@ -110,6 +110,13 @@ export interface SimSettings {
   turmiteRule:string;
   /** T1: actual 1..8 complete ordered agent substeps per displayed generation. */
   turmiteSteps:number;
+  /** T2: N distinct deterministic transition programs, assigned by agent ID. */
+  turmiteSpeciesCount:number;
+  turmiteSpeciesStride:number;
+  turmiteSpeciesMirror:boolean;
+  turmiteHeadingShear:number;
+  turmiteContact:'shared'|'repel';
+  turmiteFormation:'orbit'|'stack'|'cross';
   turmiteCount:number;
   turmiteBrush:number;
   hppBrush:number;
@@ -214,7 +221,7 @@ export const INITIAL_SETTINGS: SimSettings = {
   hodgeStates:48,hodgeK1:2,hodgeK2:3,hodgeGrowth:12,hodgeBrush:28,
   forestGrowth:0.012,forestLightning:0.0005,forestBrush:2,
   isingTemperature:2.25,isingCoupling:1,isingField:0,isingSweeps:1,isingBrush:1,
-  turmiteRule:'RL',turmiteSteps:1,turmiteCount:1,turmiteBrush:1,
+  turmiteRule:'RL',turmiteSteps:1,turmiteSpeciesCount:1,turmiteSpeciesStride:0,turmiteSpeciesMirror:false,turmiteHeadingShear:0,turmiteContact:'shared',turmiteFormation:'orbit',turmiteCount:1,turmiteBrush:1,
   hppBrush:15,hppTool:'particles'
 };
 export const INITIAL_APPEARANCE: Appearance = {

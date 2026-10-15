@@ -1,7 +1,7 @@
 import {useEffect,useState} from 'react';
 import type {Dispatch,SetStateAction} from 'react';
 import type {SimSettings,World} from '../engine/types';
-import {isingEnergy,isingMagnetization,validTurmiteRule} from '../engine/spins-turmites';
+import {isingEnergy,isingMagnetization,validTurmiteRule,turmiteTurnAt} from '../engine/spins-turmites';
 interface Props {settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSettings>>;world:World;resetNumber:number}
 const RULES=[
  {rule:'RL',label:"LANGTON'S ANT · 2"},
@@ -67,8 +67,8 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
  }
  if(s.engine==='turmites')return <section className="c3-lab" aria-label="Advanced Turmite rule genome controls">
   <div className="c3-header">
-   <strong>🐜 T1 · TURMITE GENOME LAB</strong>
-   <span>FOUR TRUE TURNS · REAL MULTI-STEP AGENTS</span>
+   <strong>🐜 T1/T2 · MUTANT TURMITE FACTORY</strong>
+   <span>FOUR TRUE TURNS · MULTI-SPECIES · DIRECTIONAL GENOMES</span>
   </div>
   <p className="module-note">The ants READ their current cell's track state, TURN by the corresponding L/R/S/U command, increment that cell modulo the number of colors, and MOVE to their next cell. Agents act sequentially, so their paths can interact through actual shared pigment. These are genuine automaton instructions, not cosmetic direction arrows.</p>
   <div className="c3-readouts">
@@ -138,6 +138,81 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
   </label>
   <input id="turmite-brush" type="range" min="0" max={s.turmiteRule.length-1}
    value={s.turmiteBrush} step="1" onChange={e=>change('turmiteBrush',Number(e.target.value))}/>
+  <div className="c3-header"><strong>🧬 T2 · SPECIES & HEADING MUTATION</strong>
+   <span>REAL TRANSITION RULES, NOT COLOR EFFECTS</span></div>
+  <p className="module-note">Each agent has a stable identity number. Species = agent number modulo the selected species count. The command it reads comes from track pigment + (heading × heading shear) + (species × genome offset), modulo genome length. Optionally reverse L/R for odd-numbered species. These operations choose different REAL turns and change the generated trails.</p>
+  <label className="input-label" htmlFor="turmite-species-count">
+   Distinct ant species <em>{s.turmiteSpeciesCount??1} · live</em>
+  </label>
+  <input id="turmite-species-count" type="range" min="1" max="4" step="1"
+   value={s.turmiteSpeciesCount??1}
+   onChange={e=>change('turmiteSpeciesCount',Number(e.target.value))}/>
+  <label className="input-label" htmlFor="turmite-species-stride">
+   Species genome phase shift <em>{s.turmiteSpeciesStride??0} pigments per species · live</em>
+  </label>
+  <input id="turmite-species-stride" type="range" min="0" max="5" step="1"
+   value={s.turmiteSpeciesStride??0}
+   onChange={e=>change('turmiteSpeciesStride',Number(e.target.value))}/>
+  <label className="input-label" htmlFor="turmite-heading-shear">
+   Heading-sensitive rule shear <em>{s.turmiteHeadingShear??0} pigment slots / quarter turn · live</em>
+  </label>
+  <input id="turmite-heading-shear" type="range" min="0" max="3" step="1"
+   value={s.turmiteHeadingShear??0}
+   onChange={e=>change('turmiteHeadingShear',Number(e.target.value))}/>
+  <label className="toggle">
+   <input id="turmite-species-mirror" type="checkbox" checked={s.turmiteSpeciesMirror??false}
+    onChange={e=>change('turmiteSpeciesMirror',e.target.checked)}/>
+   <span>MIRROR LEFT/RIGHT FOR ODD SPECIES</span>
+  </label>
+  <p className="neighborhood-note">Rule sampler below shows exactly what each species would do **on the current brush pigment**, at all four headings. Select a different track pigment to inspect that state's real transition program.</p>
+  <div id="turmite-species-matrix" role="region" aria-label="Actual Turmite species and heading rule lookup"
+   style={{overflowX:'auto'}}>
+   <table style={{width:'100%',fontSize:'.78rem',minWidth:260}}>
+    <thead><tr><th>HEADING</th>
+     {Array.from({length:s.turmiteSpeciesCount??1},(_,i)=><th key={i}>SPECIES {i+1}</th>)}
+    </tr></thead>
+    <tbody>{(['N','E','S','W'] as const).map((name,h)=><tr key={name}><th>{name}</th>
+     {Array.from({length:s.turmiteSpeciesCount??1},(_,species)=><td key={species}
+      data-heading={h} data-species={species}>
+      {turmiteTurnAt(s.turmiteRule,s.turmiteBrush,h,species,{
+       speciesCount:s.turmiteSpeciesCount??1,
+       speciesStride:s.turmiteSpeciesStride??0,
+       speciesMirror:s.turmiteSpeciesMirror??false,
+       headingShear:s.turmiteHeadingShear??0,
+       contact:s.turmiteContact??'shared'
+      })}
+     </td>)}</tr>)}</tbody>
+   </table>
+  </div>
+  <label className="input-label" htmlFor="turmite-contact">
+   Real same-cell encounter rule <em>live</em>
+  </label>
+  <select id="turmite-contact" value={s.turmiteContact??'shared'}
+   onChange={e=>change('turmiteContact',e.target.value as 'shared'|'repel')}>
+   <option value="shared">SHARED INK · sequential painting only (classic)</option>
+   <option value="repel">REPEL · co-located ants reverse headings BEFORE reading DNA</option>
+  </select>
+  <label className="input-label" htmlFor="turmite-formation">
+   Initial placement formation <em>changes restart world</em>
+  </label>
+  <select id="turmite-formation" value={s.turmiteFormation??'orbit'}
+   onChange={e=>change('turmiteFormation',e.target.value as 'orbit'|'stack'|'cross')}>
+   <option value="orbit">ORBIT · T1 seeded spread (classic)</option>
+   <option value="stack">PILEUP · all ants on the same center cell</option>
+   <option value="cross">CROSS · inward headings, cardinal arms</option>
+  </select>
+  <p className="neighborhood-note">REPEL is an actual co-location event: all ants sharing one site reverse their headings simultaneously, then read/paint/move in stable identity order. PILEUP starts them together for an immediate collision. CROSS points ants inward for later encounters. Formation changes restart; species, direction, mirror and collision modes are LIVE and preserve the existing track.</p>
+  <div className="c3-presets">
+   <button id="turmite-t2-classic" type="button" onClick={()=>setSettings(old=>({
+    ...old,turmiteSpeciesCount:1,turmiteSpeciesStride:0,turmiteSpeciesMirror:false,
+    turmiteHeadingShear:0,turmiteContact:'shared',turmiteFormation:'orbit'
+   }))}>↺ CLASSIC GENOME PHYSICS</button>
+   <button id="turmite-t2-mutate" type="button" onClick={()=>setSettings(old=>({
+    ...old,turmiteSpeciesCount:4,turmiteSpeciesStride:1,turmiteSpeciesMirror:true,
+    turmiteHeadingShear:1,turmiteContact:'repel',turmiteFormation:'stack'
+   }))}>✹ MUTANT SPECIES PILEUP</button>
+  </div>
+  <p className="neighborhood-note">Species identity comes from each saved agent's stable list position, so old recipe positions and headings remain valid without a new hidden agent schema. Same-cell pigment writing still occurs sequentially; only the explicit REPEL setting changes initial headings during a real contact.</p>
   <p className="neighborhood-note">The selected brush paints actual indexed track data, not a decorative layer. Agents and track states are preserved by recipe JSON, GIF/video capture and deterministic replay. Old L/R rules and old saves remain fully supported. Finite edges reflect ants inward; wrapped edges connect.</p>
  </section>;
  return null;

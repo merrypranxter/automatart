@@ -13,6 +13,37 @@ export interface IsingRule{
  seed:number;generation:number;
 }
 export interface TurmiteAgent {x:number;y:number;heading:0|1|2|3}
+export type TurmiteFormation='orbit'|'stack'|'cross';
+export type TurmiteContact='shared'|'repel';
+export interface TurmiteDynamics{
+ speciesCount:number;   // 1..4 stable species, indexed by agent ID modulo count
+ speciesStride:number;  // 0..5 genuine rule-lookup offset per species
+ speciesMirror:boolean; // odd species invert R<->L after rule lookup
+ headingShear:number;   // 0..3: heading-dependent track rule index
+ contact:TurmiteContact; // real co-location event before each agent round
+}
+export const DEFAULT_TURMITE_DYNAMICS:TurmiteDynamics={
+ speciesCount:1,speciesStride:0,speciesMirror:false,headingShear:0,contact:'shared'
+};
+export function validTurmiteDynamics(v:TurmiteDynamics):boolean{
+ return Number.isInteger(v.speciesCount)&&v.speciesCount>=1&&v.speciesCount<=4&&
+  Number.isInteger(v.speciesStride)&&v.speciesStride>=0&&v.speciesStride<=5&&
+  Number.isInteger(v.headingShear)&&v.headingShear>=0&&v.headingShear<=3&&
+  typeof v.speciesMirror==='boolean'&&['shared','repel'].includes(v.contact);
+}
+/** The actual command read at this ant's heading, species and track state.
+ * This is a transition-rule modification, not a visual material.
+ */
+export function turmiteTurnAt(rule:string,state:number,heading:number,species:number,
+ v:TurmiteDynamics):'L'|'R'|'S'|'U'{
+ if(!validTurmiteRule(rule)||!validTurmiteDynamics(v)||!Number.isInteger(state)||
+    state<0||state>=rule.length||!Number.isInteger(heading)||heading<0||heading>3||
+    !Number.isInteger(species)||species<0||species>=v.speciesCount)
+  throw new Error('Invalid T2 Turmite transition input');
+ const symbol=rule[(state+heading*v.headingShear+species*v.speciesStride)%rule.length] as 'L'|'R'|'S'|'U';
+ return v.speciesMirror&&species%2===1?
+  (symbol==='R'?'L':symbol==='L'?'R':symbol):symbol;
+}
 export interface TurmiteResult{cells:Uint8Array;agents:TurmiteAgent[]}
 const indexAt=(x:number,y:number,w:number,h:number,wrap:boolean):number=>{
  if(wrap){x=(x+w)%w;y=(y+h)%h;}
@@ -78,12 +109,22 @@ export function isingEnergy(cells:Uint8Array,w:number,h:number,wrap:boolean,
 export function validTurmiteRule(value:unknown):value is string{
  return typeof value==='string'&&/^[LRSU]{2,24}$/.test(value);
 }
-export function seedTurmites(w:number,h:number,count:number,seed:number):TurmiteAgent[]{
- if(!Number.isInteger(count)||count<1||count>12||w<2||h<2)
+export function seedTurmites(w:number,h:number,count:number,seed:number,
+ formation:TurmiteFormation='orbit'):TurmiteAgent[]{
+ if(!Number.isInteger(count)||count<1||count>12||w<2||h<2||
+    !['orbit','stack','cross'].includes(formation))
   throw new Error('Invalid Turmite agent count');
  const cx=Math.floor(w/2),cy=Math.floor(h/2);
  return Array.from({length:count},(_,i)=>{
   if(count===1)return {x:cx,y:cy,heading:0 as const};
+  if(formation==='stack')return {x:cx,y:cy,heading:(i%4) as 0|1|2|3};
+  if(formation==='cross'){
+   const offsets:readonly (readonly [number,number])[]=[[0,-1],[1,0],[0,1],[-1,0]];
+   const [dx,dy]=offsets[i%4],distance=1+Math.floor(i/4);
+   return {x:Math.min(w-1,Math.max(0,cx+dx*distance)),
+    y:Math.min(h-1,Math.max(0,cy+dy*distance)),
+    heading:((i+2)%4) as 0|1|2|3};
+  }
   const angle=(2*Math.PI*i/count)+random01(seed,0,i,8)*0.25;
   const rx=Math.min(Math.floor(w/5),Math.max(2,Math.floor(w/8))),
     ry=Math.min(Math.floor(h/5),Math.max(2,Math.floor(h/8)));
@@ -93,24 +134,35 @@ export function seedTurmites(w:number,h:number,count:number,seed:number):Turmite
  });
 }
 export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
- rule:string,agents:readonly TurmiteAgent[],steps=1):TurmiteResult{
+ rule:string,agents:readonly TurmiteAgent[],steps=1,
+ dynamics:TurmiteDynamics=DEFAULT_TURMITE_DYNAMICS):TurmiteResult{
  if(!validTurmiteRule(rule)||cells.length!==w*h||!agents.length||agents.length>12||
-    !Number.isInteger(steps)||steps<1||steps>8)
+    !Number.isInteger(steps)||steps<1||steps>8||!validTurmiteDynamics(dynamics))
   throw new Error('Invalid Turmite world or rule');
  const next=cells.slice();
  let current=agents.map(a=>({...a}));
  const vectors:readonly (readonly [number,number])[]=[[0,-1],[1,0],[0,1],[-1,0]];
  for(let substep=0;substep<steps;substep++){
  const moved:TurmiteAgent[]=[];
- for(const a of current){
+ // Read REAL co-location at the start of each round (before any agents
+ // move). The decision is simultaneous; sequential paint remains ordered.
+ const occupancy=new Map<number,number>();
+ if(dynamics.contact==='repel')
+  for(const a of current){
+   const key=a.y*w+a.x;occupancy.set(key,(occupancy.get(key)??0)+1);
+  }
+ for(const [agentId,a] of current.entries()){
   if(!Number.isInteger(a.x)||!Number.isInteger(a.y)||a.x<0||a.x>=w||
     a.y<0||a.y>=h||!Number.isInteger(a.heading)||a.heading<0||a.heading>3)
     throw new Error('Invalid Turmite position or heading');
   const p=a.y*w+a.x,state=next[p];
   if(state>=rule.length)throw new Error('Invalid Turmite track state');
-  const turn=rule[state];
+  const encounter=dynamics.contact==='repel'&&(occupancy.get(p)??0)>1;
+  const startingHeading=encounter?((a.heading+2)%4) as 0|1|2|3:a.heading;
+  const species=agentId%dynamics.speciesCount;
+  const turn=turmiteTurnAt(rule,state,startingHeading,species,dynamics);
   const direction=turn==='R'?1:turn==='L'?3:turn==='U'?2:0;
-  let heading=((a.heading+direction)%4) as 0|1|2|3;
+  let heading=((startingHeading+direction)%4) as 0|1|2|3;
   next[p]=(state+1)%rule.length;
   let x=a.x+vectors[heading][0],y=a.y+vectors[heading][1];
   if(wrap){x=(x+w)%w;y=(y+h)%h;}
