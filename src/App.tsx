@@ -34,7 +34,7 @@ import {stampWireTiming,type WireTimingOptions} from './engine/wire-timing';
 import {stampWireLogic,type WireLogicOptions} from './engine/wire-logic';
 import {stampWireCircuit,wireStampFootprint,type WireStampOptions} from './engine/wire-circuit-lab';
 import ReactionControls from './components/ReactionControls';
-import SpinTurmiteControls from './components/SpinTurmiteControls';
+import SpinTurmiteControls,{type TurmitePlacement} from './components/SpinTurmiteControls';
 import {validTurmiteRule,validTurmiteWriteProgram,relocateTurmiteAgent}
   from './engine/spins-turmites';
 import CyclicDynamicsControls from './components/CyclicDynamicsControls';
@@ -172,12 +172,13 @@ export default function App(){
   const [paintSpecies,setPaintSpecies]=useState(1);
   const [wireStamp,setWireStamp]=useState<WireStampOptions>({template:'loop',radius:9,rotation:0,excite:true,clear:true});
   const [wireStampArmed,setWireStampArmed]=useState(false);
+  const [turmitePlacement,setTurmitePlacement]=useState<TurmitePlacement|null>(null);
   const [wireLogicMonitor,setWireLogicMonitor]=useState<WireLogicMonitor|null>(null);
   const [wireTimingMonitor,setWireTimingMonitor]=useState<WireTimingMonitor|null>(null);
   const [wireCascadeMonitor,setWireCascadeMonitor]=useState<WireCascadeMonitor|null>(null);
   const [wirePhaseMonitor,setWirePhaseMonitor]=useState<WirePhaseMonitor|null>(null);
   const [wireFeedbackMonitor,setWireFeedbackMonitor]=useState<WireFeedbackMonitor|null>(null);
-  useEffect(()=>{setWireStampArmed(false);setWireLogicMonitor(null);setWireTimingMonitor(null);setWireCascadeMonitor(null);setWirePhaseMonitor(null);setWireFeedbackMonitor(null);},[settings.engine]);
+  useEffect(()=>{setTurmitePlacement(null);setWireStampArmed(false);setWireLogicMonitor(null);setWireTimingMonitor(null);setWireCascadeMonitor(null);setWirePhaseMonitor(null);setWireFeedbackMonitor(null);},[settings.engine]);
   const [inspectedCell,setInspectedCell]=useState<[number,number]|null>(null);
   const [mutationStrength,setMutationStrength]=useState<MutationStrength>('weird');
   const [mutationLocks,setMutationLocks]=useState<MutationLocks>({...INITIAL_MUTATION_LOCKS});
@@ -693,6 +694,23 @@ export default function App(){
   }
   function onPointerDown(e:PointerEvent<HTMLCanvasElement>){
     if(recordingRef.current)return;
+    if(settings.engine==='turmites'&&turmitePlacement){
+      const point=locatePointer(e);
+      if(point){
+        cancelBatch();setPlaying(false);
+        try{
+          const world=worldRef.current;
+          world.turmiteAgents=relocateTurmiteAgent(world.turmiteAgents??[],world.width,world.height,
+            turmitePlacement.agentId,point[0],point[1],turmitePlacement.heading);
+          setInspectedCell(point);setGeneration(world.generation);setPopulation(stat(world));
+          setMessage('Moved ant #'+(turmitePlacement.agentId+1)+' to '+point.join(',')+
+            ' · heading '+['N','E','S','W'][turmitePlacement.heading]+'. The track and generation are unchanged.');
+          draw();
+        }catch(error){setMessage('Ant placement rejected: '+(error instanceof Error?error.message:String(error)));}
+      }
+      setTurmitePlacement(null);drawStampPreview(null);
+      return; // armed placement is NEVER a paint stroke or drag.
+    }
     if(settings.engine==='wireworld'&&wireStampArmed){
       const point=locatePointer(e);
       setWireStampArmed(false);
@@ -704,6 +722,7 @@ export default function App(){
     plantAt(e);
   }
   function onPointerMove(e:PointerEvent<HTMLCanvasElement>){
+    if(turmitePlacement){drawStampPreview(null);return;}
     const point=locatePointer(e);
     if(!point){drawStampPreview(null);return;}
     if(!wireStampArmed&&(e.buttons!==0||e.pointerType==='touch')&&alienBrush.stamp==='brush'){
@@ -1108,7 +1127,7 @@ export default function App(){
         </div>
         <div className="canvas-wrap" ref={viewerWrapRef}>
           <div className="art-canvas-layer">
-            <canvas ref={canvasRef} aria-label="Interactive cellular automata canvas. Drag to paint cells." onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+            <canvas ref={canvasRef} aria-label={turmitePlacement?'Interactive cellular automata canvas. Tap once to place selected Turmite agent.':'Interactive cellular automata canvas. Drag to paint cells.'} onPointerDown={onPointerDown} onPointerMove={onPointerMove}
             onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
             onPointerLeave={()=>drawStampPreview(null)} />
             <canvas ref={previewRef} className="alien-brush-preview" aria-hidden="true"/>
@@ -1279,7 +1298,8 @@ export default function App(){
               setSettings={setSettings} world={worldRef.current}/>}
           {(settings.engine==='ising'||settings.engine==='turmites')&&
             <SpinTurmiteControls settings={settings} setSettings={setSettings}
-              world={worldRef.current} resetNumber={resetNumber}/>}
+              world={worldRef.current} resetNumber={resetNumber}
+              placement={turmitePlacement} onPlacementChange={setTurmitePlacement}/>}
           {settings.engine==='brians'&&<BrainDynamicsControls settings={settings}
             setSettings={setSettings} world={worldRef.current} neighborMax={neighborMax}/>}
           {settings.engine==='cyclic'&&
