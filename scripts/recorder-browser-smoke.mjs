@@ -1758,6 +1758,44 @@ try{
   assert.equal(t7Restored.world.arrays.cells,t7Stepped.world.arrays.cells);
   assert.deepEqual(t7Restored.world.turmiteAgents,t7Stepped.world.turmiteAgents);
   console.log('PASS T7: physical dual chemistry, true rival concentration, live conflict presets and two-field JSON/recorder parity');
+  // Codex P1: a default SINGLE ant cannot physically deposit field B.
+  // Gate activation/presets, preserve the art on CANCEL and require
+  // a second confirmed click before changing a structural ant count.
+  await page.locator('#turmite-count').fill('1');
+  await page.waitForFunction(()=>document.querySelector('#turmite-duet-enabled')?.disabled===true);
+  assert.equal(await page.locator('#turmite-duet-war').isDisabled(),true);
+  assert(await page.locator('#turmite-duet-needs-rival').isVisible());
+  const [t7OneFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t7One=JSON.parse(await readFile(await t7OneFile.path(),'utf8'));
+  assert.equal(t7One.world.turmiteAgents.length,1);
+  await page.locator('#turmite-duet-arm-restart').click();
+  assert(await page.locator('#turmite-duet-confirm-restart').isVisible());
+  await page.locator('#turmite-duet-cancel-restart').click();
+  const [t7CancelledFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t7Cancelled=JSON.parse(await readFile(await t7CancelledFile.path(),'utf8'));
+  assert.deepEqual(t7Cancelled.world.turmiteAgents,t7One.world.turmiteAgents,
+   'Cancel must keep the existing universe instead of spawning/resetting');
+  assert.equal(t7Cancelled.world.generation,t7One.world.generation);
+  assert.equal(t7Cancelled.world.arrays.cells,t7One.world.arrays.cells);
+  await page.locator('#turmite-duet-arm-restart').click();
+  await page.locator('#turmite-duet-confirm-restart').click();
+  await page.waitForFunction(()=>document.querySelector('#turmite-duet-enabled')?.checked===true&&
+   document.querySelector('#turmite-count')?.value==='2'&&
+   document.querySelector('#turmite-duet-war')?.disabled===false);
+  const [t7RivalFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t7Rival=JSON.parse(await readFile(await t7RivalFile.path(),'utf8'));
+  assert.equal(t7Rival.settings.turmiteSpeciesCount,2);
+  assert.equal(t7Rival.world.turmiteAgents.length,2,
+   'Explicit confirmed two-ant restart must create REAL opposing species');
+  assert.equal(t7Rival.world.generation,0,
+   'Structural population reset must be explicit and start a new universe');
+  console.log('PASS T7 review P1: impossible single-ant duet gated, cancel keeps art, confirmed restart creates two real factions');
 
 
 
