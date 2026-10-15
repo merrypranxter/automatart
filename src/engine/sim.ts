@@ -121,7 +121,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
     }
   }else if(s.engine==='turmites'){
     if(!prev.turmiteAgents)throw new Error('Missing Turmite agents');
-    const result=stepTurmites(cells,w,h,s.wrap,s.turmiteRule,prev.turmiteAgents);
+    const result=stepTurmites(cells,w,h,s.wrap,s.turmiteRule,prev.turmiteAgents,s.turmiteSteps??1);
     next.set(result.cells);nextAgents=result.agents;
     const cardinal=neighborOffsets('square',0,0,'vonNeumann');
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
