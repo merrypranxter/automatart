@@ -7,6 +7,7 @@ import {isingEnergy,isingMagnetization,validTurmiteRule,turmiteTurnAt,turmiteWri
 import type {TurmiteWriteProgram,TurmiteAlchemy,TurmiteMemory} from '../engine/spins-turmites';
 import TurmiteScentControls from './TurmiteScentControls';
 import TurmiteDuetControls from './TurmiteDuetControls';
+import TurmiteRhythmControls from './TurmiteRhythmControls';
 export interface TurmitePlacement{agentId:number;heading:0|1|2|3}
 interface Props {settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSettings>>;
  onMemoryChange:(patch:Partial<TurmiteMemory>)=>void;
@@ -445,6 +446,8 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
   <TurmiteScentControls settings={s} setSettings={setSettings} world={world} selectedAgent={selectedAgent}/>
   <TurmiteDuetControls settings={s} setSettings={setSettings} world={world}
    selectedAgent={selectedAgent} onStartRival={onStartRival}/>
+  <TurmiteRhythmControls settings={s} setSettings={setSettings} world={world}
+   selectedAgent={selectedAgent}/>
   <div className="c3-header"><strong>⌖ T3 · PUT AN ANT WHERE YOU WANT IT</strong>
    <span>ONE TAP · NO BRUSH MARKS · NO RESET</span></div>
   <p className="module-note">Choose a real existing ant identity and its new heading. Arm one placement, tap the stage once, and that ant moves onto the selected grid cell without erasing the path or changing the generation. Other ants stay where they are. Cancel to return to painting.</p>
