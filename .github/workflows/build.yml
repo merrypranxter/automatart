@@ -79,6 +79,8 @@ jobs:
         run: node scripts/dynamics-b6-wire-timing-smoke.mjs
       - name: Verify B7 physical canonical NAND/NOT inhibition truth tables and rotated real-world circuits
         run: node scripts/dynamics-b7-inhibition-smoke.mjs
+      - name: Verify B8 canonical NOR/three-input NAE and five alternate true CA head-count spectra
+        run: node scripts/dynamics-b8-threshold-smoke.mjs
       - name: Verify A2 dual-source mathematical color mixing and exports
         run: node scripts/a2-dual-color-smoke.mjs
       - name: Verify Print Shop effects, compositing and recipe migration
