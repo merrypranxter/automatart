@@ -289,7 +289,7 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
  let current=agents.map(a=>({...a}));
  // Optional independent true Uint8 chemical lattice. Disabled legacy calls
  // never create this field and have identical T1–T5 result shapes.
- let field=pheromones?.slice()??(chem.enabled?new Uint8Array(w*h):undefined);
+ let field:Uint8Array|undefined=pheromones?.slice()??(chem.enabled?new Uint8Array(w*h):undefined);
  const vectors:readonly (readonly [number,number])[]=[[0,-1],[1,0],[0,1],[-1,0]];
  for(let substep=0;substep<steps;substep++){
  const moved:TurmiteAgent[]=[];
