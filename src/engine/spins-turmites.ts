@@ -72,6 +72,51 @@ export function turmiteWriteAt(state:number,length:number,
  const jump=program.mode==='stride'?program.stride:1;
  return ((state+jump)%length+length)%length;
 }
+/** T4: real per-species writing programs and same-site reaction chemistry.
+ * Species identity remains the T2 stable ant index; no snapshot schema change.
+ */
+export type TurmiteCollisionWrite='none'|'erase'|'invert'|'fuse';
+export interface TurmiteAlchemy{
+ enabled:boolean;
+ species:readonly TurmiteWriteProgram[]; // exactly four independent programs
+ collision:TurmiteCollisionWrite;
+}
+export const DEFAULT_TURMITE_ALCHEMY:TurmiteAlchemy={
+ enabled:false,
+ species:[
+  DEFAULT_TURMITE_WRITE_PROGRAM,
+  {...DEFAULT_TURMITE_WRITE_PROGRAM,mode:'stride',stride:-3},
+  {...DEFAULT_TURMITE_WRITE_PROGRAM,mode:'erase'},
+  {...DEFAULT_TURMITE_WRITE_PROGRAM,mode:'table',
+   table:Array.from({length:24},(_,i)=>23-i)}
+ ],
+ collision:'none'
+};
+export function validTurmiteAlchemy(v:TurmiteAlchemy):boolean{
+ return !!v&&typeof v.enabled==='boolean'&&
+  ['none','erase','invert','fuse'].includes(v.collision)&&
+  Array.isArray(v.species)&&v.species.length===4&&
+  v.species.every(validTurmiteWriteProgram);
+}
+/** The returned value is ACTUAL outgoing Uint8 track pigment. A collision
+ * happens only if 2+ agents started the current complete substep on THIS
+ * site. Painting remains sequential, so a later ant reads earlier writes.
+ */
+export function turmiteAlchemyWriteAt(state:number,length:number,species:number,
+ occupancy:number,global:TurmiteWriteProgram,alchemy:TurmiteAlchemy):number{
+ if(!validTurmiteAlchemy(alchemy)||!Number.isInteger(species)||species<0||species>3||
+    !Number.isInteger(occupancy)||occupancy<1||occupancy>12)
+  throw new Error('Invalid T4 Turmite alchemy inputs');
+ const program=alchemy.enabled?alchemy.species[species]:global;
+ const product=turmiteWriteAt(state,length,program);
+ if(!alchemy.enabled||occupancy<2||alchemy.collision==='none')return product;
+ if(alchemy.collision==='erase')return 0;
+ if(alchemy.collision==='invert')return length-1-product;
+ // Fusion is a true order-sensitive modular chemical reaction: each
+ // participant reacts with the current physical track color, the species
+ // and the simultaneously counted number of occupants.
+ return (product+(species+1)*occupancy)%length;
+}
 /** Move precisely ONE stable agent identity, retaining every other agent and
  * every painted pixel. Return a new list, never mutate the saved source.
  */
@@ -176,10 +221,11 @@ export function seedTurmites(w:number,h:number,count:number,seed:number,
 export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
  rule:string,agents:readonly TurmiteAgent[],steps=1,
  dynamics:TurmiteDynamics=DEFAULT_TURMITE_DYNAMICS,
- write:TurmiteWriteProgram=DEFAULT_TURMITE_WRITE_PROGRAM):TurmiteResult{
+ write:TurmiteWriteProgram=DEFAULT_TURMITE_WRITE_PROGRAM,
+ alchemy:TurmiteAlchemy=DEFAULT_TURMITE_ALCHEMY):TurmiteResult{
  if(!validTurmiteRule(rule)||cells.length!==w*h||!agents.length||agents.length>12||
     !Number.isInteger(steps)||steps<1||steps>8||!validTurmiteDynamics(dynamics)||
-    !validTurmiteWriteProgram(write))
+    !validTurmiteWriteProgram(write)||!validTurmiteAlchemy(alchemy))
   throw new Error('Invalid Turmite world or rule');
  const next=cells.slice();
  let current=agents.map(a=>({...a}));
@@ -189,7 +235,7 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
  // Read REAL co-location at the start of each round (before any agents
  // move). The decision is simultaneous; sequential paint remains ordered.
  const occupancy=new Map<number,number>();
- if(dynamics.contact==='repel')
+ if(dynamics.contact==='repel'||(alchemy.enabled&&alchemy.collision!=='none'))
   for(const a of current){
    const key=a.y*w+a.x;occupancy.set(key,(occupancy.get(key)??0)+1);
   }
@@ -205,7 +251,7 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
   const turn=turmiteTurnAt(rule,state,startingHeading,species,dynamics);
   const direction=turn==='R'?1:turn==='L'?3:turn==='U'?2:0;
   let heading=((startingHeading+direction)%4) as 0|1|2|3;
-  next[p]=turmiteWriteAt(state,rule.length,write);
+  next[p]=turmiteAlchemyWriteAt(state,rule.length,species,occupancy.get(p)??1,write,alchemy);
   let x=a.x+vectors[heading][0],y=a.y+vectors[heading][1];
   if(wrap){x=(x+w)%w;y=(y+h)%h;}
   else if(x<0||x>=w||y<0||y>=h){
