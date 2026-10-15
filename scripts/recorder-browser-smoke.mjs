@@ -1476,6 +1476,36 @@ try{
   assert.equal(await page.locator('#turmite-alchemy-enabled').isChecked(),true);
   assert.equal(await page.locator('#turmite-alchemy-collision').inputValue(),'fuse');
   assert.equal(await page.locator('#turmite-formation').inputValue(),'stack');
+  // T4 regression: pressing the preset AGAIN, after agents have dispersed
+  // from an existing stack, must explicitly reseed them. This can't rely on
+  // setting changes, because count & formation already equal preset values.
+  await page.locator('#turmite-place-agent').selectOption('0');
+  await page.locator('#turmite-place-heading').selectOption('1');
+  await page.locator('#turmite-place-arm').click();
+  const t4Stage=page.locator('canvas[aria-label^="Interactive cellular"]');
+  const t4Bounds=await t4Stage.boundingBox();assert(t4Bounds);
+  await t4Stage.click({position:{x:Math.floor(t4Bounds.width*.21),y:Math.floor(t4Bounds.height*.72)}});
+  const [t4ScatteredFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t4Scattered=JSON.parse(await readFile(await t4ScatteredFile.path(),'utf8'));
+  assert.equal(t4Scattered.settings.turmiteFormation,'stack');
+  assert(t4Scattered.world.turmiteAgents.some(ant=>
+   ant.x!==t4Scattered.world.turmiteAgents[0].x||
+   ant.y!==t4Scattered.world.turmiteAgents[0].y),
+   'A currently selected stack configuration can still have dispersed ants');
+  await page.locator('#turmite-alchemy-preset').click();
+  const [t4ReseededFile]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t4Reseeded=JSON.parse(await readFile(await t4ReseededFile.path(),'utf8'));
+  const freshlyStacked=t4Reseeded.world.turmiteAgents;
+  assert(freshlyStacked.length>=4);
+  assert(freshlyStacked.every(ant=>ant.x===freshlyStacked[0].x&&ant.y===freshlyStacked[0].y),
+   'Every explicit T4 pileup click must gather all ants at the same physical site');
+  assert.equal(t4Reseeded.world.generation,0,
+   'Repeat preset click must restart the universe, even when its configuration has not changed');
+  assert.equal(t4Reseeded.settings.turmiteAlchemy.collision,'fuse');
   await page.locator('input[type=file]').last().setInputFiles({
    name:'t4-mathematically-reactive-ant-ecosystem.json',mimeType:'application/json',
    buffer:Buffer.from(JSON.stringify(t4Edited))
