@@ -676,9 +676,59 @@ try{
   await page.locator('#wire-phase-reset').click();
   assert.equal(await page.locator('#wire-phase-bits').innerText(),'0001');
   assert.match(await page.locator('#wire-phase-certification').innerText(),/EXACT B9 CERTIFIED AND/);
+  // B11: true returning-wave shield, not a decorative diode.
+  assert(await page.locator('#wire-feedback-classification').isVisible());
+  assert.equal(await page.locator('#wire-feedback-fingerprint').innerText(),'0001');
+  assert.match(await page.locator('#wire-feedback-classification').innerText(),/VERIFIED LOCAL RETURN SHIELD/);
+  assert.equal(await page.locator('#wire-feedback-return').innerText(),'—',
+   'Calibrated two-guard arrangement physically eliminates the NAND return-port HEAD');
+  assert.equal(await page.locator('#wire-feedback-final').innerText(),'T19',
+   'Two-guard shield must preserve the true downstream AND output at tick 19');
+  await page.locator('#wire-feedback-enabled').uncheck();
+  assert.match(await page.locator('#wire-feedback-classification').innerText(),/BASELINE B9/);
+  assert.equal(await page.locator('#wire-feedback-return').innerText(),'T12',
+   'Without the shield, stage-two backpropagation must reappear as a real HEAD');
+  await page.locator('#wire-feedback-enabled').check();
+  await page.locator('#wire-feedback-west').fill('-1');
+  assert.equal(await page.locator('#wire-feedback-fingerprint').innerText(),'1111',
+   'Moving a guard source alters the actual AND output truth function');
+  assert.match(await page.locator('#wire-feedback-classification').innerText(),/EXPERIMENTAL COLLISION/);
+  await page.locator('#wire-feedback-reset').click();
+  assert.equal(await page.locator('#wire-feedback-return').innerText(),'—');
+  const b11Pixels=await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL());
+  await page.locator('#wire-feedback-scan').click();
+  assert.equal(await page.locator('#wire-feedback-scan-results tbody tr').count(),3);
+  assert.equal(await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL()),b11Pixels,
+   'Three-guard collision spectrum must not paint the current artwork');
+  await page.locator('#wire-feedback-a').check();
+  await page.locator('#wire-feedback-b').check();
+  const b11Generation=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  assert(await page.locator('#wire-feedback-install').isEnabled());
+  await page.locator('#wire-feedback-install').click();
+  assert(await page.locator('#wire-feedback-live').isVisible());
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),b11Generation,
+   'A physical guard is a local art edit, not a simulation restart');
+  const b11Stage=await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL());
+  await page.locator('#wire-feedback-measure').click();
+  const measuredB11=await page.locator('#wire-feedback-measurement').innerText();
+  assert.match(measuredB11,/NAND RETURN PORT: NO HEAD/,
+   'Four-state live scope confirms zero returning electrons at old NAND port');
+  assert.match(measuredB11,/FINAL AND OUTPUT: T19/,
+   'The actual stamped guarded AND retains true positive behavior');
+  assert.equal(await page.locator('canvas[aria-label^="Interactive cellular"]').evaluate(c=>c.toDataURL()),b11Stage);
+  const [b11File]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const b11Recipe=JSON.parse(await readFile(await b11File.path(),'utf8'));
+  assert.equal(b11Recipe.world.kind,'automatart-world-v1');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'b11-physical-guarded-feedback.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(b11Recipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#engine')?.value==='wireworld');
   await page.locator('#engine').selectOption('cyclic');
   await openTab(page,'world');
-  console.log('PASS B10: true physical ±bias-rail phase mutation, five full-universe scans, read-only scope and exact portable recipe');
+  console.log('PASS B11: physical 2-guard return shield, 4-case truth, phase mutation, actual-world scope, recipe and recording');
 
   // Funhouse F1 regression: precise stepping, authentic B/S roulette, and two
   // unmistakably different random color buttons.

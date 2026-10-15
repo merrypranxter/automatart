@@ -23,11 +23,15 @@ export interface WireCascadeOptions {
  /** B10: actual upstream bias-wire length adjustments, in lattice cells. */
  biasNWShift?:number;
  biasNEShift?:number;
+ /** B11: specialized two-rail timed collision shield calibrated ONLY for r=9 and zero B10 phase. */
+ feedbackShield?:boolean;
+ guardWestShift?:number; // relative physical length change, -1..1
+ guardDiagonalShift?:number;
 }
 export interface WireCascadeLayout {
  conductors:LogicPoint[];
  heads:LogicPoint[];
- stages:{nand:LogicPoint; nandPort:LogicPoint; inverter:LogicPoint; biasPorts:LogicPoint[]; output:LogicPoint};
+ stages:{nand:LogicPoint; nandPort:LogicPoint; inverter:LogicPoint; biasPorts:LogicPoint[]; output:LogicPoint; guardPorts?:LogicPoint[]};
 }
 export interface WireCascadeCase {
  a:WireLogicBit;b:WireLogicBit;
@@ -42,7 +46,7 @@ export interface WireCascadeBench {
 }
 export interface WireCascadeStamp {
  touched:number[];
- ports:{nand:LogicPoint;inverter:LogicPoint;biases:LogicPoint[];output:LogicPoint};
+ ports:{nand:LogicPoint;inverter:LogicPoint;biases:LogicPoint[];output:LogicPoint;guardPorts?:LogicPoint[]};
 }
 const r90=([x,y]:LogicPoint,k:0|1|2|3):LogicPoint=>
  k===1?[-y,x]:k===2?[-x,-y]:k===3?[y,-x]:[x,y];
@@ -53,12 +57,16 @@ export const validWireCascade=(v:WireCascadeOptions):boolean=>
  [0,1,2,3].includes(v.rotation)&&
  (v.a===0||v.a===1)&&(v.b===0||v.b===1)&&
  Number.isInteger(v.biasNWShift??0)&&Math.abs(v.biasNWShift??0)<=3&&
- Number.isInteger(v.biasNEShift??0)&&Math.abs(v.biasNEShift??0)<=3;
+ Number.isInteger(v.biasNEShift??0)&&Math.abs(v.biasNEShift??0)<=3&&
+ Number.isInteger(v.guardWestShift??0)&&Math.abs(v.guardWestShift??0)<=1&&
+ Number.isInteger(v.guardDiagonalShift??0)&&Math.abs(v.guardDiagonalShift??0)<=1&&
+ (!v.feedbackShield||(v.radius===9&&(v.biasNWShift??0)===0&&(v.biasNEShift??0)===0));
 
 export function wireCascadeLayout(v:WireCascadeOptions):WireCascadeLayout{
  if(!validWireCascade(v))throw Error('Invalid certified two-stage AND circuit');
  const {radius:r,outputLength:d,rotation:k,a,b,
-  biasNWShift=0,biasNEShift=0}=v;
+  biasNWShift=0,biasNEShift=0,feedbackShield=false,
+  guardWestShift=0,guardDiagonalShift=0}=v;
  const wires:LogicPoint[]=[],heads:LogicPoint[]=[];
  // Stage one — NAND. Off contacts are actually VOID, not parasitic stubs.
  for(let i=0;i<=r;i++)wires.push([i,-i]);
@@ -82,6 +90,27 @@ export function wireCascadeLayout(v:WireCascadeOptions):WireCascadeLayout{
    if(i===length)heads.push(point);
   }
  }
+ // B11 research specimen (r=9 ONLY): two actual transmitting guard rails
+ // approach the upstream return-wave corridor. Physical guard HEADS are
+ // seeded at the remote conductor ends, not injected at a magic tick.
+ // The fixed calibrated pair blocks the t=r+3 RETURN at NAND-port for 11,
+ // while preserving the final AND output. This does not establish a
+ // general one-way diode, reusable logic, or phase-shift robustness.
+ const guardPorts:LogicPoint[]=[];
+ if(feedbackShield){
+  const guards=[
+   {tip:[r-2,-r] as LogicPoint,dx:-1,dy:0,length:r+1+guardWestShift},
+   {tip:[r-1,-r] as LogicPoint,dx:-1,dy:-1,length:r+2+guardDiagonalShift}
+  ];
+  for(const guard of guards){
+   guardPorts.push(guard.tip);
+   for(let i=0;i<=guard.length;i++){
+    const point:LogicPoint=[guard.tip[0]+guard.dx*i,guard.tip[1]+guard.dy*i];
+    wires.push(point);
+    if(i===guard.length)heads.push(point);
+   }
+  }
+ }
  // The outgoing SE rail is not adjacent to any of the THREE incoming
  // detector HEAD sites, so no emitter can bypass the second computation.
  for(let i=1;i<=d;i++)wires.push([j[0]+i,j[1]+i]);
@@ -96,7 +125,8 @@ export function wireCascadeLayout(v:WireCascadeOptions):WireCascadeLayout{
    nandPort:r90([r,-r],k),
    inverter:r90(j,k),
    biasPorts:biasPorts.map(p=>r90(p,k)),
-   output:r90([j[0]+d,j[1]+d],k)
+   output:r90([j[0]+d,j[1]+d],k),
+   ...(feedbackShield?{guardPorts:guardPorts.map(p=>r90(p,k))}:{})
   }
  };
 }
@@ -182,6 +212,7 @@ export function stampWireCascade(world:World,anchor:LogicPoint,v:WireCascadeOpti
   nand:translate(shape.stages.nandPort,anchor),
   inverter:translate(shape.stages.inverter,anchor),
   biases:shape.stages.biasPorts.map(p=>translate(p,anchor)),
-  output:translate(shape.stages.output,anchor)
+  output:translate(shape.stages.output,anchor),
+  ...(shape.stages.guardPorts?{guardPorts:shape.stages.guardPorts.map(p=>translate(p,anchor))}:{})
  }};
 }
