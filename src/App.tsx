@@ -1327,6 +1327,11 @@ export default function App(){
           {(settings.engine==='ising'||settings.engine==='turmites')&&
             <SpinTurmiteControls settings={settings} setSettings={setSettings}
               onMemoryChange={updateTurmiteMemory}
+              onStartRival={()=>{
+                cancelBatch();setPlaying(false);setTurmitePlacement(null);
+                setResetNumber(n=>n+1);
+                setMessage('Confirmed fresh two-ant chemical war. Previous artwork was intentionally restarted.');
+              }}
               world={worldRef.current} resetNumber={resetNumber}
               placement={turmitePlacement} onPlacementChange={setTurmitePlacement}
               onReseed={()=>{
