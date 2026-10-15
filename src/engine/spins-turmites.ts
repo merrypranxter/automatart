@@ -115,7 +115,7 @@ export function turmiteAlchemyWriteAt(state:number,length:number,species:number,
  // Fusion is a true order-sensitive modular chemical reaction: each
  // participant reacts with the current physical track color, the species
  // and the simultaneously counted number of occupants.
- return (product+(species+1)*occupancy)%length;
+ return (product+occupancy+species+1)%length;
 }
 /** Move precisely ONE stable agent identity, retaining every other agent and
  * every painted pixel. Return a new list, never mutate the saved source.
