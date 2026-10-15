@@ -35,7 +35,7 @@ import {stampWireLogic,type WireLogicOptions} from './engine/wire-logic';
 import {stampWireCircuit,wireStampFootprint,type WireStampOptions} from './engine/wire-circuit-lab';
 import ReactionControls from './components/ReactionControls';
 import SpinTurmiteControls,{type TurmitePlacement} from './components/SpinTurmiteControls';
-import {validTurmiteRule,validTurmiteWriteProgram,validTurmiteAlchemy,DEFAULT_TURMITE_ALCHEMY,validTurmiteMemory,DEFAULT_TURMITE_MEMORY,relocateTurmiteAgent}
+import {validTurmiteRule,validTurmiteWriteProgram,validTurmiteAlchemy,DEFAULT_TURMITE_ALCHEMY,validTurmiteMemory,DEFAULT_TURMITE_MEMORY,normalizeTurmiteAgentMemories,relocateTurmiteAgent}
   from './engine/spins-turmites';
 import CyclicDynamicsControls from './components/CyclicDynamicsControls';
 import WaveDynamicsControls from './components/WaveDynamicsControls';
@@ -323,6 +323,22 @@ export default function App(){
   };
   const updateSetting=<K extends keyof SimSettings>(key:K,value:SimSettings[K])=>
     setSettings(s=>({...s,[key]:value}));
+  // Make memory-cycle changes persistent in the real per-agent registers,
+  // not merely in the UI. No painting, relocation, or time reset.
+  const updateTurmiteMemory=(patch:Partial<SimSettings['turmiteMemory']>)=>{
+    if(recordingRef.current)return;
+    const candidate={...(settings.turmiteMemory??DEFAULT_TURMITE_MEMORY),...patch};
+    if(!validTurmiteMemory(candidate))return;
+    if(patch.states!==undefined&&patch.states!==settings.turmiteMemory?.states){
+      cancelBatch();
+      const world=worldRef.current;
+      if(world.engine==='turmites'&&world.turmiteAgents)
+        world.turmiteAgents=normalizeTurmiteAgentMemories(world.turmiteAgents,patch.states);
+    }
+    setSettings(old=>({...old,turmiteMemory:{
+      ...(old.turmiteMemory??DEFAULT_TURMITE_MEMORY),...patch
+    }}));
+  };
   const updateAppearance=<K extends keyof Appearance>(key:K,value:Appearance[K])=>
     setAppearance(a=>({...a,[key]:value}));
   const toggleCustomRule=(kind:'customBirth'|'customSurvive',number:number)=>{
@@ -1302,6 +1318,7 @@ export default function App(){
               setSettings={setSettings} world={worldRef.current}/>}
           {(settings.engine==='ising'||settings.engine==='turmites')&&
             <SpinTurmiteControls settings={settings} setSettings={setSettings}
+              onMemoryChange={updateTurmiteMemory}
               world={worldRef.current} resetNumber={resetNumber}
               placement={turmitePlacement} onPlacementChange={setTurmitePlacement}
               onReseed={()=>{
