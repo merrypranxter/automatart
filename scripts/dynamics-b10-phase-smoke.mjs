@@ -114,8 +114,11 @@ try{
    }
    const bench=measureWirePhase(radius,8,nw,ne).rows.find(row=>row.a===a&&row.b===b);
    assert(bench);
-   assert.deepEqual(observed,bench,
-    'Independent whole-world evolution measures the EXACT same 5-site head time-series as isolated phase bench');
+   assert.deepEqual(observed,{
+    nandTicks:bench.nandTicks,stage2Ticks:bench.stage2Ticks,
+    biasNWTicks:bench.biasNWTicks,biasNETicks:bench.biasNETicks,
+    outputTicks:bench.outputTicks
+   },'Production whole-world evolution measures the EXACT same five physical port traces as isolated bench');
    assert.deepEqual(world.cells,restored.cells,'The real delayed conductors replay from JSON bit-exactly');
    assert.deepEqual(previous.length,world.cells.length);
    assert.equal(world.waveStimulusCount,0);
