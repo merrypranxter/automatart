@@ -1828,6 +1828,20 @@ try{
    'T8 live control edits preserve actual agent identity and history');
   assert.equal(t8Edited.settings.turmiteRhythm.coupling,-23);
   assert.equal(t8Edited.settings.turmiteRhythm.chemistry,8);
+  // Codex P2: the existing T5 next-turn inspector must include the REAL T8
+  // rule-lookup displacement (but still explain that T2 acts afterward).
+  const rhythmAnt=t8Edited.world.turmiteAgents[1];
+  const rhythmRaw=Buffer.from(t8Edited.world.arrays.cells,'base64');
+  const rhythmState=rhythmRaw[rhythmAnt.y*t8Edited.world.width+rhythmAnt.x];
+  const rhythmM=t8Edited.settings.turmiteMemory;
+  const phaseM=(rhythmAnt.memory??0)%rhythmM.states;
+  const lookupM=rhythmM.enabled?
+   (rhythmState+phaseM*rhythmM.turnBias)%t8Edited.settings.turmiteRule.length:rhythmState;
+  const rhythmSector=Math.floor((rhythmAnt.rhythmPhase??73)/32);
+  const lookupRhythm=(lookupM+rhythmSector*t8Edited.settings.turmiteRhythm.turnBias)%
+   t8Edited.settings.turmiteRule.length;
+  assert.equal(await page.locator('#turmite-memory-matrix [data-memory-lookup="1"]').innerText(),
+   '#'+lookupRhythm,'Inspector must show T5+T8 actual pre-T2 lookup, not stale T5 only');
   await page.getByRole('button',{name:'STEP +1'}).click();
   const [t8SteppedDownload]=await Promise.all([
    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
