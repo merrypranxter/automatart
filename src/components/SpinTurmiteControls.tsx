@@ -7,6 +7,8 @@ import {isingEnergy,isingMagnetization,validTurmiteRule,turmiteTurnAt,turmiteWri
 import type {TurmiteWriteProgram,TurmiteAlchemy,TurmiteMemory} from '../engine/spins-turmites';
 import TurmiteScentControls from './TurmiteScentControls';
 import TurmiteDuetControls from './TurmiteDuetControls';
+import TurmiteRhythmControls from './TurmiteRhythmControls';
+import {DEFAULT_TURMITE_RHYTHM,phaseOf,rhythmIndex} from '../engine/turmite-rhythm';
 export interface TurmitePlacement{agentId:number;heading:0|1|2|3}
 interface Props {settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSettings>>;
  onMemoryChange:(patch:Partial<TurmiteMemory>)=>void;
@@ -35,6 +37,7 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
  const alchemy=s.turmiteAlchemy??DEFAULT_TURMITE_ALCHEMY;
  const speciesWrite=alchemy.species[alchemySpecies];
  const memory=s.turmiteMemory??DEFAULT_TURMITE_MEMORY;
+ const rhythm=s.turmiteRhythm??DEFAULT_TURMITE_RHYTHM;
  const updateAlchemy=(patch:Partial<TurmiteAlchemy>)=>setSettings(old=>({
   ...old,turmiteAlchemy:{...(old.turmiteAlchemy??DEFAULT_TURMITE_ALCHEMY),...patch}
  }));
@@ -431,7 +434,10 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
       const state=world.cells[ant.y*world.width+ant.x]??0;
       const phase=(ant.memory??0)%memory.states;
       const species=id%(s.turmiteSpeciesCount??1);
-      const index=memory.enabled?(state+phase*memory.turnBias)%s.turmiteRule.length:state;
+      const memoryIndex=memory.enabled?(state+phase*memory.turnBias)%s.turmiteRule.length:state;
+      const rhythmSector=rhythm.enabled?rhythmIndex(phaseOf(ant,id),rhythm.mode):0;
+      const index=rhythm.enabled?
+       (memoryIndex+rhythmSector*rhythm.turnBias)%s.turmiteRule.length:memoryIndex;
       return <tr key={id}>
        <th>#{id+1}</th><td>{species+1}</td><td data-memory-agent={id}>{phase}</td>
        <td>#{state}</td><td data-memory-lookup={id}>#{index}</td>
@@ -439,12 +445,14 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
      })}</tbody>
     </table>
    </div>
-   *Memory-adjusted pigment index before existing T2 heading/species offsets and any REPEL turn.
+   *T5 memory and T8 oscillator-adjusted rule index, before existing T2 heading/species offsets and any REPEL turn.
   </div>
   <p className="neighborhood-note">LIVE editing never clears artwork, moves ants, or resets time. Turning memory OFF bypasses the feedback without forgetting saved registers; turning it ON resumes those registers. Changing the number of register states maps each stored phase modulo the selected cycle. Restarting the universe starts fresh, and recipes/recordings retain the actual registers.</p>
   <TurmiteScentControls settings={s} setSettings={setSettings} world={world} selectedAgent={selectedAgent}/>
   <TurmiteDuetControls settings={s} setSettings={setSettings} world={world}
    selectedAgent={selectedAgent} onStartRival={onStartRival}/>
+  <TurmiteRhythmControls settings={s} setSettings={setSettings} world={world}
+   selectedAgent={selectedAgent}/>
   <div className="c3-header"><strong>⌖ T3 · PUT AN ANT WHERE YOU WANT IT</strong>
    <span>ONE TAP · NO BRUSH MARKS · NO RESET</span></div>
   <p className="module-note">Choose a real existing ant identity and its new heading. Arm one placement, tap the stage once, and that ant moves onto the selected grid cell without erasing the path or changing the generation. Other ants stay where they are. Cancel to return to painting.</p>
