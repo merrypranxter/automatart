@@ -2015,6 +2015,10 @@ try{
   bypassRecipe.world.turmiteAgents[0].alive=false;
   bypassRecipe.world.turmiteAgents[0].energy=0;
   bypassRecipe.world.turmiteAgents[0].rhythmPhase=0;
+  bypassRecipe.world.turmiteAgents[0].x=4;
+  bypassRecipe.world.turmiteAgents[0].y=4;
+  bypassRecipe.world.turmiteAgents[1].x=8;
+  bypassRecipe.world.turmiteAgents[1].y=8;
   bypassRecipe.world.turmiteAgents[1].alive=true;
   bypassRecipe.world.turmiteAgents[1].rhythmPhase=128;
   await page.locator('input[type=file]').last().setInputFiles({
