@@ -2403,6 +2403,15 @@ try{
   assert.deepEqual(t13Restored.world.turmiteAgents,t13Nourished.world.turmiteAgents);
   assert.deepEqual(t13Restored.settings.turmiteNiches,t13Nourished.settings.turmiteNiches);
   assert.equal(t13Restored.world.arrays.turmiteDnaCode,t13Nourished.world.arrays.turmiteDnaCode);
+  await page.locator('#turmite-life-enabled').uncheck();
+  await page.waitForFunction(()=>document.querySelector('#turmite-niche-energy')?.textContent==='—');
+  await page.locator('#turmite-life-enabled').check();
+  await page.locator('#turmite-genetics-enabled').uncheck();
+  await page.waitForFunction(()=>document.querySelector('#turmite-niche-energy')?.textContent==='—'&&
+   Array.from(document.querySelectorAll('[data-niche-direction]')).every(x=>x.textContent?.includes('score 0')));
+  // The genome, niches and fossil field remain saved, but T10 disabled
+  // means neither steering nor the T9 compatibility bonus are applied.
+  await page.locator('#turmite-genetics-enabled').check();
   console.log('PASS T13: four ecological presets, truly matched fossil nutrition, non-destructive bypass and exact recipe restore');
 
 
