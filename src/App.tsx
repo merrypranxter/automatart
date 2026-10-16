@@ -46,6 +46,7 @@ import {DEFAULT_TURMITE_LIFE,validTurmiteLife} from './engine/turmite-life';
 import {DEFAULT_TURMITE_EVOLUTION,validTurmiteEvolution} from './engine/turmite-genetics';
 import {DEFAULT_TURMITE_GENE_SPILL,validTurmiteGeneSpill} from './engine/turmite-gene-spill';
 import {DEFAULT_TURMITE_DNA_FOSSILS,validDnaFossilSettings} from './engine/turmite-dna-fossils';
+import {DEFAULT_TURMITE_NICHES,validTurmiteNiches} from './engine/turmite-niches';
 import CyclicDynamicsControls from './components/CyclicDynamicsControls';
 import WaveDynamicsControls from './components/WaveDynamicsControls';
 import BrainDynamicsControls from './components/BrainDynamicsControls';
@@ -1031,6 +1032,8 @@ export default function App(){
       if(!validTurmiteGeneSpill(s.turmiteGeneSpill))throw new Error('Invalid T11 physical gene-contact program');
       s.turmiteDnaFossils=s.turmiteDnaFossils??{...DEFAULT_TURMITE_DNA_FOSSILS};
       if(!validDnaFossilSettings(s.turmiteDnaFossils))throw new Error('Invalid T12 environmental DNA pool');
+      s.turmiteNiches=s.turmiteNiches??{...DEFAULT_TURMITE_NICHES};
+      if(!validTurmiteNiches(s.turmiteNiches))throw new Error('Invalid T13 genetic habitat settings');
       s.turmiteWriteMode=s.turmiteWriteMode??'next';
       s.turmiteWriteStride=s.turmiteWriteStride??1;
       s.turmiteWriteTable=s.turmiteWriteTable??Array.from({length:24},(_,i)=>(i+1)%24);
