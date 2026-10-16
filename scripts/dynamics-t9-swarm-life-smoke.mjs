@@ -22,6 +22,7 @@ try{
  const {createWorld,stepWorld}=await load(3);
  const {snapshotWorld,restoreWorldSnapshot}=await load(4);
  const {createCaptureCursor}=await load(5);
+ const {rhythmOrderParameter}=await import(pathToFileURL(resolve('scripts/.t9-rhythm.mjs')).href);
  const l={...DEFAULT_TURMITE_LIFE,enabled:true,founders:1};
  assert(validTurmiteLife(l));
  for(const patch of [{founders:0},{founders:13},{lifespan:1},{lifespan:4097},
