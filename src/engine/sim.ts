@@ -143,7 +143,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
       s.turmiteAlchemy,s.turmiteMemory,s.turmitePheromoneRules,prev.turmitePheromones,
       s.turmiteDuet,prev.turmiteRivalPheromones,s.turmiteRhythm,s.turmiteLife,
       s.turmiteEvolution,s.seed,s.turmiteGeneSpill,s.turmiteDnaFossils,
-      prev.turmiteDnaCode,prev.turmiteDnaStrength);
+      prev.turmiteDnaCode,prev.turmiteDnaStrength,s.turmiteNiches);
     next.set(result.cells);nextAgents=result.agents;nextPheromones=result.pheromones;
     nextRivalPheromones=result.rivalPheromones;
     nextDnaCode=result.dnaCode;nextDnaStrength=result.dnaStrength;

@@ -20,6 +20,8 @@ import {DEFAULT_TURMITE_GENE_SPILL,validTurmiteGeneSpill,validTransferAgent,step
 import type {TurmiteGeneSpill,ExchangeAgent} from './turmite-gene-spill';
 import {DEFAULT_TURMITE_DNA_FOSSILS,validDnaFossilSettings,validDnaFossilAgent,stepDnaFossils} from './turmite-dna-fossils';
 import type {TurmiteDnaFossils,DnaPool,DnaFossilAgent} from './turmite-dna-fossils';
+import {DEFAULT_TURMITE_NICHES,validTurmiteNiches,nicheSteerHeading} from './turmite-niches';
+import type {TurmiteNiches} from './turmite-niches';
 
 const CARDINAL:readonly (readonly [number,number])[]=[[0,-1],[1,0],[0,1],[-1,0]];
 export interface IsingRule{
@@ -298,7 +300,8 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
  evolution:TurmiteEvolution=DEFAULT_TURMITE_EVOLUTION,geneticSeed=0,
  spill:TurmiteGeneSpill=DEFAULT_TURMITE_GENE_SPILL,
  dna:TurmiteDnaFossils=DEFAULT_TURMITE_DNA_FOSSILS,
- dnaCode?:Uint8Array,dnaStrength?:Uint8Array):TurmiteResult{
+ dnaCode?:Uint8Array,dnaStrength?:Uint8Array,
+ niche:TurmiteNiches=DEFAULT_TURMITE_NICHES):TurmiteResult{
  if(!validTurmiteRule(rule)||cells.length!==w*h||!agents.length||agents.length>12||
     !Number.isInteger(steps)||steps<1||steps>8||!validTurmiteDynamics(dynamics)||
     !validTurmiteWriteProgram(write)||!validTurmiteAlchemy(alchemy)||
@@ -308,6 +311,7 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
     !validTurmiteRhythm(rhythm)||!validTurmiteLife(life)||
     !validTurmiteEvolution(evolution)||!Number.isInteger(geneticSeed)||
     !validTurmiteGeneSpill(spill)||!validDnaFossilSettings(dna)||
+    !validTurmiteNiches(niche)||
     ((dnaCode===undefined)!==(dnaStrength===undefined)))
   throw new Error('Invalid Turmite world or rule');
  const next=cells.slice();
@@ -324,7 +328,7 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
  // Synchronous old-phase read; all coupled rhythms update only AFTER
  // physical T1–T7 decisions. This cannot give later ants future knowledge.
  const oldLifeCells=(life.enabled||(spill.enabled&&evolution.enabled)||
-  (dna.enabled&&evolution.enabled))?next.slice():next;
+  (dna.enabled&&evolution.enabled)||niche.enabled)?next.slice():next;
  const nextPhases=rhythm.enabled?stepRhythmPhases(life.enabled?current:
     current.map(a=>({...a,alive:true})),dynamics.speciesCount,
    w,h,wrap,rhythm,field,rival):undefined;
@@ -371,6 +375,11 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
    heading=duetHeading(field,rival,w,h,wrap,a.x,a.y,heading,species,duet);
   else if(field&&chem.enabled)
    heading=pheromoneSteerHeading(field,w,h,wrap,a.x,a.y,heading,species,chem);
+  // Actual environmental DNA landscape then redirects true trajectory.
+  // It always samples old T12 arrays, never this microstep's new deposits.
+  if(niche.enabled&&evolution.enabled)
+   heading=nicheSteerHeading(a,a.x,a.y,heading,w,h,wrap,
+    environmental?.code,environmental?.strength,niche);
   const base=turmiteAlchemyWriteAt(state,rule.length,species,occupancy.get(p)??1,write,alchemy);
   const rememberedInk=memory.enabled?
    ((base+phase*memory.writeBias)%rule.length+rule.length)%rule.length:base;
@@ -407,7 +416,8 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
  }
  const nextLife=life.enabled?
   stepTurmiteLife(current,moved,oldLifeCells,field,rival,w,h,wrap,life,
-    evolution,geneticSeed).agents:moved;
+    evolution,geneticSeed,niche.enabled&&evolution.enabled?niche:DEFAULT_TURMITE_NICHES,
+    environmental?.code,environmental?.strength).agents:moved;
  // Horizontal exchange is based on PRE-STEP positions and real old
  // chemistry, after lifespan/reproduction, before chemical fields diffuse.
  const afterExchange=spill.enabled&&evolution.enabled?

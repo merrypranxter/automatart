@@ -77,6 +77,8 @@ jobs:
         run: node scripts/dynamics-t11-gene-spill-smoke.mjs
       - name: Verify T12 genuine extracellular DNA fossils, delayed absorption and preserved field replay
         run: node scripts/dynamics-t12-dna-fossils-smoke.mjs
+      - name: Verify T13 real genotype-conditioned habitat motion, fitness and nursery placement
+        run: node scripts/dynamics-t13-genetic-niches-smoke.mjs
       - name: Verify C4 HPP conservation, boundaries, wall painting, recipes and recording
         run: node scripts/c4-hpp-smoke.mjs
       - name: Verify D1a true rhombille tile edge graph, tap projection and CA compatibility
