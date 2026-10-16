@@ -19,7 +19,7 @@ try{
  })));
  const load=i=>import(pathToFileURL(resolve(files[i][1])).href);
  const {DEFAULT_TURMITE_NICHES,validTurmiteNiches,siteNicheFitness,
-  nicheSteerHeading,nicheEnergyAt,nicheNurseryHeading}=await load(0);
+  nicheSteerHeading,nicheEnergyAt,nicheNurseryHeading,nicheDirectionSite}=await load(0);
  const {encodeDnaFragment}=await load(1);
  const {DEFAULT_TURMITE_LIFE,stepTurmiteLife}=await load(2);
  const {stepTurmites,DEFAULT_TURMITE_DYNAMICS,DEFAULT_TURMITE_WRITE_PROGRAM,
@@ -71,6 +71,10 @@ try{
   edgeStrength[x+y*7]=255;};
  mark(1,3,-2);mark(0,4,-2);
  const atEdge={...ant,x:0,y:3,heading:1};
+ assert.equal(nicheDirectionSite(0,3,3,7,7,false),3*7+1,
+  'Inspector compass must use the actual reflected EAST neighbor for off-grid WEST');
+ assert.equal(nicheDirectionSite(0,3,3,7,7,true),3*7+6,
+  'Wrapped worlds must show true opposite-edge WEST DNA');
  assert.equal(nicheSteerHeading(atEdge,0,3,1,7,7,false,
   edgeCodes,edgeStrength,{...opt,policy:'avoid-foreign'}),0,
   'At finite edge, off-grid west scores reflected east danger, chooses safe NORTH');
