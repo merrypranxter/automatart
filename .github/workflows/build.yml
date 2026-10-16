@@ -73,6 +73,8 @@ jobs:
         run: node scripts/dynamics-t9-swarm-life-smoke.mjs
       - name: Verify T10 real heritable genomes, mutation selection, birth ancestry and exact recipe replay
         run: node scripts/dynamics-t10-genetic-drift-smoke.mjs
+      - name: Verify T11 real physical contact-driven gene exchange, old-cell gates and exact saved replay
+        run: node scripts/dynamics-t11-gene-spill-smoke.mjs
       - name: Verify C4 HPP conservation, boundaries, wall painting, recipes and recording
         run: node scripts/c4-hpp-smoke.mjs
       - name: Verify D1a true rhombille tile edge graph, tap projection and CA compatibility

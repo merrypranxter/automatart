@@ -139,7 +139,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
       table:s.turmiteWriteTable??Array.from({length:24},(_,i)=>(i+1)%24)},
       s.turmiteAlchemy,s.turmiteMemory,s.turmitePheromoneRules,prev.turmitePheromones,
       s.turmiteDuet,prev.turmiteRivalPheromones,s.turmiteRhythm,s.turmiteLife,
-      s.turmiteEvolution,s.seed);
+      s.turmiteEvolution,s.seed,s.turmiteGeneSpill);
     next.set(result.cells);nextAgents=result.agents;nextPheromones=result.pheromones;
     nextRivalPheromones=result.rivalPheromones;
     const cardinal=neighborOffsets('square',0,0,'vonNeumann');

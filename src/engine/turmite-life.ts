@@ -135,6 +135,10 @@ export function stepTurmiteLife<T extends LifeAgent&GeneticAgent>(
     ...('rhythmPhase' in born?{rhythmPhase:(slot*73)%256}:{})
    } as T;
    delete child.genome;delete child.parentId;delete child.depth;delete child.brood;
+   // Old occupant's contact history must not contaminate newborn identity.
+   delete (child as T&{transferCount?:number}).transferCount;
+   delete (child as T&{transferFrom?:number}).transferFrom;
+   delete (child as T&{transferGene?:string}).transferGene;
    if(evolution.enabled){
     child.genome=offspringGenome!;
     child.parentId=i;child.depth=Math.min(4096,(p.depth??0)+1);child.brood=0;

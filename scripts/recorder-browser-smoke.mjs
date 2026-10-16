@@ -2132,6 +2132,86 @@ try{
   assert.deepEqual(t10Restored.settings.turmiteEvolution,t10Born.settings.turmiteEvolution);
   console.log('PASS T10: 100% locus-specific mutated real baby, exact parent genealogy, four presets, no-reset genetics and replay');
 
+  // T11: live contact-gated horizontal DNA exchange on ACTUAL ant sites.
+  assert.equal(await page.locator('#turmite-spill-enabled').isChecked(),false);
+  const [t11BaseDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t11Base=JSON.parse(await readFile(await t11BaseDownload.path(),'utf8'));
+  await page.locator('#turmite-spill-plasmids').click();
+  assert.equal(await page.locator('#turmite-spill-enabled').isChecked(),true);
+  assert.equal(await page.locator('#turmite-genetics-enabled').isChecked(),true);
+  await page.locator('#turmite-spill-probability').fill('100');
+  await page.locator('#turmite-spill-radius').fill('0');
+  const [t11EditedDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t11Edited=JSON.parse(await readFile(await t11EditedDownload.path(),'utf8'));
+  assert.equal(t11Edited.world.generation,t11Base.world.generation);
+  assert.deepEqual(t11Edited.world.turmiteAgents,t11Base.world.turmiteAgents);
+  assert.equal(t11Edited.world.arrays.cells,t11Base.world.arrays.cells);
+  await page.locator('#turmite-spill-mutation').click();
+  assert.equal(await page.locator('#turmite-spill-mode').inputValue(),'mutate');
+  await page.locator('#turmite-spill-track').click();
+  assert.equal(await page.locator('#turmite-spill-gate').inputValue(),'pigment');
+  await page.locator('#turmite-spill-chemical').click();
+  assert.equal(await page.locator('#turmite-spill-gate').inputValue(),'scent');
+  assert.equal(await page.locator('#turmite-scent-enabled').isChecked(),true,
+   'Chemical Vectors activates actual T6 resource field, not just an inactive filter');
+  const contactRecipe=structuredClone(t10Born);
+  contactRecipe.settings.turmiteLife.enabled=false;
+  contactRecipe.settings.turmiteEvolution.enabled=true;
+  contactRecipe.settings.turmiteGeneSpill={
+   enabled:true,radius:0,probability:100,locus:'write',
+   mode:'copy',gate:'any',threshold:32
+  };
+  contactRecipe.settings.turmiteSteps=1;
+  contactRecipe.world.turmiteAgents[0]={
+   ...contactRecipe.world.turmiteAgents[0],x:3,y:3,
+   genome:{turn:0,write:0,metabolism:0,forage:0}
+  };
+  contactRecipe.world.turmiteAgents[1]={
+   ...contactRecipe.world.turmiteAgents[1],x:3,y:3,
+   genome:{turn:0,write:1,metabolism:0,forage:0}
+  };
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t11-real-same-site-plasmids.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(contactRecipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-spill-enabled')?.checked===true&&
+   document.querySelector('#turmite-spill-radius')?.value==='0');
+  await page.getByRole('button',{name:'STEP +1'}).click();
+  const [t11SteppedDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t11Stepped=JSON.parse(await readFile(await t11SteppedDownload.path(),'utf8'));
+  assert.equal(t11Stepped.world.generation,contactRecipe.world.generation+1);
+  assert.equal(t11Stepped.world.turmiteAgents[0].genome.write,1);
+  assert.equal(t11Stepped.world.turmiteAgents[1].genome.write,0);
+  assert.deepEqual(t11Stepped.world.turmiteAgents.map(a=>a.transferCount),[1,1]);
+  assert.deepEqual(t11Stepped.world.turmiteAgents.map(a=>a.transferFrom),[1,0]);
+  assert.equal(await page.locator('#turmite-spill-matrix [data-spill-count="0"]').innerText(),'1');
+  assert.equal(await page.locator('#turmite-spill-contacts').innerText(),'2');
+  await page.locator('#turmite-spill-off').click();
+  const [t11OffDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t11Off=JSON.parse(await readFile(await t11OffDownload.path(),'utf8'));
+  assert.deepEqual(t11Off.world.turmiteAgents,t11Stepped.world.turmiteAgents);
+  assert.equal(t11Off.settings.turmiteGeneSpill.enabled,false);
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t11-gene-spill-replay.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(t11Stepped))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-spill-enabled')?.checked===true);
+  const [t11ReplayedDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t11Replayed=JSON.parse(await readFile(await t11ReplayedDownload.path(),'utf8'));
+  assert.deepEqual(t11Replayed.world.turmiteAgents,t11Stepped.world.turmiteAgents);
+  assert.deepEqual(t11Replayed.settings.turmiteGeneSpill,t11Stepped.settings.turmiteGeneSpill);
+  console.log('PASS T11: four spatial transmission presets, actual same-cell alleles exchanged, saved donor IDs and no-reset replay');
+
 
 
   await page.locator('#engine').selectOption('life');
