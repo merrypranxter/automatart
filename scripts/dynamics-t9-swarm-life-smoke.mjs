@@ -24,6 +24,12 @@ try{
  const {snapshotWorld,restoreWorldSnapshot}=await load(4);
  const {createCaptureCursor}=await load(5);
  const {rhythmOrderParameter}=await import(pathToFileURL(resolve('scripts/.t9-rhythm.mjs')).href);
+ const paired=[{x:1,y:1,heading:0,alive:false,rhythmPhase:0},
+  {x:2,y:2,heading:1,alive:true,rhythmPhase:128}];
+ assert(Math.abs(rhythmOrderParameter(paired,true)-1)<1e-12,
+  'T9 ON: the lone living ant is trivially perfectly coherent');
+ assert(Math.abs(rhythmOrderParameter(paired,false))<1e-12,
+  'T9 OFF: both ant clocks are participating and the order includes both');
  const l={...DEFAULT_TURMITE_LIFE,enabled:true,founders:1};
  assert(validTurmiteLife(l));
  for(const patch of [{founders:0},{founders:13},{lifespan:1},{lifespan:4097},
