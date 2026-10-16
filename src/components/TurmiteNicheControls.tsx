@@ -24,7 +24,12 @@ export default function TurmiteNicheControls({settings:s,setSettings,world,selec
   ...old,turmiteNiches:{...(old.turmiteNiches??DEFAULT_TURMITE_NICHES),...patch},
   ...(activate?{
    turmiteEvolution:{...(old.turmiteEvolution??DEFAULT_TURMITE_EVOLUTION),enabled:true},
-   turmiteLife:{...(old.turmiteLife??DEFAULT_TURMITE_LIFE),enabled:true},
+   turmiteLife:{...(old.turmiteLife??DEFAULT_TURMITE_LIFE),enabled:true,
+    // A nursery without actual T9 reproduction is scientifically inert.
+    // Selecting a nursery preset or enabling it explicitly restores bud
+    // ONLY if breeding was off. Existing split reproduction is preserved.
+    breeding:patch.nursery===true&&old.turmiteLife?.breeding==='off'?'bud':
+     (old.turmiteLife?.breeding??DEFAULT_TURMITE_LIFE.breeding)},
    turmiteDnaFossils:{...(old.turmiteDnaFossils??DEFAULT_TURMITE_DNA_FOSSILS),enabled:true}
   }:{})
  }));
@@ -63,7 +68,7 @@ export default function TurmiteNicheControls({settings:s,setSettings,world,selec
     value={n[key]} onChange={e=>set({[key]:Number(e.target.value)})}/>
   </div>)}
   <label className="toggle"><input id="turmite-niche-nursery" type="checkbox"
-   checked={n.nursery} onChange={e=>set({nursery:e.target.checked})}/>
+   checked={n.nursery} onChange={e=>set({nursery:e.target.checked},e.target.checked)}/>
    NICHE NURSERIES · PLACE NEW BABIES IN COMPATIBLE NEIGHBORING CELLS</label>
   <div className="c3-presets">
    <button id="turmite-niche-garden" type="button" onClick={()=>set({
