@@ -54,6 +54,11 @@ export function rhythmIndex(phase:number,mode:TurmiteRhythm['mode']):number{
 }
 const SIN_Q=Array.from({length:256},(_,i)=>
  Math.round(1024*Math.sin(2*Math.PI*i/256)));
+/** JavaScript Math.round(-x.5) rounds toward +infinity, creating a false
+ * one-tick net drift in two-agent symmetric couplings. Quantize the signed
+ * Kuramoto force symmetrically, including exact negative half-ties.
+ */
+const roundSigned=(n:number):number=>n<0?-Math.round(-n):Math.round(n);
 function torusDistance(a:number,b:number,extent:number,wrap:boolean):number{
  const d=Math.abs(a-b);
  return wrap?Math.min(d,extent-d):d;
@@ -98,7 +103,7 @@ export function stepRhythmPhases(
    totalWeight+=weight;
   }
   const coupling=totalWeight>0?
-    Math.round(settings.coupling*sum/(1024*totalWeight)):0;
+    roundSigned(settings.coupling*sum/(1024*totalWeight)):0;
   const chemicalPotential=(a?.[p]??0)-(b?.[p]??0);
   const chemistry=Math.round(settings.chemistry*chemicalPotential/255);
   const next=phase+settings.frequency+(i%speciesCount)*settings.detune+
