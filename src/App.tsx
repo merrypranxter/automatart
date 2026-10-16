@@ -45,6 +45,7 @@ import {DEFAULT_TURMITE_RHYTHM,validTurmiteRhythm} from './engine/turmite-rhythm
 import {DEFAULT_TURMITE_LIFE,validTurmiteLife} from './engine/turmite-life';
 import {DEFAULT_TURMITE_EVOLUTION,validTurmiteEvolution} from './engine/turmite-genetics';
 import {DEFAULT_TURMITE_GENE_SPILL,validTurmiteGeneSpill} from './engine/turmite-gene-spill';
+import {DEFAULT_TURMITE_DNA_FOSSILS,validDnaFossilSettings} from './engine/turmite-dna-fossils';
 import CyclicDynamicsControls from './components/CyclicDynamicsControls';
 import WaveDynamicsControls from './components/WaveDynamicsControls';
 import BrainDynamicsControls from './components/BrainDynamicsControls';
@@ -145,7 +146,9 @@ function cloneWorld(world:World):World{
     cells:world.cells.slice(),grains:world.grains?.slice(),hppWalls:world.hppWalls?.slice(),
     turmiteAgents:world.turmiteAgents?.map(a=>({...a})),
     turmitePheromones:world.turmitePheromones?.slice(),
-    turmiteRivalPheromones:world.turmiteRivalPheromones?.slice(),ages:world.ages.slice(),
+    turmiteRivalPheromones:world.turmiteRivalPheromones?.slice(),
+    turmiteDnaCode:world.turmiteDnaCode?.slice(),
+    turmiteDnaStrength:world.turmiteDnaStrength?.slice(),ages:world.ages.slice(),
     neighbors:world.neighbors.slice(),events:world.events.slice(),
     traces:world.traces.slice(),previousCells:world.previousCells?.slice(),
     olderCells:world.olderCells?.slice(),fossils:world.fossils?.slice(),
@@ -1026,6 +1029,8 @@ export default function App(){
       if(!validTurmiteEvolution(s.turmiteEvolution))throw new Error('Invalid T10 genome mutation program');
       s.turmiteGeneSpill=s.turmiteGeneSpill??{...DEFAULT_TURMITE_GENE_SPILL};
       if(!validTurmiteGeneSpill(s.turmiteGeneSpill))throw new Error('Invalid T11 physical gene-contact program');
+      s.turmiteDnaFossils=s.turmiteDnaFossils??{...DEFAULT_TURMITE_DNA_FOSSILS};
+      if(!validDnaFossilSettings(s.turmiteDnaFossils))throw new Error('Invalid T12 environmental DNA pool');
       s.turmiteWriteMode=s.turmiteWriteMode??'next';
       s.turmiteWriteStride=s.turmiteWriteStride??1;
       s.turmiteWriteTable=s.turmiteWriteTable??Array.from({length:24},(_,i)=>(i+1)%24);

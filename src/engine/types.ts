@@ -11,6 +11,7 @@ import type {TurmiteRhythm} from './turmite-rhythm';
 import type {TurmiteLife} from './turmite-life';
 import type {TurmiteEvolution} from './turmite-genetics';
 import type {TurmiteGeneSpill} from './turmite-gene-spill';
+import type {TurmiteDnaFossils} from './turmite-dna-fossils';
 
 export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus' | 'wireworld' | 'sandpile' | 'hodgepodge' | 'forestfire' | 'ising' | 'turmites' | 'hpp';
 export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'maze' | 'mazectric' | 'replicator' | 'diamoeba' | 'coral' | 'amoeba' | 'custom';
@@ -134,6 +135,8 @@ export interface SimSettings {
   turmiteEvolution:TurmiteEvolution;
   /** T11: synchronous physical horizontal transfer of true T10 alleles. */
   turmiteGeneSpill:TurmiteGeneSpill;
+  /** T12: a persistent actual environmental pool of encoded inherited DNA. */
+  turmiteDnaFossils:TurmiteDnaFossils;
   /** T1: actual 1..8 complete ordered agent substeps per displayed generation. */
   turmiteSteps:number;
   /** T2: N distinct deterministic transition programs, assigned by agent ID. */
@@ -212,6 +215,9 @@ export interface World {
   /** Actual 8-bit physical scent field, independent of painted track. */
   turmitePheromones?:Uint8Array;
   turmiteRivalPheromones?:Uint8Array;
+  /** True extracellular genetic fragments and their physical field strength. */
+  turmiteDnaCode?:Uint8Array;
+  turmiteDnaStrength?:Uint8Array;
   turmiteRule?:string;
   ages: Uint16Array;
   neighbors: Uint8Array;
@@ -266,6 +272,7 @@ export const INITIAL_SETTINGS: SimSettings = {
    turmiteLife:{enabled:false,founders:2,initialEnergy:96,metabolism:3,pigmentFood:12,chemicalFood:8,lifespan:256,birthEnergy:125,birthCost:52,breeding:'bud'},
    turmiteEvolution:{enabled:false,mutationRate:30,mutationSize:1,locus:'all'},
    turmiteGeneSpill:{enabled:false,radius:1,probability:70,locus:'all',mode:'copy',gate:'any',threshold:32},
+   turmiteDnaFossils:{enabled:false,deposit:160,decay:3,spread:3,uptake:65,threshold:24,locus:'all',mode:'copy'},
    turmiteSteps:1,turmiteSpeciesCount:1,turmiteSpeciesStride:0,turmiteSpeciesMirror:false,turmiteHeadingShear:0,turmiteContact:'shared',turmiteFormation:'orbit',turmiteCount:1,turmiteBrush:1,
   hppBrush:15,hppTool:'particles'
 };

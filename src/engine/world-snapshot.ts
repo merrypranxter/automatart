@@ -6,6 +6,7 @@ import type {TurmiteAgent} from './spins-turmites';
 import {validateLifecycleAgent} from './turmite-life';
 import {validGeneticAgent} from './turmite-genetics';
 import {validTransferAgent} from './turmite-gene-spill';
+import {validDnaPool,validDnaFossilAgent} from './turmite-dna-fossils';
 import type {MargolusEpoch} from './margolus-rules';
 import {validMargolusEpochs} from './margolus-rules';
 
@@ -18,7 +19,7 @@ interface PackedWorld {
   generation:number;
   turmiteAgents?:TurmiteAgent[];
   margolusEpochs?:MargolusEpoch[];
-  arrays:Record<'cells'|'ages'|'neighbors'|'events'|'traces'|'previousCells'|'olderCells'|'fossils',string> & {grains?:string;hppWalls?:string;turmitePheromones?:string;turmiteRivalPheromones?:string};
+  arrays:Record<'cells'|'ages'|'neighbors'|'events'|'traces'|'previousCells'|'olderCells'|'fossils',string> & {grains?:string;hppWalls?:string;turmitePheromones?:string;turmiteRivalPheromones?:string;turmiteDnaCode?:string;turmiteDnaStrength?:string};
 }
 function pack(data:Uint8Array):string{
   let string='';
@@ -52,7 +53,10 @@ export function snapshotWorld(world:World):PackedWorld{
       ...(world.engine==='turmites'&&world.turmitePheromones?
        {turmitePheromones:pack(world.turmitePheromones)}:{}),
       ...(world.engine==='turmites'&&world.turmiteRivalPheromones?
-       {turmiteRivalPheromones:pack(world.turmiteRivalPheromones)}:{})
+       {turmiteRivalPheromones:pack(world.turmiteRivalPheromones)}:{}),
+      ...(world.engine==='turmites'&&world.turmiteDnaCode&&world.turmiteDnaStrength?
+       {turmiteDnaCode:pack(world.turmiteDnaCode),
+        turmiteDnaStrength:pack(world.turmiteDnaStrength)}:{})
     }
   };
 }
@@ -83,6 +87,10 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
     turmitePheromones:settings.engine==='turmites'?
       (source.turmitePheromones!==undefined?get('turmitePheromones',n):
        settings.turmitePheromoneRules?.enabled?new Uint8Array(n):undefined):undefined,
+    turmiteDnaCode:settings.engine==='turmites'&&source.turmiteDnaCode!==undefined?
+      get('turmiteDnaCode',n):undefined,
+    turmiteDnaStrength:settings.engine==='turmites'&&source.turmiteDnaStrength!==undefined?
+      get('turmiteDnaStrength',n):undefined,
     turmiteRivalPheromones:settings.engine==='turmites'?
       (source.turmiteRivalPheromones!==undefined?get('turmiteRivalPheromones',n):
        settings.turmitePheromoneRules?.enabled&&settings.turmiteDuet?.enabled&&
@@ -102,6 +110,10 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
     for(let i=0;i<n;i++)if(world.cells[i]>1)throw new Error('Invalid Ising spin state');
   }
   if(settings.engine==='turmites'){
+    if((world.turmiteDnaCode===undefined)!==(world.turmiteDnaStrength===undefined)||
+       (world.turmiteDnaCode&&world.turmiteDnaStrength&&
+        !validDnaPool({code:world.turmiteDnaCode,strength:world.turmiteDnaStrength},n)))
+      throw new Error('Invalid saved extracellular DNA field');
     if(!validTurmiteRule(settings.turmiteRule)||!Array.isArray(s.turmiteAgents)||
        s.turmiteAgents.length!==settings.turmiteCount)
       throw new Error('Invalid saved Turmite agent count');
@@ -115,7 +127,7 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
           (agent.rhythmPhase!==undefined&&(!Number.isInteger(agent.rhythmPhase)||
            agent.rhythmPhase<0||agent.rhythmPhase>255))||
           !validateLifecycleAgent(agent)||!validGeneticAgent(agent,agents.length)||
-          !validTransferAgent(agent,agents.length))
+          !validTransferAgent(agent,agents.length)||!validDnaFossilAgent(agent,n))
         throw new Error('Invalid saved Turmite coordinate');
     }
     for(let i=0;i<n;i++)if(world.cells[i]>=settings.turmiteRule.length)

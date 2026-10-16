@@ -51,6 +51,8 @@ export function cloneWorld(w:World):World{
   return {...w,cells:w.cells.slice(),grains:w.grains?.slice(),hppWalls:w.hppWalls?.slice(),
     turmiteAgents:w.turmiteAgents?.map(a=>({...a})),turmitePheromones:w.turmitePheromones?.slice(),
     turmiteRivalPheromones:w.turmiteRivalPheromones?.slice(),
+    turmiteDnaCode:w.turmiteDnaCode?.slice(),
+    turmiteDnaStrength:w.turmiteDnaStrength?.slice(),
     ages:w.ages.slice(),neighbors:w.neighbors.slice(),
     events:w.events.slice(),traces:w.traces.slice(),
     previousCells:w.previousCells?.slice(),olderCells:w.olderCells?.slice(),
@@ -102,6 +104,12 @@ export function createCaptureCursor(source:World,s:SimSettings,fps:number,stepsP
           ((!current.turmiteRivalPheromones&&!next.turmiteRivalPheromones)||
            (!!current.turmiteRivalPheromones&&!!next.turmiteRivalPheromones&&
             equalCells(current.turmiteRivalPheromones,next.turmiteRivalPheromones)))&&
+          ((!current.turmiteDnaCode&&!next.turmiteDnaCode)||
+           (!!current.turmiteDnaCode&&!!next.turmiteDnaCode&&
+            equalCells(current.turmiteDnaCode,next.turmiteDnaCode)))&&
+          ((!current.turmiteDnaStrength&&!next.turmiteDnaStrength)||
+           (!!current.turmiteDnaStrength&&!!next.turmiteDnaStrength&&
+            equalCells(current.turmiteDnaStrength,next.turmiteDnaStrength)))&&
           (!next.grains||!!current.grains&&equalGrains(current.grains,next.grains));
         unchanged=same?unchanged+1:0;
         if(!same)changed=true;
