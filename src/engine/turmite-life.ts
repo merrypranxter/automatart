@@ -112,12 +112,12 @@ export function stepTurmiteLife<T extends LifeAgent>(
    p.energy!-=r.birthCost;
    const childEnergy=r.breeding==='split'?Math.max(1,Math.floor(r.birthCost/2)):
     Math.max(1,r.birthCost);
-   out[slot]={...born,x,y,heading,alive:true,age:0,energy:childEnergy,
+   out[slot]=({...born,x,y,heading,alive:true,age:0,energy:childEnergy,
     // A new oscillator and memory register belong to the CHILD rather
     // than restoring the dead slot's previous identity history.
     ...('memory' in born?{memory:0}:{}),
     ...('rhythmPhase' in born?{rhythmPhase:(slot*73)%256}:{})
-   };
+   }) as T;
    births++;
   }
  }
