@@ -59,6 +59,48 @@ try{
   // Dynamics P1: actual evolution instead of coarse ineffective sliders.
   await page.locator('.transport .primary').click(); // pause before comparing generations
   await page.waitForTimeout(100);
+
+  // Z-FRAME: a persistent, phone-friendly output aspect switch changes
+  // GIF/VIDEO/PNG framing without changing a single actual CA cell.
+  assert.equal(await page.locator('#quick-world-aspect').inputValue(),'square');
+  assert.equal(await page.locator('#quick-export-aspect').inputValue(),'current');
+  const worldGridBefore=await page.locator('.readouts').innerText();
+  await page.locator('#quick-export-aspect').selectOption('portrait');
+  assert.equal(await page.locator('#export-frame-aspect').inputValue(),'portrait');
+  assert.equal(await page.locator('#snapshot-aspect').inputValue(),'portrait');
+  await page.locator('#export-resolution').selectOption('720');
+  await page.waitForFunction(()=>document.querySelector('#export-frame-preview')?.height===426);
+  assert((await page.locator('.capture-specs b').innerText()).includes('720 × 1280'),
+   'Non-destructive 9:16 GIF/video preset displays exact actual output pixels');
+  assert.equal(await page.locator('.readouts').innerText(),worldGridBefore,
+   'Reframing for vertical export must never touch the living CA world');
+  await page.locator('#export-frame-fit').selectOption('cover');
+  assert.equal(await page.locator('#export-frame-preview').getAttribute('height'),'426');
+  assert.equal(await page.locator('#snapshot-aspect').inputValue(),'portrait');
+  assert.equal(await page.locator('#quick-export-aspect').inputValue(),'portrait');
+  await page.locator('#export-frame-fit').selectOption('contain');
+  // Changing ACTUAL simulation aspect modifies neighborhood graph. Guard
+  // this destructive action with explicit, cancellable confirmation.
+  await page.locator('#quick-world-aspect').selectOption('portrait');
+  assert(await page.locator('#confirm-world-aspect').isVisible());
+  assert.equal(await page.locator('#aspect').inputValue(),'portrait');
+  assert.equal(await page.locator('.readouts').innerText(),worldGridBefore,
+   'Merely selecting a new world shape MUST NOT erase/resize artwork');
+  await page.locator('#cancel-world-aspect').click();
+  assert.equal(await page.locator('#quick-world-aspect').inputValue(),'square');
+  assert.equal(await page.locator('.readouts').innerText(),worldGridBefore);
+  await page.locator('#quick-world-aspect').selectOption('portrait');
+  await page.locator('#confirm-world-aspect').click();
+  await page.waitForFunction(()=>document.querySelector('.readouts')?.textContent?.includes('96×171'));
+  assert.equal(await page.locator('#quick-world-aspect').inputValue(),'portrait');
+  assert.equal(await page.locator('#aspect').inputValue(),'portrait');
+  await page.locator('#quick-world-aspect').selectOption('square');
+  await page.locator('#confirm-world-aspect').click();
+  await page.waitForFunction(()=>document.querySelector('.readouts')?.textContent?.includes('96×96'));
+  await page.locator('#export-resolution').selectOption('360');
+  await page.locator('#quick-export-aspect').selectOption('current');
+  assert.equal(await page.locator('#export-frame-aspect').inputValue(),'current');
+  console.log('PASS Z-FRAME: 9:16 export preview, common PNG/GIF/video shape, safe cancel/confirm, genuine portrait lattice');
   assert(await page.locator('#cyclic-reach').isVisible(),'Real chase-field control is available');
   const cyclicGen=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
   await page.locator('#cyclic-reach').fill('3');
