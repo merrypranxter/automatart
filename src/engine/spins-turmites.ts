@@ -331,7 +331,7 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
     a.y<0||a.y>=h||!Number.isInteger(a.heading)||a.heading<0||a.heading>3||
     (a.memory!==undefined&&(!Number.isInteger(a.memory)||a.memory<0||a.memory>23))||
     (a.rhythmPhase!==undefined&&(!Number.isInteger(a.rhythmPhase)||a.rhythmPhase<0||a.rhythmPhase>255))||
-    !validateLifecycleAgent(a)||!validGeneticAgent(a))
+    !validateLifecycleAgent(a)||!validGeneticAgent(a,current.length))
     throw new Error('Invalid Turmite position or heading');
   if(life.enabled&&!lifeIsActive(a)){
    moved.push({...a});
