@@ -2212,6 +2212,100 @@ try{
   assert.deepEqual(t11Replayed.settings.turmiteGeneSpill,t11Stepped.settings.turmiteGeneSpill);
   console.log('PASS T11: four spatial transmission presets, actual same-cell alleles exchanged, saved donor IDs and no-reset replay');
 
+  // T12: an old-world extracellular DNA site really rewrites a visiting ant,
+  // and its lattice is saved, restored, and not modified merely by controls.
+  assert.equal(await page.locator('#turmite-dna-enabled').isChecked(),false);
+  const [t12BeforeDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t12Before=JSON.parse(await readFile(await t12BeforeDownload.path(),'utf8'));
+  await page.locator('#turmite-dna-fossil-bed').click();
+  assert.equal(await page.locator('#turmite-dna-enabled').isChecked(),true);
+  await page.locator('#turmite-dna-spore-storm').click();
+  assert.equal(await page.locator('#turmite-dna-mode').inputValue(),'mutate');
+  assert.equal(await page.locator('#turmite-dna-spread').inputValue(),'8');
+  await page.locator('#turmite-dna-ghost-ink').click();
+  assert.equal(await page.locator('#turmite-dna-locus').inputValue(),'turn');
+  await page.locator('#turmite-dna-bone-memory').click();
+  assert.equal(await page.locator('#turmite-dna-decay').inputValue(),'0');
+  const [t12UnmovedDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t12Unmoved=JSON.parse(await readFile(await t12UnmovedDownload.path(),'utf8'));
+  assert.equal(t12Unmoved.world.generation,t12Before.world.generation);
+  assert.deepEqual(t12Unmoved.world.turmiteAgents,t12Before.world.turmiteAgents);
+  assert.equal(t12Unmoved.world.arrays.cells,t12Before.world.arrays.cells);
+
+  // Import a two-ant physical old-DNA encounter with a single non-neutral
+  // fossil from a previous step. The artist isn't forced to reset.
+  const dnaRecipe=structuredClone(t11Stepped);
+  dnaRecipe.settings.turmiteLife.enabled=false;
+  dnaRecipe.settings.turmiteEvolution.enabled=true;
+  dnaRecipe.settings.turmiteGeneSpill.enabled=false;
+  dnaRecipe.settings.turmiteDnaFossils={
+   enabled:true,deposit:0,decay:0,spread:0,
+   uptake:100,threshold:1,locus:'write',mode:'copy'
+  };
+  dnaRecipe.settings.turmiteSteps=1;
+  const N=dnaRecipe.world.width*dnaRecipe.world.height;
+  const oldDna=new Uint8Array(N),oldStrength=new Uint8Array(N);
+  const hit=3+3*dnaRecipe.world.width;
+  oldDna[hit]=13; // encoded actual WRITE allele +2, 0 remains empty
+  oldStrength[hit]=210;
+  dnaRecipe.world.arrays.turmiteDnaCode=Buffer.from(oldDna).toString('base64');
+  dnaRecipe.world.arrays.turmiteDnaStrength=Buffer.from(oldStrength).toString('base64');
+  dnaRecipe.world.turmiteAgents[0]={
+   ...dnaRecipe.world.turmiteAgents[0],x:3,y:3,heading:0,
+   genome:{turn:0,write:0,metabolism:0,forage:0}
+  };
+  dnaRecipe.world.turmiteAgents[1]={
+   ...dnaRecipe.world.turmiteAgents[1],x:8,y:8,heading:1,
+   genome:{turn:0,write:0,metabolism:0,forage:0}
+  };
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t12-actual-old-dna-recipe.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(dnaRecipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-dna-enabled')?.checked===true&&
+   document.querySelector('#turmite-dna-sites')?.textContent==='1');
+  await page.getByRole('button',{name:'STEP +1'}).click();
+  const [t12TransformedDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t12Transformed=JSON.parse(await readFile(await t12TransformedDownload.path(),'utf8'));
+  assert.equal(t12Transformed.world.generation,dnaRecipe.world.generation+1);
+  assert.equal(t12Transformed.world.turmiteAgents[0].genome.write,2,
+   'A genuinely previously occupied DNA site rewrites the visiting ant');
+  assert.equal(t12Transformed.world.turmiteAgents[0].uptakeCount,1);
+  assert.equal(t12Transformed.world.turmiteAgents[0].uptakeSite,hit);
+  assert.equal(t12Transformed.world.arrays.turmiteDnaCode,
+   dnaRecipe.world.arrays.turmiteDnaCode,'Undisturbed fossil code stays physically saved');
+  assert.equal(t12Transformed.world.arrays.turmiteDnaStrength,
+   dnaRecipe.world.arrays.turmiteDnaStrength,'DNA strength history survives true update');
+  assert.equal(await page.locator('#turmite-dna-matrix [data-dna-count="0"]').innerText(),'1');
+  await page.locator('#turmite-dna-off').click();
+  const [t12OffDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t12Off=JSON.parse(await readFile(await t12OffDownload.path(),'utf8'));
+  assert.equal(t12Off.settings.turmiteDnaFossils.enabled,false);
+  assert.deepEqual(t12Off.world.turmiteAgents,t12Transformed.world.turmiteAgents);
+  assert.equal(t12Off.world.arrays.turmiteDnaCode,t12Transformed.world.arrays.turmiteDnaCode);
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t12-actual-fossils-reload.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(t12Transformed))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-dna-enabled')?.checked===true&&
+   document.querySelector('#turmite-dna-exposures')?.textContent==='1');
+  const [t12RestoredDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t12Restored=JSON.parse(await readFile(await t12RestoredDownload.path(),'utf8'));
+  assert.deepEqual(t12Restored.world.turmiteAgents,t12Transformed.world.turmiteAgents);
+  assert.equal(t12Restored.world.arrays.turmiteDnaCode,t12Transformed.world.arrays.turmiteDnaCode);
+  assert.equal(t12Restored.world.arrays.turmiteDnaStrength,t12Transformed.world.arrays.turmiteDnaStrength);
+  console.log('PASS T12: four live DNA fossil presets, real old-site genetic transformation, conserved frozen field and exact recipe replay');
+
 
 
   await page.locator('#engine').selectOption('life');
