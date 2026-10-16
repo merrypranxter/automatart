@@ -6,7 +6,8 @@ interface Props{settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSett
 export default function TurmiteLifeControls({settings:s,setSettings,world,selectedAgent}:Props){
  const l=s.turmiteLife??DEFAULT_TURMITE_LIFE;
  const agents=world.turmiteAgents??[];
- const living=agents.filter(lifeIsActive).length,dormant=agents.length-living;
+ const living=l.enabled?agents.filter(lifeIsActive).length:agents.length;
+ const dormant=agents.length-living;
  const set=(patch:Partial<TurmiteLife>)=>setSettings(old=>({
   ...old,turmiteLife:{...(old.turmiteLife??DEFAULT_TURMITE_LIFE),...patch}
  }));
@@ -41,7 +42,7 @@ export default function TurmiteLifeControls({settings:s,setSettings,world,select
    <label className="input-label" htmlFor={'turmite-life-'+key}>{label}
     <em>{l[key]}</em></label>
    <input id={'turmite-life-'+key} type="range" min={min} max={max}
-    step={key==='lifespan'?8:1} value={l[key]}
+    step={1} value={l[key]}
     onChange={e=>set({[key]:Number(e.target.value)})}/>
   </div>)}
   <label className="input-label" htmlFor="turmite-life-founders">Founders in NEXT freshly created world
@@ -71,7 +72,7 @@ export default function TurmiteLifeControls({settings:s,setSettings,world,select
     <tbody>{agents.map((agent,i)=><tr key={i} data-life-agent={i}
      aria-selected={selectedAgent===i}>
       <th>#{i+1}</th>
-      <td data-life-status={i}>{lifeIsActive(agent)?'● ALIVE':'○ DORMANT'}</td>
+      <td data-life-status={i}>{!l.enabled||lifeIsActive(agent)?'● ACTIVE':'○ DORMANT'}</td>
       <td data-life-energy={i}>{agent.energy??l.initialEnergy} / 255</td>
       <td data-life-age={i}>{agent.age??0} / {l.lifespan}</td>
       <td>{i%s.turmiteSpeciesCount+1}</td>
