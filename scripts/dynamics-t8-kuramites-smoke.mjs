@@ -55,6 +55,14 @@ try{
   'Attractive sinusoidal Kuramoto coupling synchronizes two quarter-cycle separated oscillators');
  assert.deepEqual(stepRhythmPhases(pair,1,8,8,true,{...syn,coupling:-32}),[224,96],
   'Negative coupling increases, rather than suppresses, phase separation');
+ // Codex P2: JS Math.round has asymmetric negative half ties. In this real
+ // sin-lookup pair, sin(30*2π/256) quantizes to 688/1024, so K=32
+ // produces EXACT 21.5. Both ants must get opposite 22-tick forces.
+ const tie=[{x:3,y:3,rhythmPhase:0},{x:4,y:3,rhythmPhase:30}];
+ assert.deepEqual(stepRhythmPhases(tie,1,8,8,true,syn),[22,8],
+  'Signed half-ticks must cancel exactly, never cause fake global oscillator drift');
+ assert.deepEqual(stepRhythmPhases(tie,1,8,8,true,{...syn,coupling:-32}),[234,52],
+  'Negative K half-ticks must likewise be equal-and-opposite');
  assert.deepEqual(stepRhythmPhases(pair,1,8,8,true,{...syn,radius:1}),[0,64],
   'Physical neighbor radius excludes agents at its exact boundary');
  assert.deepEqual(stepRhythmPhases(pair,1,8,8,true,{...syn,coupling:0}),[0,64],
