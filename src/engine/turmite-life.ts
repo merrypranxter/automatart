@@ -139,6 +139,10 @@ export function stepTurmiteLife<T extends LifeAgent&GeneticAgent>(
    delete (child as T&{transferCount?:number}).transferCount;
    delete (child as T&{transferFrom?:number}).transferFrom;
    delete (child as T&{transferGene?:string}).transferGene;
+   // T12: new baby is NOT the former occupant of the genetic fossil site.
+   delete (child as T&{uptakeCount?:number}).uptakeCount;
+   delete (child as T&{uptakeGene?:string}).uptakeGene;
+   delete (child as T&{uptakeSite?:number}).uptakeSite;
    if(evolution.enabled){
     child.genome=offspringGenome!;
     child.parentId=i;child.depth=Math.min(4096,(p.depth??0)+1);child.brood=0;
