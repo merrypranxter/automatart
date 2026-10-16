@@ -34,6 +34,7 @@ export default function TurmiteGeneticsControls({settings:s,setSettings,world,se
    <div><b id="turmite-genetics-descendants">{actualBorn}</b><span>REGISTERED DESCENDANTS</span></div>
    <div><b id="turmite-genetics-slots">{ants.length}</b><span>STABLE ANT IDENTITIES</span></div>
   </div>
+  <p className="neighborhood-note">With the default 1-ant world or a full 12/12 colony, there are no vacant slots for birth and mutation. Choose 8–12 ant slots and 2 founders, then intentionally start a NEW world to watch lineages diverge. Choosing a preset alone NEVER resets or destroys the current art.</p>
   <p className="neighborhood-note">Mutation happens only after a successful T9 birth into a vacant slot. A parent passes its complete genome to the child, and a seeded event can alter one allele. With T10 OFF, genes stay saved but have zero influence; original T1–T9 math resumes. Founder genomes start neutral: +0 to everything. Enable T9 breeding and leave room for offspring.</p>
   <label className="input-label" htmlFor="turmite-genetics-rate">Birth mutation probability
    <em>{evo.mutationRate}%</em></label>
@@ -54,9 +55,9 @@ export default function TurmiteGeneticsControls({settings:s,setSettings,world,se
   </select>
   <div className="c3-presets">
    <button type="button" id="turmite-genetics-rainbow" onClick={()=>set({
-    enabled:true,mutationRate:100,mutationSize:2,locus:'write'},true)}>🌈 COLOR BLOODLINES</button>
+    enabled:true,mutationRate:100,mutationSize:1,locus:'write'},true)}>🌈 COLOR BLOODLINES</button>
    <button type="button" id="turmite-genetics-maze" onClick={()=>set({
-    enabled:true,mutationRate:100,mutationSize:2,locus:'turn'},true)}>🌀 MUTATING MAZES</button>
+    enabled:true,mutationRate:100,mutationSize:1,locus:'turn'},true)}>🌀 MUTATING MAZES</button>
    <button type="button" id="turmite-genetics-hunger" onClick={()=>set({
     enabled:true,mutationRate:65,mutationSize:1,locus:'all'},true)}>🧫 SURVIVAL OF THE WEIRDEST</button>
    <button type="button" id="turmite-genetics-experiment" onClick={()=>set({
