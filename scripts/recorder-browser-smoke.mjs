@@ -2333,6 +2333,10 @@ try{
   // Run the deliberately destructive real-lattice conversion at the END
   // so legacy recipe/download and GIF tests are unaffected by world reset.
   await page.locator('#engine').selectOption('cyclic');
+  // Earlier geometry tests leave the world on a non-square (possibly
+  // rhombille) lattice. Only a square lattice has exactly 96×171 cell sites
+  // at 9:16; explicitly choose the geometry before asserting those numbers.
+  await page.locator('#lattice').selectOption('square');
   await page.locator('#resolution').fill('96');
   if((await page.locator('.transport .primary').getAttribute('aria-label'))==='Pause simulation')
    await page.locator('.transport .primary').click(); // exact frozen state
