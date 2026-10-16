@@ -422,6 +422,7 @@ export default function App(){
     const undo=undoMutationRef.current;
     if(!undo||recordingRef.current||batchProgress!==null)return;
     cancelBatch();
+    setPendingWorldAspect(null);
     setPlaying(false);
     const restored=cloneWorld(undo.world);
     if(requiresWorldRestart(settings,undo.settings)){
@@ -592,11 +593,13 @@ export default function App(){
     setMargolusDirection(direction);setPlaying(true);
   }
   function restart(){
+    setPendingWorldAspect(null);
     cancelBatch();
     setResetNumber(n=>n+1);
     setMessage('Universe restarted from its exact seed.');
   }
   function randomize(){
+    setPendingWorldAspect(null);
     cancelBatch();
     updateSetting('seed',Math.floor(Math.random()*4294967295));
     setMessage('New seeded universe generated. Keep the seed if you like it.');
@@ -1050,6 +1053,9 @@ export default function App(){
       setAlienBrush(brushLoaded);
       undoMutationRef.current=null;
       pendingWorldRestoreRef.current=restored;
+      // Review P2: a confirmation belongs to the OLD world. Importing
+      // another recipe must invalidate it before that restored world shows.
+      setPendingWorldAspect(null);
       setHasMutationUndo(false);
       setLastMutation(null);
       setPlaying(false);
