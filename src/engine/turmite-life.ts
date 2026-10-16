@@ -3,6 +3,9 @@
  * Birth happens only by filling a dead slot; nobody gets renumbered.
  * All resource reads use the identical old world for the whole microstep.
  */
+import {DEFAULT_TURMITE_EVOLUTION,genomeOf,inheritGenome,validTurmiteEvolution,validGeneticAgent} from './turmite-genetics';
+import type {TurmiteEvolution,GeneticAgent} from './turmite-genetics';
+
 export interface TurmiteLife{
  enabled:boolean;
  founders:number;           // 1..12, only applied when creating a NEW world
@@ -61,14 +64,16 @@ export interface LifeStep{
  * Resource reads use the pre-movement previous cells, A and B; this makes
  * birth/death independent of stable agent iteration order.
  */
-export function stepTurmiteLife<T extends LifeAgent>(
+export function stepTurmiteLife<T extends LifeAgent&GeneticAgent>(
  prior:readonly T[],moved:readonly T[],oldCells:Uint8Array,
  oldA:Uint8Array|undefined,oldB:Uint8Array|undefined,
- w:number,h:number,wrap:boolean,r:TurmiteLife
+ w:number,h:number,wrap:boolean,r:TurmiteLife,
+ evolution:TurmiteEvolution=DEFAULT_TURMITE_EVOLUTION,geneticSeed=0
 ):{agents:T[];stats:LifeStep}{
  if(!validTurmiteLife(r)||prior.length!==moved.length||
   oldCells.length!==w*h||(oldA&&oldA.length!==w*h)||
-  (oldB&&oldB.length!==w*h))throw new Error('Invalid T9 lifecycle lattice');
+  (oldB&&oldB.length!==w*h)||!validTurmiteEvolution(evolution)||
+  !Number.isInteger(geneticSeed))throw new Error('Invalid T9/T10 lifecycle lattice');
  if(!r.enabled)return {agents:moved.map(x=>({...x})),stats:{
   active:moved.filter(lifeIsActive).length,births:0,deaths:0}};
  const wasActive=prior.map(lifeIsActive);
@@ -77,6 +82,7 @@ export function stepTurmiteLife<T extends LifeAgent>(
  for(let i=0;i<prior.length;i++){
   const a=prior[i],next=out[i];
   if(!validateLifecycleAgent(a)||!validateLifecycleAgent(next)||
+   !validGeneticAgent(a)||!validGeneticAgent(next)||
    !Number.isInteger(a.x)||!Number.isInteger(a.y)||
    a.x<0||a.x>=w||a.y<0||a.y>=h)
    throw new Error('Invalid T9 agent state');
@@ -85,9 +91,13 @@ export function stepTurmiteLife<T extends LifeAgent>(
    continue;
   }
   const at=a.y*w+a.x;
-  const food=oldCells[at]>0?r.pigmentFood:0;
+  // True inherited metabolic genes change actual survival efficiency;
+  // all resources are sampled from the same pre-movement physical fields.
+  const genes=evolution.enabled?genomeOf(a):null;
+  const food=oldCells[at]>0?Math.max(0,r.pigmentFood+(genes?.forage??0)*2):0;
   const chemical=Math.floor((oldA?.[at]??0)*r.chemicalFood/255);
-  const energy=Math.min(255,Math.max(0,(a.energy??r.initialEnergy)+food+chemical-r.metabolism));
+  const metabolicCost=Math.max(0,r.metabolism+(genes?.metabolism??0));
+  const energy=Math.min(255,Math.max(0,(a.energy??r.initialEnergy)+food+chemical-metabolicCost));
   const age=(a.age??0)+1;
   next.energy=energy;next.age=age;next.alive=energy>0&&age<r.lifespan;
   if(!next.alive)deaths++;
@@ -109,15 +119,27 @@ export function stepTurmiteLife<T extends LifeAgent>(
    let x=p.x+displacement[heading][0],y=p.y+displacement[heading][1];
    if(wrap){x=(x+w)%w;y=(y+h)%h;}
    else{x=Math.max(0,Math.min(w-1,x));y=Math.max(0,Math.min(h-1,y));}
+   // Inheritance reads the parent's PRE-birth brood counter; increment
+   // only on an actual successful birth. Deterministic across speed modes.
+   const offspringGenome=evolution.enabled?
+    inheritGenome(p,i,slot,geneticSeed,evolution):undefined;
+   if(evolution.enabled)p.brood=Math.min(1e9,(p.brood??0)+1);
    p.energy!-=r.birthCost;
    const childEnergy=r.breeding==='split'?Math.max(1,Math.floor(r.birthCost/2)):
     Math.max(1,r.birthCost);
-   out[slot]=({...born,x,y,heading,alive:true,age:0,energy:childEnergy,
-    // A new oscillator and memory register belong to the CHILD rather
-    // than restoring the dead slot's previous identity history.
+   // Never resurrect a previous occupant's genome or old genealogy.
+   // New children are neutral with T10 bypassed; with it enabled they
+   // inherit their actual current parent's genome and one mutated allele.
+   const child={...born,x,y,heading,alive:true,age:0,energy:childEnergy,
     ...('memory' in born?{memory:0}:{}),
     ...('rhythmPhase' in born?{rhythmPhase:(slot*73)%256}:{})
-   }) as T;
+   } as T;
+   delete child.genome;delete child.parentId;delete child.depth;delete child.brood;
+   if(evolution.enabled){
+    child.genome=offspringGenome!;
+    child.parentId=i;child.depth=Math.min(4096,(p.depth??0)+1);child.brood=0;
+   }
+   out[slot]=child;
    births++;
   }
  }

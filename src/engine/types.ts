@@ -9,6 +9,7 @@ import type {TurmitePheromones} from './turmite-pheromones';
 import type {TurmiteDuet} from './turmite-duet';
 import type {TurmiteRhythm} from './turmite-rhythm';
 import type {TurmiteLife} from './turmite-life';
+import type {TurmiteEvolution} from './turmite-genetics';
 
 export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus' | 'wireworld' | 'sandpile' | 'hodgepodge' | 'forestfire' | 'ising' | 'turmites' | 'hpp';
 export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'maze' | 'mazectric' | 'replicator' | 'diamoeba' | 'coral' | 'amoeba' | 'custom';
@@ -128,6 +129,8 @@ export interface SimSettings {
   turmiteRhythm:TurmiteRhythm;
   /** T9: real age, metabolic resources, life/death and vacant-slot birth. */
   turmiteLife:TurmiteLife;
+  /** T10: genuine heritable rule and fitness mutations at birth. */
+  turmiteEvolution:TurmiteEvolution;
   /** T1: actual 1..8 complete ordered agent substeps per displayed generation. */
   turmiteSteps:number;
   /** T2: N distinct deterministic transition programs, assigned by agent ID. */
@@ -258,6 +261,7 @@ export const INITIAL_SETTINGS: SimSettings = {
    turmiteDuet:{enabled:false,deposit:24,diffusion:4,evaporation:1,reaction:'neutralize',reactionRate:6,navigation:'territories',threshold:2,strength:2},
    turmiteRhythm:{enabled:false,frequency:12,detune:2,coupling:16,radius:12,chemistry:0,mode:'phase',turnBias:1,writeBias:1},
    turmiteLife:{enabled:false,founders:2,initialEnergy:96,metabolism:3,pigmentFood:12,chemicalFood:8,lifespan:256,birthEnergy:125,birthCost:52,breeding:'bud'},
+   turmiteEvolution:{enabled:false,mutationRate:30,mutationSize:1,locus:'all'},
    turmiteSteps:1,turmiteSpeciesCount:1,turmiteSpeciesStride:0,turmiteSpeciesMirror:false,turmiteHeadingShear:0,turmiteContact:'shared',turmiteFormation:'orbit',turmiteCount:1,turmiteBrush:1,
   hppBrush:15,hppTool:'particles'
 };

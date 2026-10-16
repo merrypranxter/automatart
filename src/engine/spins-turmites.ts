@@ -14,13 +14,15 @@ import {DEFAULT_TURMITE_RHYTHM,validTurmiteRhythm,stepRhythmPhases,phaseOf,rhyth
 import type {TurmiteRhythm} from './turmite-rhythm';
 import {DEFAULT_TURMITE_LIFE,validTurmiteLife,lifeIsActive,stepTurmiteLife,validateLifecycleAgent} from './turmite-life';
 import type {TurmiteLife} from './turmite-life';
+import {DEFAULT_TURMITE_EVOLUTION,validTurmiteEvolution,validGeneticAgent,genomeOf} from './turmite-genetics';
+import type {TurmiteEvolution,TurmiteGenome} from './turmite-genetics';
 
 const CARDINAL:readonly (readonly [number,number])[]=[[0,-1],[1,0],[0,1],[-1,0]];
 export interface IsingRule{
  temperature:number; coupling:number; field:number;sweeps:number;
  seed:number;generation:number;
 }
-export interface TurmiteAgent {x:number;y:number;heading:0|1|2|3;memory?:number;rhythmPhase?:number;alive?:boolean;age?:number;energy?:number}
+export interface TurmiteAgent {x:number;y:number;heading:0|1|2|3;memory?:number;rhythmPhase?:number;alive?:boolean;age?:number;energy?:number;genome?:TurmiteGenome;parentId?:number;depth?:number;brood?:number}
 export type TurmiteFormation='orbit'|'stack'|'cross';
 export type TurmiteContact='shared'|'repel';
 export interface TurmiteDynamics{
@@ -288,14 +290,16 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
  duet:TurmiteDuet=DEFAULT_TURMITE_DUET,
  rivalPheromones?:Uint8Array,
  rhythm:TurmiteRhythm=DEFAULT_TURMITE_RHYTHM,
- life:TurmiteLife=DEFAULT_TURMITE_LIFE):TurmiteResult{
+ life:TurmiteLife=DEFAULT_TURMITE_LIFE,
+ evolution:TurmiteEvolution=DEFAULT_TURMITE_EVOLUTION,geneticSeed=0):TurmiteResult{
  if(!validTurmiteRule(rule)||cells.length!==w*h||!agents.length||agents.length>12||
     !Number.isInteger(steps)||steps<1||steps>8||!validTurmiteDynamics(dynamics)||
     !validTurmiteWriteProgram(write)||!validTurmiteAlchemy(alchemy)||
     !validTurmiteMemory(memory)||!validTurmitePheromones(chem)||
     (pheromones!==undefined&&pheromones.length!==w*h)||
     !validTurmiteDuet(duet)||(rivalPheromones!==undefined&&rivalPheromones.length!==w*h)||
-    !validTurmiteRhythm(rhythm)||!validTurmiteLife(life))
+    !validTurmiteRhythm(rhythm)||!validTurmiteLife(life)||
+    !validTurmiteEvolution(evolution)||!Number.isInteger(geneticSeed))
   throw new Error('Invalid Turmite world or rule');
  const next=cells.slice();
  let current=agents.map(a=>({...a}));
@@ -327,7 +331,7 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
     a.y<0||a.y>=h||!Number.isInteger(a.heading)||a.heading<0||a.heading>3||
     (a.memory!==undefined&&(!Number.isInteger(a.memory)||a.memory<0||a.memory>23))||
     (a.rhythmPhase!==undefined&&(!Number.isInteger(a.rhythmPhase)||a.rhythmPhase<0||a.rhythmPhase>255))||
-    !validateLifecycleAgent(a))
+    !validateLifecycleAgent(a)||!validGeneticAgent(a,current.length))
     throw new Error('Invalid Turmite position or heading');
   if(life.enabled&&!lifeIsActive(a)){
    moved.push({...a});
@@ -340,8 +344,10 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
   const species=agentId%dynamics.speciesCount;
   const phase=(a.memory??0)%memory.states;
   const beat=rhythm.enabled?rhythmIndex(phaseOf(a,agentId),rhythm.mode):0;
+  const genes=evolution.enabled?genomeOf(a):null;
   const remembered=memory.enabled?(state+phase*memory.turnBias)%rule.length:state;
-  const lookup=rhythm.enabled?(remembered+beat*rhythm.turnBias)%rule.length:remembered;
+  const rhythmLookup=rhythm.enabled?(remembered+beat*rhythm.turnBias)%rule.length:remembered;
+  const lookup=((rhythmLookup+(genes?.turn??0))%rule.length+rule.length)%rule.length;
   const turn=turmiteTurnAt(rule,lookup,startingHeading,species,dynamics);
   const direction=turn==='R'?1:turn==='L'?3:turn==='U'?2:0;
   let heading=((startingHeading+direction)%4) as 0|1|2|3;
@@ -354,8 +360,9 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
   const base=turmiteAlchemyWriteAt(state,rule.length,species,occupancy.get(p)??1,write,alchemy);
   const rememberedInk=memory.enabled?
    ((base+phase*memory.writeBias)%rule.length+rule.length)%rule.length:base;
-  const pigment=rhythm.enabled?
+  const rhythmicInk=rhythm.enabled?
    ((rememberedInk+beat*rhythm.writeBias)%rule.length+rule.length)%rule.length:rememberedInk;
+  const pigment=((rhythmicInk+(genes?.write??0))%rule.length+rule.length)%rule.length;
   next[p]=pigment;
   const nextMemory=memory.enabled?
    turmiteMemoryAdvance(phase,state,pigment,occupancy.get(p)??1,memory):a.memory;
@@ -372,10 +379,15 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
   if(a.alive!==undefined)movedAgent.alive=a.alive;
   if(a.age!==undefined)movedAgent.age=a.age;
   if(a.energy!==undefined)movedAgent.energy=a.energy;
+  if(a.genome!==undefined)movedAgent.genome={...a.genome};
+  if(a.parentId!==undefined)movedAgent.parentId=a.parentId;
+  if(a.depth!==undefined)movedAgent.depth=a.depth;
+  if(a.brood!==undefined)movedAgent.brood=a.brood;
   moved.push(movedAgent);
  }
  const nextLife=life.enabled?
-  stepTurmiteLife(current,moved,oldLifeCells,field,rival,w,h,wrap,life).agents:moved;
+  stepTurmiteLife(current,moved,oldLifeCells,field,rival,w,h,wrap,life,
+    evolution,geneticSeed).agents:moved;
  if(field&&rival&&duelActive){
   const even:TurmiteAgent[]=[],odd:TurmiteAgent[]=[];
   for(let id=0;id<current.length;id++)

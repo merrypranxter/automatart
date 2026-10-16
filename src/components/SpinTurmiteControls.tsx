@@ -9,6 +9,7 @@ import TurmiteScentControls from './TurmiteScentControls';
 import TurmiteDuetControls from './TurmiteDuetControls';
 import TurmiteRhythmControls from './TurmiteRhythmControls';
 import TurmiteLifeControls from './TurmiteLifeControls';
+import TurmiteGeneticsControls from './TurmiteGeneticsControls';
 import {DEFAULT_TURMITE_RHYTHM,phaseOf,rhythmIndex} from '../engine/turmite-rhythm';
 export interface TurmitePlacement{agentId:number;heading:0|1|2|3}
 interface Props {settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSettings>>;
@@ -455,6 +456,8 @@ export default function SpinTurmiteControls({settings:s,setSettings,world,resetN
   <TurmiteRhythmControls settings={s} setSettings={setSettings} world={world}
    selectedAgent={selectedAgent}/>
   <TurmiteLifeControls settings={s} setSettings={setSettings} world={world}
+   selectedAgent={selectedAgent}/>
+  <TurmiteGeneticsControls settings={s} setSettings={setSettings} world={world}
    selectedAgent={selectedAgent}/>
   <div className="c3-header"><strong>⌖ T3 · PUT AN ANT WHERE YOU WANT IT</strong>
    <span>ONE TAP · NO BRUSH MARKS · NO RESET</span></div>
