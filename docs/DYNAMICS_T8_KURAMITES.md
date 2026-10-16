@@ -40,7 +40,7 @@ Four complete presets:
 - **Phase Choir:** strong positive coupling; group synchrony and ordered mutations.
 - **Rhythm Riot:** negative coupling and species detuning; frustrated ant clocks.
 - **Quantized Pulses:** turning and writing change only as each phase crosses a narrow 1/8 ring window.
-- **Chemical Metronome:** true A−B field changes oscillator frequency and resulting physical behavior.
+- **Chemical Metronome:** enables the genuine T6 chemical field if necessary, without resetting artwork; true A−B field then changes oscillator frequency and resulting physical behavior. T7 B is optional (B=0 when absent).
 
 A live table shows each ant's **actual saved phase, species, and feedback sector**. The Kuramoto order parameter `R=|mean(exp(i*2πP/256))|` shows overall phase coherence: 0 distributed, 1 synchronized. For a single ant R=1 trivially; coupling requires at least two real ants, but the single ant still has genuine intrinsic rhythmic feedback without a forced restart.
 
