@@ -500,6 +500,15 @@ export default function App(){
     }
   },[appearance,activeTab,settings,frameAspect,frameFit]);
 
+  // Keep the renderer and export snapshots honest when ecology is bypassed:
+  // dormant registers are frozen, but those slots really move as T1–T8 ants.
+  useEffect(()=>{
+    if(worldRef.current.engine==='turmites'){
+      worldRef.current.turmiteLifeEnabled=settings.turmiteLife.enabled;
+      draw();
+    }
+  },[settings.turmiteLife.enabled,draw]);
+
   // Any rule-setting edit cancels a pending batch before new math is applied.
   useEffect(()=>{batchTokenRef.current++;setBatchProgress(null);},[settings]);
 
