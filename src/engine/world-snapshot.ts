@@ -113,7 +113,7 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
            agent.memory<0||agent.memory>23))||
           (agent.rhythmPhase!==undefined&&(!Number.isInteger(agent.rhythmPhase)||
            agent.rhythmPhase<0||agent.rhythmPhase>255))||
-          !validateLifecycleAgent(agent)||!validGeneticAgent(agent))
+          !validateLifecycleAgent(agent)||!validGeneticAgent(agent,agents.length))
         throw new Error('Invalid saved Turmite coordinate');
     }
     for(let i=0;i<n;i++)if(world.cells[i]>=settings.turmiteRule.length)
