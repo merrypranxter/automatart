@@ -45,6 +45,11 @@ try{
  write(4,3,'write',2); // E matches the selected actual genome
  write(2,3,'write',-2); // W is hostile to this genotype
  assert.equal(siteNicheFitness(ant,fieldCode,fieldStr,3*7+4,opt).fitness,255);
+ assert.equal(siteNicheFitness(ant,fieldCode,fieldStr,3*7+4,
+  {...opt,enabled:false}).matching,true,
+  'Physical DNA remains genuinely matching even when T13 habitat physics OFF');
+ assert.equal(siteNicheFitness(ant,fieldCode,fieldStr,3*7+4,
+  {...opt,threshold:255}).matching,true);
  assert.equal(siteNicheFitness(ant,fieldCode,fieldStr,3*7+2,opt).fitness,0);
  assert.equal(nicheSteerHeading(ant,3,3,0,7,7,false,fieldCode,fieldStr,opt),1,
   'Actual nearby matched DNA changes true L/R/S/U ant movement to EAST');
@@ -58,6 +63,19 @@ try{
   {...opt,threshold:255}),1,'Threshold is inclusive');
  assert.equal(nicheSteerHeading(ant,3,3,0,7,7,false,fieldCode,fieldStr,
   {...opt,threshold:255,steering:0}),0);
+ // Finite-world edge regression: westward 'escape' at x=0 reflects EAST.
+ // A foreign DNA site to the east cannot be dodged by pretending the
+ // off-grid west cell is neutral, when the north neighbor is actually safe.
+ const edgeCodes=new Uint8Array(49),edgeStrength=new Uint8Array(49);
+ const mark=(x,y,score)=>{edgeCodes[x+y*7]=encodeDnaFragment('write',score);
+  edgeStrength[x+y*7]=255;};
+ mark(1,3,-2);mark(0,4,-2);
+ const atEdge={...ant,x:0,y:3,heading:1};
+ assert.equal(nicheSteerHeading(atEdge,0,3,1,7,7,false,
+  edgeCodes,edgeStrength,{...opt,policy:'avoid-foreign'}),0,
+  'At finite edge, off-grid west scores reflected east danger, chooses safe NORTH');
+ assert.equal(siteNicheFitness(ant,fieldCode,fieldStr,3*7+4,
+  {...opt,threshold:255,enabled:false}).matching,true);
  assert.equal(nicheEnergyAt(ant,3*7+4,fieldCode,fieldStr,opt),24);
  assert.equal(nicheEnergyAt(ant,3*7+2,fieldCode,fieldStr,opt),-20);
  assert.equal(nicheEnergyAt(ant,3*7+4,fieldCode,fieldStr,{...opt,enabled:false}),0);
