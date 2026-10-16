@@ -2306,6 +2306,105 @@ try{
   assert.equal(t12Restored.world.arrays.turmiteDnaStrength,t12Transformed.world.arrays.turmiteDnaStrength);
   console.log('PASS T12: four live DNA fossil presets, real old-site genetic transformation, conserved frozen field and exact recipe replay');
 
+  // T13 physical ecological habitat: controls and presets are non-destructive,
+  // then a seeded actual DNA site boosts only compatible real organism energy.
+  assert.equal(await page.locator('#turmite-niche-enabled').isChecked(),false);
+  const [t13BeforeDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t13Before=JSON.parse(await readFile(await t13BeforeDownload.path(),'utf8'));
+  await page.locator('#turmite-niche-garden').click();
+  assert.equal(await page.locator('#turmite-niche-enabled').isChecked(),true);
+  assert.equal(await page.locator('#turmite-life-enabled').isChecked(),true);
+  assert.equal(await page.locator('#turmite-genetics-enabled').isChecked(),true);
+  assert.equal(await page.locator('#turmite-dna-enabled').isChecked(),true);
+  assert.equal(await page.locator('#turmite-niche-nursery').isChecked(),true);
+  await page.locator('#turmite-niche-invasion').click();
+  assert.equal(await page.locator('#turmite-niche-policy').inputValue(),'novelty');
+  await page.locator('#turmite-niche-immune').click();
+  assert.equal(await page.locator('#turmite-niche-policy').inputValue(),'avoid-foreign');
+  await page.locator('#turmite-niche-cradle').click();
+  assert.equal(await page.locator('#turmite-niche-nutrient').inputValue(),'32');
+  const [t13UnchangedDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t13Unchanged=JSON.parse(await readFile(await t13UnchangedDownload.path(),'utf8'));
+  assert.equal(t13Unchanged.world.generation,t13Before.world.generation);
+  assert.deepEqual(t13Unchanged.world.turmiteAgents,t13Before.world.turmiteAgents);
+  assert.equal(t13Unchanged.world.arrays.cells,t13Before.world.arrays.cells);
+  assert.equal(t13Unchanged.world.arrays.turmiteDnaCode,t13Before.world.arrays.turmiteDnaCode);
+
+  const nicheRecipe=structuredClone(t12Transformed);
+  nicheRecipe.settings.turmiteGeneSpill.enabled=false;
+  nicheRecipe.settings.turmiteEvolution.enabled=true;
+  nicheRecipe.settings.turmiteLife={
+   ...nicheRecipe.settings.turmiteLife,enabled:true,metabolism:0,
+   pigmentFood:0,chemicalFood:0,breeding:'off',lifespan:4096
+  };
+  nicheRecipe.settings.turmiteDnaFossils={
+   ...nicheRecipe.settings.turmiteDnaFossils,enabled:true,
+   deposit:0,decay:0,spread:0,uptake:0,threshold:1
+  };
+  nicheRecipe.settings.turmiteNiches={
+   enabled:true,policy:'kin',tolerance:0,threshold:1,
+   steering:0,nutrient:30,hazard:20,nursery:false
+  };
+  nicheRecipe.settings.turmiteSteps=1;
+  const changedSite=3+3*nicheRecipe.world.width;
+  const dnaCodes=new Uint8Array(nicheRecipe.world.width*nicheRecipe.world.height);
+  const dnaStrength=new Uint8Array(dnaCodes.length);
+  dnaCodes[changedSite]=13; // T12 write-allele +2, genuine matched old fragment
+  dnaStrength[changedSite]=210;
+  nicheRecipe.world.arrays.turmiteDnaCode=Buffer.from(dnaCodes).toString('base64');
+  nicheRecipe.world.arrays.turmiteDnaStrength=Buffer.from(dnaStrength).toString('base64');
+  for(let i=0;i<nicheRecipe.world.turmiteAgents.length;i++){
+   nicheRecipe.world.turmiteAgents[i]={
+    ...nicheRecipe.world.turmiteAgents[i],
+    x:i===0?3:8,y:i===0?3:8,
+    alive:true,age:4,energy:100,
+    genome:{turn:0,write:i===0?2:-2,metabolism:0,forage:0}
+   };
+  }
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t13-real-compatible-niche.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(nicheRecipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-niche-enabled')?.checked===true&&
+   document.querySelector('#turmite-niche-policy')?.value==='kin'&&
+   document.querySelector('#turmite-niche-strength')?.textContent==='210');
+  await page.getByRole('button',{name:'STEP +1'}).click();
+  const [t13NourishedDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t13Nourished=JSON.parse(await readFile(await t13NourishedDownload.path(),'utf8'));
+  assert.equal(t13Nourished.world.generation,nicheRecipe.world.generation+1);
+  assert.equal(t13Nourished.world.turmiteAgents[0].energy,124,
+   'True old-site matched DNA supplies exactly floor(210*30/255) usable energy');
+  assert.equal(t13Nourished.world.turmiteAgents[1].energy,100,
+   'Other ant far from the DNA niche earns no imaginary nutrient');
+  assert.equal(t13Nourished.world.arrays.turmiteDnaCode,nicheRecipe.world.arrays.turmiteDnaCode);
+  await page.locator('#turmite-niche-off').click();
+  const [t13BypassDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t13Bypass=JSON.parse(await readFile(await t13BypassDownload.path(),'utf8'));
+  assert.equal(t13Bypass.settings.turmiteNiches.enabled,false);
+  assert.deepEqual(t13Bypass.world.turmiteAgents,t13Nourished.world.turmiteAgents);
+  assert.equal(t13Bypass.world.arrays.turmiteDnaCode,t13Nourished.world.arrays.turmiteDnaCode);
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t13-genetic-niche-replay.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(t13Nourished))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-niche-enabled')?.checked===true);
+  const [t13RestoredDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t13Restored=JSON.parse(await readFile(await t13RestoredDownload.path(),'utf8'));
+  assert.deepEqual(t13Restored.world.turmiteAgents,t13Nourished.world.turmiteAgents);
+  assert.deepEqual(t13Restored.settings.turmiteNiches,t13Nourished.settings.turmiteNiches);
+  assert.equal(t13Restored.world.arrays.turmiteDnaCode,t13Nourished.world.arrays.turmiteDnaCode);
+  console.log('PASS T13: four ecological presets, truly matched fossil nutrition, non-destructive bypass and exact recipe restore');
+
 
 
   await page.locator('#engine').selectOption('life');
