@@ -2207,7 +2207,8 @@ try{
   // so legacy recipe/download and GIF tests are unaffected by world reset.
   await page.locator('#engine').selectOption('cyclic');
   await page.locator('#resolution').fill('96');
-  await page.locator('.transport .primary').click(); // pause for exact counters
+  if((await page.locator('.transport .primary').getAttribute('aria-label'))==='Pause simulation')
+   await page.locator('.transport .primary').click(); // exact frozen state
   const endWorldGridBefore=await page.locator('.readouts').innerText();
   assert.equal(await page.locator('#quick-world-aspect').inputValue(),'square');
   // Changing ACTUAL simulation aspect modifies neighborhood graph. Guard
