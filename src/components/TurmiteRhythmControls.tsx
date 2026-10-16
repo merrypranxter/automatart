@@ -2,14 +2,18 @@ import type {Dispatch,SetStateAction} from 'react';
 import type {SimSettings,World} from '../engine/types';
 import {DEFAULT_TURMITE_RHYTHM,phaseOf,rhythmIndex,rhythmOrderParameter} from '../engine/turmite-rhythm';
 import type {TurmiteRhythm} from '../engine/turmite-rhythm';
+import {DEFAULT_TURMITE_PHEROMONES} from '../engine/turmite-pheromones';
 
 interface Props{settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSettings>>;world:World;selectedAgent:number}
 export default function TurmiteRhythmControls({settings:s,setSettings,world,selectedAgent}:Props){
  const r=s.turmiteRhythm??DEFAULT_TURMITE_RHYTHM;
  const ants=world.turmiteAgents??[];
  const coherence=rhythmOrderParameter(ants);
- const set=(patch:Partial<TurmiteRhythm>)=>setSettings(old=>({
-  ...old,turmiteRhythm:{...(old.turmiteRhythm??DEFAULT_TURMITE_RHYTHM),...patch}
+ const set=(patch:Partial<TurmiteRhythm>,requiresChemical=false)=>setSettings(old=>({
+  ...old,turmiteRhythm:{...(old.turmiteRhythm??DEFAULT_TURMITE_RHYTHM),...patch},
+  ...(requiresChemical?{turmitePheromoneRules:{
+   ...(old.turmitePheromoneRules??DEFAULT_TURMITE_PHEROMONES),enabled:true
+  }}:{})
  }));
  return <div aria-label="T8 living Kuramite oscillator laboratory">
   <div className="c3-header"><strong>🎛 T8 · KURAMITES</strong>
@@ -62,7 +66,7 @@ export default function TurmiteRhythmControls({settings:s,setSettings,world,sele
    <button id="turmite-rhythm-chemical" type="button" onClick={()=>set({
     enabled:true,frequency:12,detune:4,coupling:18,radius:16,chemistry:16,
     mode:'phase',turnBias:1,writeBias:-2
-   })}>🧪 CHEMICAL METRONOME</button>
+   },true)}>🧪 CHEMICAL METRONOME</button>
    <button id="turmite-rhythm-off" type="button" onClick={()=>set({enabled:false})}>
     ↺ BYPASS T8 · KEEP OSCILLATOR HISTORY</button>
   </div>
@@ -88,6 +92,7 @@ export default function TurmiteRhythmControls({settings:s,setSettings,world,sele
     })}</tbody>
    </table>
   </div>
+  <p className="neighborhood-note">The Chemical Metronome preset also turns on the genuine T6 field without resetting the artwork. A works alone (B=0); with T7 active, the signed A−B field drives each oscillator. The two chemical lattices continue evolving by their own equations.</p>
   <p className="neighborhood-note">The phase table shows actual saved oscillator registers (0–255). Feedback happens after the old T5 memory offset and before T2 heading/species turn selection. T8 OFF preserves original T1–T7 behavior, freezes oscillator registers, and does not reset artwork. Recipe snapshots and video/GIF captures retain exactly these same evolving phases.</p>
  </div>;
 }
