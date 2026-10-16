@@ -18,13 +18,15 @@ import {DEFAULT_TURMITE_EVOLUTION,validTurmiteEvolution,validGeneticAgent,genome
 import type {TurmiteEvolution,TurmiteGenome} from './turmite-genetics';
 import {DEFAULT_TURMITE_GENE_SPILL,validTurmiteGeneSpill,validTransferAgent,stepGeneSpill} from './turmite-gene-spill';
 import type {TurmiteGeneSpill,ExchangeAgent} from './turmite-gene-spill';
+import {DEFAULT_TURMITE_DNA_FOSSILS,validDnaFossilSettings,validDnaFossilAgent,stepDnaFossils} from './turmite-dna-fossils';
+import type {TurmiteDnaFossils,DnaPool,DnaFossilAgent} from './turmite-dna-fossils';
 
 const CARDINAL:readonly (readonly [number,number])[]=[[0,-1],[1,0],[0,1],[-1,0]];
 export interface IsingRule{
  temperature:number; coupling:number; field:number;sweeps:number;
  seed:number;generation:number;
 }
-export interface TurmiteAgent extends ExchangeAgent {x:number;y:number;heading:0|1|2|3;memory?:number;rhythmPhase?:number;alive?:boolean;age?:number;energy?:number;genome?:TurmiteGenome;parentId?:number;depth?:number;brood?:number}
+export interface TurmiteAgent extends ExchangeAgent,DnaFossilAgent {x:number;y:number;heading:0|1|2|3;memory?:number;rhythmPhase?:number;alive?:boolean;age?:number;energy?:number;genome?:TurmiteGenome;parentId?:number;depth?:number;brood?:number}
 export type TurmiteFormation='orbit'|'stack'|'cross';
 export type TurmiteContact='shared'|'repel';
 export interface TurmiteDynamics{
@@ -192,7 +194,7 @@ export function relocateTurmiteAgent(agents:readonly TurmiteAgent[],w:number,h:n
   throw new Error('Invalid T3 Turmite placement');
  return agents.map((a,i)=>i===agentId?{...a,x,y,heading}:{...a});
 }
-export interface TurmiteResult{cells:Uint8Array;agents:TurmiteAgent[];pheromones?:Uint8Array;rivalPheromones?:Uint8Array}
+export interface TurmiteResult{cells:Uint8Array;agents:TurmiteAgent[];pheromones?:Uint8Array;rivalPheromones?:Uint8Array;dnaCode?:Uint8Array;dnaStrength?:Uint8Array}
 const indexAt=(x:number,y:number,w:number,h:number,wrap:boolean):number=>{
  if(wrap){x=(x+w)%w;y=(y+h)%h;}
  else if(x<0||y<0||x>=w||y>=h)return -1;
@@ -294,7 +296,9 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
  rhythm:TurmiteRhythm=DEFAULT_TURMITE_RHYTHM,
  life:TurmiteLife=DEFAULT_TURMITE_LIFE,
  evolution:TurmiteEvolution=DEFAULT_TURMITE_EVOLUTION,geneticSeed=0,
- spill:TurmiteGeneSpill=DEFAULT_TURMITE_GENE_SPILL):TurmiteResult{
+ spill:TurmiteGeneSpill=DEFAULT_TURMITE_GENE_SPILL,
+ dna:TurmiteDnaFossils=DEFAULT_TURMITE_DNA_FOSSILS,
+ dnaCode?:Uint8Array,dnaStrength?:Uint8Array):TurmiteResult{
  if(!validTurmiteRule(rule)||cells.length!==w*h||!agents.length||agents.length>12||
     !Number.isInteger(steps)||steps<1||steps>8||!validTurmiteDynamics(dynamics)||
     !validTurmiteWriteProgram(write)||!validTurmiteAlchemy(alchemy)||
@@ -303,9 +307,12 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
     !validTurmiteDuet(duet)||(rivalPheromones!==undefined&&rivalPheromones.length!==w*h)||
     !validTurmiteRhythm(rhythm)||!validTurmiteLife(life)||
     !validTurmiteEvolution(evolution)||!Number.isInteger(geneticSeed)||
-    !validTurmiteGeneSpill(spill))
+    !validTurmiteGeneSpill(spill)||!validDnaFossilSettings(dna)||
+    ((dnaCode===undefined)!==(dnaStrength===undefined)))
   throw new Error('Invalid Turmite world or rule');
  const next=cells.slice();
+ let environmental:DnaPool|undefined=dnaCode&&dnaStrength?
+  {code:dnaCode.slice(),strength:dnaStrength.slice()}:undefined;
  let current=agents.map(a=>({...a}));
  // Optional independent true Uint8 chemical lattice. Disabled legacy calls
  // never create this field and have identical T1–T5 result shapes.
@@ -316,7 +323,8 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
  for(let substep=0;substep<steps;substep++){
  // Synchronous old-phase read; all coupled rhythms update only AFTER
  // physical T1–T7 decisions. This cannot give later ants future knowledge.
- const oldLifeCells=(life.enabled||(spill.enabled&&evolution.enabled))?next.slice():next;
+ const oldLifeCells=(life.enabled||(spill.enabled&&evolution.enabled)||
+  (dna.enabled&&evolution.enabled))?next.slice():next;
  const nextPhases=rhythm.enabled?stepRhythmPhases(life.enabled?current:
     current.map(a=>({...a,alive:true})),dynamics.speciesCount,
    w,h,wrap,rhythm,field,rival):undefined;
@@ -336,7 +344,8 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
     (a.memory!==undefined&&(!Number.isInteger(a.memory)||a.memory<0||a.memory>23))||
     (a.rhythmPhase!==undefined&&(!Number.isInteger(a.rhythmPhase)||a.rhythmPhase<0||a.rhythmPhase>255))||
     !validateLifecycleAgent(a)||!validGeneticAgent(a,current.length)||
-    !validTransferAgent(a,current.length))
+    !validTransferAgent(a,current.length)||
+    !validDnaFossilAgent(a,w*h))
     throw new Error('Invalid Turmite position or heading');
   if(life.enabled&&!lifeIsActive(a)){
    moved.push({...a});
@@ -391,6 +400,9 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
   if(a.transferCount!==undefined)movedAgent.transferCount=a.transferCount;
   if(a.transferFrom!==undefined)movedAgent.transferFrom=a.transferFrom;
   if(a.transferGene!==undefined)movedAgent.transferGene=a.transferGene;
+  if(a.uptakeCount!==undefined)movedAgent.uptakeCount=a.uptakeCount;
+  if(a.uptakeGene!==undefined)movedAgent.uptakeGene=a.uptakeGene;
+  if(a.uptakeSite!==undefined)movedAgent.uptakeSite=a.uptakeSite;
   moved.push(movedAgent);
  }
  const nextLife=life.enabled?
@@ -401,6 +413,10 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
  const afterExchange=spill.enabled&&evolution.enabled?
   stepGeneSpill(current,nextLife,oldLifeCells,field,w,h,wrap,
     life.enabled,true,spill,geneticSeed).agents:nextLife;
+ const dnaResult=dna.enabled&&evolution.enabled?
+  stepDnaFossils(current,afterExchange,environmental,oldLifeCells,
+   w,h,wrap,life.enabled,true,dna,geneticSeed):undefined;
+ if(dnaResult)environmental=dnaResult.pool;
  if(field&&rival&&duelActive){
   const even:TurmiteAgent[]=[],odd:TurmiteAgent[]=[];
   for(let id=0;id<current.length;id++)
@@ -411,9 +427,10 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
  }else if(field&&chem.enabled)
   field=stepTurmitePheromones(field,w,h,wrap,
    life.enabled?current.filter(lifeIsActive):current,chem);
- current=afterExchange;
+ current=dnaResult?.agents??afterExchange;
  }
  return {cells:next,agents:current,
   ...(field?{pheromones:field}:{}),
-  ...(rival?{rivalPheromones:rival}:{})};
+  ...(rival?{rivalPheromones:rival}:{}),
+  ...(environmental?{dnaCode:environmental.code,dnaStrength:environmental.strength}:{})};
 }
