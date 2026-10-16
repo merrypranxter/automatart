@@ -92,9 +92,9 @@ body{overflow:hidden}
 
 /* panels */
 .deck-panels{grid-area:panels;min-height:0;min-width:0;display:flex;flex-direction:column;border:1px solid #403260;border-radius:16px;background:linear-gradient(115deg,#191431f2,#100d23f0);overflow:hidden}
-.panel{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 14px 22px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin;scrollbar-color:#6e3fa5 transparent}
+.panel{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 14px 22px;display:flex;flex-direction:column;gap:10px;scroll-padding-top:92px;scrollbar-width:thin;scrollbar-color:#6e3fa5 transparent}
 .panel:focus-visible{outline-offset:-3px}
-.panel-head{position:sticky;top:0;z-index:3;margin:0 -14px 2px;padding:13px 14px 10px;background:linear-gradient(105deg,#2a1348f7,#111a38f7);border-bottom:1px solid #644584;backdrop-filter:blur(4px)}
+.panel-head{position:sticky;pointer-events:none;top:0;z-index:3;margin:0 -14px 2px;padding:13px 14px 10px;background:linear-gradient(105deg,#2a1348f7,#111a38f7);border-bottom:1px solid #644584;backdrop-filter:blur(4px)}
 .panel-head h2{margin:0;font:700 17px 'Chakra Petch',monospace;letter-spacing:1px;color:var(--accent)}
 .panel-head p{margin:3px 0 0;font-size:12px;line-height:1.45;color:#cdb8f6}
 .panel>*{flex:0 0 auto}
