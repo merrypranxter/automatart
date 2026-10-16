@@ -351,6 +351,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
     turmiteLifeEnabled:s.engine==='turmites'?s.turmiteLife.enabled:undefined,
     turmitePheromones:nextPheromones?.slice(),
     turmiteRivalPheromones:nextRivalPheromones?.slice(),
+    turmiteDnaCode:nextDnaCode?.slice(),turmiteDnaStrength:nextDnaStrength?.slice(),
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,
     ages:nextAges,neighbors,events,traces:nextTraces,
     previousCells:cells.slice(),
