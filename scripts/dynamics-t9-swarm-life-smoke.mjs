@@ -111,6 +111,10 @@ try{
  for(let i=0;i<18;i++)world=stepWorld(world,settings);
  assert(world.turmiteAgents.some(a=>a.alive===true&&a.age>0),
   'Real moving ecological agents maintain age and nutrient registers');
+ const cursor=createCaptureCursor(world,settings,12,12);
+ const first=stepWorld(world,settings);
+ assert.equal(cursor.advance().changed,true,'Metabolism and aging are real physical changes in recorder');
+ assert.deepEqual(cursor.current.turmiteAgents,first.turmiteAgents);
  const snap=snapshotWorld(world);
  assert.deepEqual(snap.turmiteAgents,world.turmiteAgents);
  let replay=restoreWorldSnapshot(snap,settings);
@@ -122,10 +126,6 @@ try{
   assert.deepEqual(replay.turmitePheromones,world.turmitePheromones);
   assert.deepEqual(replay.turmiteRivalPheromones,world.turmiteRivalPheromones);
  }
- const cursor=createCaptureCursor(world,settings,12,12);
- const next=stepWorld(world,settings);
- assert.deepEqual(cursor.advance().changed,true,'Aging is a real physical change in recorder');
- assert.deepEqual(cursor.current.turmiteAgents,next.turmiteAgents);
  const malformed=structuredClone(snap);
  malformed.turmiteAgents[0].energy=999;
  assert.throws(()=>restoreWorldSnapshot(malformed,settings),/Invalid saved Turmite coordinate/);
