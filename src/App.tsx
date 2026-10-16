@@ -1594,6 +1594,17 @@ export default function App(){
 
         <section className="panel" id="panel-export" role="tabpanel" aria-labelledby="tab-export" tabIndex={0} hidden={activeTab!=='export'}>
           <PanelHead id="export"/>
+          {/* Save/load stays near the TOP so a tall video-framing form cannot
+              bury the user's project backups or make mobile access awkward. */}
+          <div className="group">
+            <h3 className="group-head">RECIPES <small>JSON · rules, colors, real cells, brush</small></h3>
+            <div className="export-grid">
+              <button onClick={saveRecipe} className="export">⇩ SAVE RECIPE</button>
+              <button onClick={()=>loadRef.current?.click()} className="export">⇧ LOAD RECIPE</button>
+              <input className="sr-only" ref={loadRef} type="file" accept=".json,application/json" onChange={loadRecipe}/>
+            </div>
+            <p className="fineprint">A recipe stores the exact living universe, so loading one brings back these very cells, not just the settings.</p>
+          </div>
           <div className="recorder-panel" ref={recorderRef}>
             <div className="recorder-heading"><span>✹ ANIMATION RECORDER</span><span className="recorder-ready">GIF · MP4 / WEBM</span></div>
             <div className="frame-export-controls">
@@ -1771,15 +1782,6 @@ export default function App(){
             </div>}
             <p className="snapshot-advice">Your live world and generation are preserved. Alternate frame shapes center the original artwork with a dark matte instead of stretching or cropping it. On iPhone use SAVE / SHARE after rendering.</p>
           </section>
-          <div className="group">
-            <h3 className="group-head">RECIPES <small>JSON · rules, colors, real cells, brush</small></h3>
-            <div className="export-grid">
-              <button onClick={saveRecipe} className="export">⇩ SAVE RECIPE</button>
-              <button onClick={()=>loadRef.current?.click()} className="export">⇧ LOAD RECIPE</button>
-              <input className="sr-only" ref={loadRef} type="file" accept=".json,application/json" onChange={loadRecipe}/>
-            </div>
-            <p className="fineprint">A recipe stores the exact living universe, so loading one brings back these very cells, not just the settings.</p>
-          </div>
           <footer className="footer">AUTOMATART / CHAOS WITH A REPRODUCIBLE SEED · <a href="https://github.com/merrypranxter/automatart" target="_blank" rel="noreferrer">GITHUB ↗</a></footer>
         </section>
       </div>
