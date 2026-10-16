@@ -5,6 +5,8 @@
  */
 import {DEFAULT_TURMITE_EVOLUTION,genomeOf,inheritGenome,validTurmiteEvolution,validGeneticAgent} from './turmite-genetics';
 import type {TurmiteEvolution,GeneticAgent} from './turmite-genetics';
+import {DEFAULT_TURMITE_NICHES,validTurmiteNiches,nicheEnergyAt,nicheNurseryHeading} from './turmite-niches';
+import type {TurmiteNiches} from './turmite-niches';
 
 export interface TurmiteLife{
  enabled:boolean;
@@ -68,12 +70,18 @@ export function stepTurmiteLife<T extends LifeAgent&GeneticAgent>(
  prior:readonly T[],moved:readonly T[],oldCells:Uint8Array,
  oldA:Uint8Array|undefined,oldB:Uint8Array|undefined,
  w:number,h:number,wrap:boolean,r:TurmiteLife,
- evolution:TurmiteEvolution=DEFAULT_TURMITE_EVOLUTION,geneticSeed=0
+ evolution:TurmiteEvolution=DEFAULT_TURMITE_EVOLUTION,geneticSeed=0,
+ niche:TurmiteNiches=DEFAULT_TURMITE_NICHES,
+ oldDnaCode?:Uint8Array,oldDnaStrength?:Uint8Array
 ):{agents:T[];stats:LifeStep}{
  if(!validTurmiteLife(r)||prior.length!==moved.length||
   oldCells.length!==w*h||(oldA&&oldA.length!==w*h)||
   (oldB&&oldB.length!==w*h)||!validTurmiteEvolution(evolution)||
-  !Number.isInteger(geneticSeed))throw new Error('Invalid T9/T10 lifecycle lattice');
+  !Number.isInteger(geneticSeed)||!validTurmiteNiches(niche)||
+  ((oldDnaCode===undefined)!==(oldDnaStrength===undefined))||
+  (oldDnaCode!==undefined&&oldDnaCode.length!==w*h)||
+  (oldDnaStrength!==undefined&&oldDnaStrength.length!==w*h))
+  throw new Error('Invalid T9/T10/T13 lifecycle lattice');
  if(!r.enabled)return {agents:moved.map(x=>({...x})),stats:{
   active:moved.filter(lifeIsActive).length,births:0,deaths:0}};
  const wasActive=prior.map(lifeIsActive);
@@ -97,7 +105,8 @@ export function stepTurmiteLife<T extends LifeAgent&GeneticAgent>(
   const food=oldCells[at]>0?Math.max(0,r.pigmentFood+(genes?.forage??0)*2):0;
   const chemical=Math.floor((oldA?.[at]??0)*r.chemicalFood/255);
   const metabolicCost=Math.max(0,r.metabolism+(genes?.metabolism??0));
-  const energy=Math.min(255,Math.max(0,(a.energy??r.initialEnergy)+food+chemical-metabolicCost));
+  const ecosystem=nicheEnergyAt(a,at,oldDnaCode,oldDnaStrength,niche);
+  const energy=Math.min(255,Math.max(0,(a.energy??r.initialEnergy)+food+chemical+ecosystem-metabolicCost));
   const age=(a.age??0)+1;
   next.energy=energy;next.age=age;next.alive=energy>0&&age<r.lifespan;
   if(!next.alive)deaths++;
@@ -112,8 +121,10 @@ export function stepTurmiteLife<T extends LifeAgent&GeneticAgent>(
    if(!wasActive[i]||p.alive!==true||p.age!<2||
     p.energy!<r.birthEnergy||p.energy!<=r.birthCost)continue;
    const slot=free.shift()!;
-   const born=out[slot],heading=(r.breeding==='split'?
+   const born=out[slot],baseHeading=(r.breeding==='split'?
     (p.heading+2)%4:p.heading) as 0|1|2|3;
+   const heading=nicheNurseryHeading(p,p.x,p.y,baseHeading,w,h,wrap,
+    oldDnaCode,oldDnaStrength,niche);
    const displacement:[[number,number],[number,number],[number,number],[number,number]]=
     [[0,-1],[1,0],[0,1],[-1,0]];
    let x=p.x+displacement[heading][0],y=p.y+displacement[heading][1];
