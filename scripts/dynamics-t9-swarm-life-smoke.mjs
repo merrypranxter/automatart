@@ -141,6 +141,7 @@ try{
  const legacy={...INITIAL_SETTINGS,engine:'turmites',cellCount:32,turmiteCount:3};
  const worldOld=createWorld(legacy);
  assert(worldOld.turmiteAgents.every(a=>a.energy===undefined&&a.age===undefined&&a.alive===undefined));
+ assert.equal(worldOld.turmiteLifeEnabled,false);
  for(let i=0;i<8;i++)assert.equal(stepWorld(worldOld,legacy).turmiteAgents[0].energy,undefined);
  let checks=0;
  for(const breeding of ['off','bud','split'])
