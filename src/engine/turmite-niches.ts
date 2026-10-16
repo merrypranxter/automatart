@@ -47,10 +47,13 @@ export function siteNicheFitness(
 ):NicheSite{
  const fragment=code&&p>=0?decodeDnaFragment(code[p]):null;
  const value=strength&&p>=0?strength[p]:0;
- if(!fragment||!n.enabled||value<n.threshold)
-  return {code:fragment?code![p]:0,strength:value,matching:false,fitness:0};
+ if(!fragment)return {code:0,strength:value,matching:false,fitness:0};
+ // Genetic compatibility is a FACT of the stored allele, even when
+ // ecological physics is bypassed or the fragment is below threshold.
  const own=genomeOf(a)[fragment.locus];
  const matching=Math.abs(own-fragment.allele)<=n.tolerance;
+ if(!n.enabled||value<n.threshold)
+  return {code:code![p],strength:value,matching,fitness:0};
  let fitness=0;
  if(n.policy==='kin')fitness=matching?value:0;
  else if(n.policy==='novelty')fitness=matching?0:value;
@@ -67,7 +70,13 @@ export function nicheSteerHeading(
  n:TurmiteNiches
 ):0|1|2|3{
  if(!n.enabled||n.steering===0||!code||!strength)return heading;
- const at=(dir:number)=>pos(x+VECTORS[dir][0],y+VECTORS[dir][1],w,h,wrap);
+ // At a finite boundary the actual physics REFLECTS a heading off-grid.
+ // Score that reflected REAL destination, never fictitious off-grid zero
+ // (which would incorrectly attract 'avoid foreign' ants into obstacles).
+ const at=(dir:number)=>{
+  const result=pos(x+VECTORS[dir][0],y+VECTORS[dir][1],w,h,wrap);
+  return result>=0?result:pos(x-VECTORS[dir][0],y-VECTORS[dir][1],w,h,false);
+ };
  const old=siteNicheFitness(a,code,strength,at(heading),n).fitness;
  let best=old,chosen=heading;
  for(let k=1;k<4;k++){
