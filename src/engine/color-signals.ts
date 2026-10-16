@@ -1,6 +1,5 @@
 import type {Appearance,ColorBy,World} from './types';
-import {neighborOffsets} from './topology';
-import {rhombilleCentroid} from './rhombille';
+import {neighborOffsets,cellCentroid} from './topology';
 
 export const NEW_COLOR_SIGNALS:ReadonlyArray<{id:ColorBy;label:string;explanation:string}>= [
   {id:'entropy',label:'Local entropy → mixed-state disorder',explanation:'Normalized Shannon entropy of nearby cell-state frequencies. High where surrounding states are diverse and balanced.'},
@@ -122,9 +121,9 @@ export function computeColorSignal(world:World,a:Appearance,id:ColorBy=a.colorBy
           const p=at(world,x+dx,y+dy);
           if(p<0)continue;
           const change=(cells[p]!==flowPrevious[p]?1:0)+((flowPrevious[p]!==flowOlder[p] ? 0.5*opts.history : 0));
-          if(world.lattice==='rhombille'){
-            const [ox,oy]=rhombilleCentroid(x,y);
-            const [nx,ny]=rhombilleCentroid(x+dx,y+dy);
+          if((world.lattice==='rhombille'||world.lattice==='kagome')){
+            const [ox,oy]=cellCentroid(world.lattice,x,y);
+            const [nx,ny]=cellCentroid(world.lattice,x+dx,y+dy);
             vx+=(nx-ox)*change;vy+=(ny-oy)*change;
           }else{vx+=dx*change;vy+=dy*change;}
           energy+=change;
@@ -164,13 +163,13 @@ export function computeColorSignal(world:World,a:Appearance,id:ColorBy=a.colorBy
       }
       case 'gradient':{
         let dx=0,dy=0;
-        if(world.lattice==='rhombille'){
-          const edges=neighborOffsets('rhombille',x,y,'moore');
-          const [cx,cy]=rhombilleCentroid(x,y);
+        if((world.lattice==='rhombille'||world.lattice==='kagome')){
+          const edges=neighborOffsets(world.lattice,x,y,'moore');
+          const [cx,cy]=cellCentroid(world.lattice,x,y);
           for(const [ex,ey] of edges){
             const p=at(world,x+ex,y+ey);
             if(p<0)continue;
-            const [nx,ny]=rhombilleCentroid(x+ex,y+ey);
+            const [nx,ny]=cellCentroid(world.lattice,x+ex,y+ey);
             const delta=densities![p]-densities![i];
             const length=Math.hypot(nx-cx,ny-cy)||1;
             dx+=(nx-cx)/length*delta;dy+=(ny-cy)/length*delta;

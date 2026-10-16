@@ -75,3 +75,18 @@ The user approved **all** options in the four photographed dropdowns **before** 
 3. Recorder produces multiple distinct actual GIF frames and user-visible save/share control.
 4. Desktop and mobile layout smoke; Safari on-device remains user-assisted.
 5. Clear phase status in README and changelog; no claiming unimplemented wishlist items.
+
+## APPENDED RESEARCH BACKLOG — Weird Guy cellular automata innovations (2026-10-16)
+
+The approved existing work queue is unchanged: D1B Kagome, D1C square–octagon, D2 Penrose, D3 Voronoi, D4 integration, F6 new skins, followed by remaining major milestones. **These are future ideas, NOT shipped features**; see [the full research appendix](WEIRD_GUY_AUTOMATA_RESEARCH_BACKLOG.md).
+
+1. **Temporal Anarchy**: seeded asynchronous updating, real time-brush regions and scheduled local transitions.
+2. **Lenia / Flow Lenia**: continuous-valued fields, multi-ring growth kernels and genuine organic morphogenesis.
+3. **Hyperbolic CA**: actual non-Euclidean Poincaré tiling graph, not fisheye rendering of a square automaton.
+4. **Physarum hybrids**: chemotaxis plus dynamic nutrient, pheromone and reaction-diffusion fields.
+5. **Particle Lenia**: grid-free energy-gradient swarms and species mixing.
+6. **Neural CA**: learned image/texture growth, regenerating wounds, hidden-state scarring and failed healing.
+7. **Audio ↔ CA physics**: sonic signals modulate local rules and real morphology; CA measurements control synthesized sound.
+8. **Living 3D sculptures**: graph CA on deforming 3D surfaces and volumetric CA; raymarching only for presentation.
+
+Original proposed combinations: **Law Painter** (different local laws in painted regions), **Ecosystem Surgery** (intervene in T9–T13 metabolic/genetic fields), and **Evolutionary Specimen Farm** (diversity-driven reproduceable mutation gallery). Preserve MATHEMAGICAL! 9:16/1:1/full frame/export parity, seeded replay, exact classifier labels, high-resolution output and iPhone-friendly compute budgets.
