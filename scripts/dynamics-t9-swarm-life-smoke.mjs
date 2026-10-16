@@ -9,7 +9,8 @@ const files=[
  ['src/engine/types.ts','scripts/.t9-types.mjs'],
  ['src/engine/sim.ts','scripts/.t9-sim.mjs'],
  ['src/engine/world-snapshot.ts','scripts/.t9-snap.mjs'],
- ['src/engine/capture.ts','scripts/.t9-capture.mjs']
+ ['src/engine/capture.ts','scripts/.t9-capture.mjs'],
+ ['src/engine/turmite-rhythm.ts','scripts/.t9-rhythm.mjs']
 ];
 try{
  await Promise.all(files.map(([entry,outfile])=>build({entryPoints:[entry],outfile,
@@ -22,6 +23,13 @@ try{
  const {createWorld,stepWorld}=await load(3);
  const {snapshotWorld,restoreWorldSnapshot}=await load(4);
  const {createCaptureCursor}=await load(5);
+ const {rhythmOrderParameter}=await import(pathToFileURL(resolve('scripts/.t9-rhythm.mjs')).href);
+ const paired=[{x:1,y:1,heading:0,alive:false,rhythmPhase:0},
+  {x:2,y:2,heading:1,alive:true,rhythmPhase:128}];
+ assert(Math.abs(rhythmOrderParameter(paired,true)-1)<1e-12,
+  'T9 ON: the lone living ant is trivially perfectly coherent');
+ assert(Math.abs(rhythmOrderParameter(paired,false))<1e-12,
+  'T9 OFF: both ant clocks are participating and the order includes both');
  const l={...DEFAULT_TURMITE_LIFE,enabled:true,founders:1};
  assert(validTurmiteLife(l));
  for(const patch of [{founders:0},{founders:13},{lifespan:1},{lifespan:4097},
@@ -105,6 +113,7 @@ try{
   turmiteDuet:{...INITIAL_SETTINGS.turmiteDuet,enabled:true}
  };
  let world=createWorld(settings);
+ assert.equal(world.turmiteLifeEnabled,true);
  assert.equal(world.turmiteAgents.length,8);
  assert.equal(world.turmiteAgents.filter(lifeIsActive).length,2);
  assert(world.turmiteAgents.slice(2).every(a=>a.energy===0&&a.alive===false));
@@ -132,6 +141,7 @@ try{
  const legacy={...INITIAL_SETTINGS,engine:'turmites',cellCount:32,turmiteCount:3};
  const worldOld=createWorld(legacy);
  assert(worldOld.turmiteAgents.every(a=>a.energy===undefined&&a.age===undefined&&a.alive===undefined));
+ assert.equal(worldOld.turmiteLifeEnabled,false);
  for(let i=0;i<8;i++)assert.equal(stepWorld(worldOld,legacy).turmiteAgents[0].energy,undefined);
  let checks=0;
  for(const breeding of ['off','bud','split'])

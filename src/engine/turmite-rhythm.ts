@@ -112,8 +112,8 @@ export function stepRhythmPhases(
   return ((next%256)+256)%256;
  });
 }
-export function rhythmOrderParameter(agents:readonly PhaseAgent[]):number{
- const living=agents.map((a,i)=>({a,i})).filter(x=>x.a.alive!==false);
+export function rhythmOrderParameter(agents:readonly PhaseAgent[],lifeEnabled=false):number{
+ const living=agents.map((a,i)=>({a,i})).filter(x=>!lifeEnabled||x.a.alive!==false);
  if(living.length===0)return 0;
  let cosine=0,sine=0;
  for(const {a:agent,i} of living){

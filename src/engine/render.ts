@@ -146,11 +146,12 @@ function renderSquareWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,out
     const headings:readonly (readonly [number,number])[]=[[0,-1],[1,0],[0,1],[-1,0]];
     for(const agent of world.turmiteAgents){
       const px=(agent.x+.5)*sx,py=(agent.y+.5)*sy,r=Math.max(1.5,Math.min(sx,sy)*.43);
-      ctx.fillStyle=agent.alive===false?'#665b83':'#fdff73';
-      ctx.strokeStyle=agent.alive===false?'#c5a6dd':'#111027';
+      const dormant=world.turmiteLifeEnabled===true&&agent.alive===false;
+      ctx.fillStyle=dormant?'#665b83':'#fdff73';
+      ctx.strokeStyle=dormant?'#c5a6dd':'#111027';
       ctx.lineWidth=Math.max(.75,Math.min(sx,sy)*.09);
       ctx.beginPath();ctx.arc(px,py,r,0,2*Math.PI);ctx.fill();ctx.stroke();
-      if(agent.alive!==false){
+      if(!dormant){
        const [dx,dy]=headings[agent.heading];
        ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+dx*r*.82,py+dy*r*.82);ctx.stroke();
       }
