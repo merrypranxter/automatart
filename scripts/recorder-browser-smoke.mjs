@@ -1881,7 +1881,22 @@ try{
   assert.equal(t8Restored.world.arrays.cells,t8Stepped.world.arrays.cells);
   assert.equal(t8Restored.world.arrays.turmitePheromones,t8Stepped.world.arrays.turmitePheromones);
   assert.equal(t8Restored.world.arrays.turmiteRivalPheromones,t8Stepped.world.arrays.turmiteRivalPheromones);
-  console.log('PASS T8: real oscillators, eight sectors, four presets, live no-reset knobs and exact T1–T8 recipe replay');
+  // Codex P2: from a T6-disabled recipe, Chemical Metronome MUST enable
+  // actual source chemistry and not just change an ineffective bias knob.
+  await page.locator('#turmite-scent-enabled').uncheck();
+  assert.equal(await page.locator('#turmite-scent-enabled').isChecked(),false);
+  await page.locator('#turmite-rhythm-chemical').click();
+  assert.equal(await page.locator('#turmite-scent-enabled').isChecked(),true);
+  const [t8ChemDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t8Chem=JSON.parse(await readFile(await t8ChemDownload.path(),'utf8'));
+  assert.equal(t8Chem.settings.turmitePheromoneRules.enabled,true);
+  assert.equal(t8Chem.settings.turmiteRhythm.chemistry,16);
+  assert.equal(t8Chem.world.generation,t8Stepped.world.generation,
+   'Chemical preset enables its real physics input without resetting artwork');
+  assert.deepEqual(t8Chem.world.turmiteAgents,t8Stepped.world.turmiteAgents);
+  console.log('PASS T8: signed 256-state rhythms, corrected T5+T8 lookup, chemical enable, four presets and exact saved phases');
 
 
 
