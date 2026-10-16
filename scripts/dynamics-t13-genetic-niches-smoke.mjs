@@ -118,6 +118,23 @@ try{
   opt,fieldCode,fieldStr);
  assert.deepEqual([nurseryResult.agents[1].x,nurseryResult.agents[1].y],
   [4,3],'True birth goes to an actual adjacent old DNA-matched nursery');
+ // Edge birth regression: a westward off-grid heading is NOT a physical
+ // nursery at x=-1 (which T9 would clamp onto its parent's cell).
+ const edgeNurseryCode=new Uint8Array(49),edgeNurseryStrength=new Uint8Array(49);
+ for(const [x,y,q] of [[1,3,255],[0,2,150],[0,4,200]]){
+  edgeNurseryCode[x+y*7]=encodeDnaFragment('write',-2);
+  edgeNurseryStrength[x+y*7]=q;
+ }
+ assert.equal(nicheNurseryHeading(ant,0,3,3,7,7,false,
+  edgeNurseryCode,edgeNurseryStrength,opt),0,
+  'Finite-edge nursery must pick the least hostile REAL adjacent cell, not imaginary west');
+ const edgeParent=[{...nurseryParent[0],x:0,y:3,heading:3},nurseryParent[1]];
+ const edgeBaby=stepTurmiteLife(edgeParent,edgeParent,
+  new Uint8Array(49),undefined,undefined,7,7,false,fertile,
+  {...INITIAL_SETTINGS.turmiteEvolution,enabled:true},11,
+  opt,edgeNurseryCode,edgeNurseryStrength);
+ assert.deepEqual([edgeBaby.agents[1].x,edgeBaby.agents[1].y],[0,2],
+  'True newborn occupies an in-world adjacent N site, never its parents border cell');
  const traditional=stepTurmiteLife(nurseryParent,nurseryMoved,
   new Uint8Array(49),undefined,undefined,7,7,false,fertile,
   {...INITIAL_SETTINGS.turmiteEvolution,enabled:true},11,
