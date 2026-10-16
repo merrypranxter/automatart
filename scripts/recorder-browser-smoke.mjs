@@ -90,9 +90,15 @@ try{
   await page.locator('#threshold').fill('2');
   assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),cyclicGen,
    'Changing chase dynamics does not reset the running cells');
-  const [cyclicFile]=await Promise.all([
-    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
-  ]);
+  const cyclicDownload=page.waitForEvent('download',{timeout:10000});
+  await page.getByRole('button',{name:'SAVE RECIPE'}).click();
+  console.log('RECIPE SAVE DIAGNOSTICS',JSON.stringify({
+   status:await page.locator('.status-msg').allTextContents().catch(()=>[]),
+   errors:errors.map(String),
+   activeTab:await page.locator('[role="tab"][aria-selected="true"]').allTextContents().catch(()=>[]),
+   world:await page.locator('.readouts').innerText()
+  }));
+  const cyclicFile=await cyclicDownload;
   const tunedCyclic=JSON.parse(await readFile(await cyclicFile.path(),'utf8'));
   assert.equal(tunedCyclic.settings.cyclicReach,3);
   assert.equal(tunedCyclic.settings.cyclicDrive,.0025);
