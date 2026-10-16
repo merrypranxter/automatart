@@ -2040,6 +2040,98 @@ try{
   console.log('PASS T9 review: bypassed dead slots visibly reactivate and count in Kuramoto coherence');
   console.log('PASS T9: live ecological math, four presets, no-reset knobs, real ant energy/age and exact recipe reload');
 
+  // T10: real birth mutation. The UI settings must not touch the existing
+  // actual track before the next ant microstep.
+  assert.equal(await page.locator('#turmite-genetics-enabled').isChecked(),false);
+  const [t10BeforeDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t10Before=JSON.parse(await readFile(await t10BeforeDownload.path(),'utf8'));
+  await page.locator('#turmite-genetics-rainbow').click();
+  assert.equal(await page.locator('#turmite-genetics-enabled').isChecked(),true);
+  assert.equal(await page.locator('#turmite-life-enabled').isChecked(),true);
+  assert.equal(await page.locator('#turmite-genetics-locus').inputValue(),'write');
+  assert.equal(await page.locator('#turmite-genetics-rate').inputValue(),'100');
+  const [t10UnmovedDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t10Unmoved=JSON.parse(await readFile(await t10UnmovedDownload.path(),'utf8'));
+  assert.equal(t10Before.world.generation,t10Unmoved.world.generation);
+  assert.equal(t10Before.world.arrays.cells,t10Unmoved.world.arrays.cells);
+  assert.deepEqual(t10Before.world.turmiteAgents,t10Unmoved.world.turmiteAgents,
+   'Changing real genetic program cannot reset, repaint or kill existing ants');
+  await page.locator('#turmite-genetics-maze').click();
+  assert.equal(await page.locator('#turmite-genetics-locus').inputValue(),'turn');
+  await page.locator('#turmite-genetics-hunger').click();
+  assert.equal(await page.locator('#turmite-genetics-locus').inputValue(),'all');
+  await page.locator('#turmite-genetics-experiment').click();
+  assert.equal(await page.locator('#turmite-genetics-locus').inputValue(),'metabolism');
+
+  // Re-use an actual T9 recipe, but explicitly establish one viable parent
+  // and an old dormant slot to make a new, real genetically mutated infant.
+  const geneticSeed=structuredClone(t9After);
+  geneticSeed.settings.turmiteEvolution={
+    enabled:true,mutationRate:100,mutationSize:1,locus:'write'
+  };
+  geneticSeed.settings.turmiteLife={
+    ...geneticSeed.settings.turmiteLife,enabled:true,breeding:'bud',
+    birthEnergy:100,birthCost:40,metabolism:0,pigmentFood:0,chemicalFood:0,
+    lifespan:4096
+  };
+  geneticSeed.settings.turmiteSteps=1;
+  geneticSeed.world.turmiteAgents[0]={
+    ...geneticSeed.world.turmiteAgents[0],x:3,y:3,heading:0,
+    alive:true,age:10,energy:240
+  };
+  geneticSeed.world.turmiteAgents[1]={
+    ...geneticSeed.world.turmiteAgents[1],x:8,y:8,heading:1,
+    alive:false,age:7,energy:0
+  };
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t10-one-parent-and-vacancy.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(geneticSeed))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-genetics-enabled')?.checked===true&&
+   document.querySelector('#turmite-genetics-rate')?.value==='100'&&
+   document.querySelector('#turmite-life-dormant')?.textContent==='1');
+  await page.getByRole('button',{name:'STEP +1'}).click();
+  const [t10BornDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t10Born=JSON.parse(await readFile(await t10BornDownload.path(),'utf8'));
+  assert.equal(t10Born.world.generation,geneticSeed.world.generation+1);
+  assert.equal(t10Born.world.turmiteAgents[0].brood,1,'Genuine birth increments parent brood counter');
+  const baby=t10Born.world.turmiteAgents[1];
+  assert.equal(baby.parentId,0);
+  assert.equal(baby.depth,1);
+  assert.equal(baby.age,0);
+  assert.equal(baby.alive,true);
+  assert(baby.genome&&baby.genome.write!==0&&baby.genome.turn===0&&
+   baby.genome.metabolism===0&&baby.genome.forage===0,
+   '100% locus-specific mutation creates true heritable stored ink change');
+  assert.equal(await page.locator('#turmite-genetics-diversity').innerText(),'2');
+  assert.equal(await page.locator('#turmite-genetics-matrix [data-genetics-parent="1"]').innerText(),'#1');
+  await page.locator('#turmite-genetics-off').click();
+  const [t10OffDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t10Off=JSON.parse(await readFile(await t10OffDownload.path(),'utf8'));
+  assert.equal(t10Off.settings.turmiteEvolution.enabled,false);
+  assert.deepEqual(t10Off.world.turmiteAgents,t10Born.world.turmiteAgents,
+   'Turning evolution off must freeze, not erase, genuine inherited DNA');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t10-heritable-dna-replay.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(t10Born))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-genetics-enabled')?.checked===true);
+  const [t10RestoredDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t10Restored=JSON.parse(await readFile(await t10RestoredDownload.path(),'utf8'));
+  assert.deepEqual(t10Restored.world.turmiteAgents,t10Born.world.turmiteAgents);
+  assert.deepEqual(t10Restored.settings.turmiteEvolution,t10Born.settings.turmiteEvolution);
+  console.log('PASS T10: 100% locus-specific mutated real baby, exact parent genealogy, four presets, no-reset genetics and replay');
+
 
 
   await page.locator('#engine').selectOption('life');
