@@ -76,6 +76,7 @@ export function createWorld(s:SimSettings):World{
   return {engine:s.engine,lattice:s.lattice,wrap:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,hppWalls,turmiteAgents,
+    turmiteLifeEnabled:s.engine==='turmites'?s.turmiteLife.enabled:undefined,
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,
     turmitePheromones:s.engine==='turmites'&&s.turmitePheromoneRules?.enabled?new Uint8Array(n):undefined,
     turmiteRivalPheromones:s.engine==='turmites'&&s.turmiteDuet?.enabled&&
@@ -341,6 +342,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,stepChanged,stepStructural,waveStimulusCount,margolusEpochs,
     cells:next,grains:nextGrains,hppWalls:prev.hppWalls?.slice(),turmiteAgents:nextAgents?.map(a=>({...a})),
+    turmiteLifeEnabled:s.engine==='turmites'?s.turmiteLife.enabled:undefined,
     turmitePheromones:nextPheromones?.slice(),
     turmiteRivalPheromones:nextRivalPheromones?.slice(),
     turmiteRule:s.engine==='turmites'?s.turmiteRule:undefined,hodgeStates:s.engine==='hodgepodge'?s.hodgeStates:undefined,
