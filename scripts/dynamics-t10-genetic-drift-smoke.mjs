@@ -37,6 +37,8 @@ try {
  assert(!validGeneticAgent({genome:{...NEUTRAL_TURMITE_GENOME,turn:9}}));
  assert(!validGeneticAgent({brood:-1}));
  assert(!validGeneticAgent({parentId:12}));
+ assert(!validGeneticAgent({parentId:11},2),'Cannot claim parent slot #12 in a 2-ant universe');
+ assert(validGeneticAgent({parentId:1},2));
  assert(!validGeneticAgent({depth:4097}));
  assert.deepEqual(genomeOf({}),NEUTRAL_TURMITE_GENOME);
  const parent={genome:{turn:0,write:-1,metabolism:2,forage:-3},brood:7,depth:3};
@@ -115,6 +117,9 @@ try {
  assert.deepEqual(bypassed.agents,old.agents);
  assert.deepEqual(bypassed.cells,old.cells,
   'T10 OFF exactly preserves pre-T10 movement and track even with persisted nonzero genes');
+ assert.equal(genomeDiversity([{genome:NEUTRAL_TURMITE_GENOME,alive:true}],true),1,
+  'One surviving organism is ONE distinct genome');
+ assert.equal(genomeDiversity([{genome:NEUTRAL_TURMITE_GENOME,alive:false}],true),0);
  assert.equal(genomeDiversity([{genome:NEUTRAL_TURMITE_GENOME,alive:true},
   {genome:NEUTRAL_TURMITE_GENOME,alive:false},{genome:{...NEUTRAL_TURMITE_GENOME,turn:1}}],true),2);
  assert.equal(genomeDiversity([{genome:NEUTRAL_TURMITE_GENOME,alive:true},
@@ -154,6 +159,11 @@ try {
  invalid.turmiteAgents[0].genome={...NEUTRAL_TURMITE_GENOME};
  invalid.turmiteAgents[0].parentId=12;
  assert.throws(()=>restoreWorldSnapshot(invalid,cfg),/Invalid saved Turmite coordinate/);
+ invalid.turmiteAgents[0].parentId=11;
+ assert.throws(()=>restoreWorldSnapshot(invalid,cfg),/Invalid saved Turmite coordinate/,
+  'Parent registry ID below 12 but above real capacity 8 must be rejected');
+ invalid.turmiteAgents[0].parentId=7;
+ assert.doesNotThrow(()=>restoreWorldSnapshot(invalid,cfg));
  const legacy={...INITIAL_SETTINGS,engine:'turmites',turmiteCount:3,cellCount:32};
  const plain=createWorld(legacy);
  assert(plain.turmiteAgents.every(a=>a.genome===undefined&&a.brood===undefined));
