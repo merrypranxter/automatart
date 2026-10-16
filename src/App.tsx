@@ -241,6 +241,7 @@ export default function App(){
   const stageRef=useRef<HTMLElement>(null);
   const viewerWrapRef=useRef<HTMLDivElement>(null);
   const exportPreviewRef=useRef<HTMLCanvasElement>(null);
+  const exportScratchRef=useRef<HTMLCanvasElement|null>(null);
   const [viewerFullscreen,setViewerFullscreen]=useState(false);
   const [activeTab,setActiveTab]=useState<TabId>(initialTab);
   const selectTab=(id:TabId)=>{
@@ -484,7 +485,19 @@ export default function App(){
   },[settings.engine,settings.lattice,settings.lifeRule,settings.neighborShape,settings.speciesCount]);
   const draw=useCallback(()=>{
     if(canvasRef.current)renderWorld(canvasRef.current,worldRef.current,appearance,900);
-  },[appearance]);
+    // In-place painting, circuit installation and Turmite placement can
+    // change pixels without advancing generation or changing population.
+    // Keep the output framing preview faithful to the actual live state.
+    if(activeTab==='export'&&!recordingRef.current){
+      const target=exportPreviewRef.current;
+      if(target){
+        const scratch=exportScratchRef.current??document.createElement('canvas');
+        exportScratchRef.current=scratch;
+        renderExportFrame(target,scratch,worldRef.current,appearance,
+          exportFrameLayout(settings,240,frameAspect,frameFit));
+      }
+    }
+  },[appearance,activeTab,settings,frameAspect,frameFit]);
 
   // Any rule-setting edit cancels a pending batch before new math is applied.
   useEffect(()=>{batchTokenRef.current++;setBatchProgress(null);},[settings]);
@@ -494,6 +507,9 @@ export default function App(){
   useEffect(()=>{
     worldRef.current=pendingWorldRestoreRef.current??createWorld(settings);
     pendingWorldRestoreRef.current=null;
+    // Every true world replacement (new engine, seed, lattice, grid, etc.)
+    // invalidates any older destructive shape confirmation.
+    setPendingWorldAspect(null);
     setGeneration(worldRef.current.generation);
     setPopulation(stat(worldRef.current));
   },[settings.engine,settings.cellCount,settings.aspect,settings.seed,
@@ -1142,7 +1158,8 @@ export default function App(){
     if(activeTab!=='export'||capturing)return;
     const target=exportPreviewRef.current;
     if(!target)return;
-    const scratch=document.createElement('canvas');
+    const scratch=exportScratchRef.current??document.createElement('canvas');
+    exportScratchRef.current=scratch;
     // The preview is cheap, but uses the SAME exact framing/render equations
     // as full-res PNG, real GIF Worker frames and frame-perfect WebM.
     const l=exportFrameLayout(settings,240,frameAspect,frameFit);

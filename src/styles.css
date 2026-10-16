@@ -145,7 +145,7 @@ body{overflow:hidden}
 @media (max-width:899px) and (orientation:portrait),(max-width:640px){
   :root{--gap:7px;--stack-h:35vh}
   @supports (height:1dvh){:root{--stack-h:35dvh}}
-  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto minmax(0,1fr);
+  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,42dvh) auto minmax(0,1fr);
     grid-template-areas:"top" "stage" "tabs" "panels";
     padding:max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
   .topbar{flex-wrap:wrap;gap:7px}
@@ -157,13 +157,21 @@ body{overflow:hidden}
   .species-pick{order:3;flex:1 1 100%;padding:3px 4px 3px 10px}
   .species-pick label{display:block;font-size:9px}
   .species-pick select{min-height:38px;font-size:16px}
-  .stage{padding:7px;gap:6px;overflow:visible}
+  /* Constrain the studio stage: new frame selectors must NOT squash the
+     separate scrollable tool drawer below the fold on small phones. */
+  .stage{padding:7px;gap:6px;min-height:0;max-height:42dvh;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
   .stage{position:relative}
   .stage-header{position:absolute;top:13px;right:13px;z-index:4;padding:0}
   .stage-header>div:first-child,.stage-view-actions .live-label{display:none}
   .stage-view-actions button{min-height:30px;padding:4px 8px;background:#0d0820d9}
   .canvas-corner.tr{display:none}
-  .canvas-wrap{flex:0 0 auto;height:var(--stack-h);min-height:150px}
+  /* Artwork leads and remains in view when stage controls scroll. */
+  .canvas-wrap{order:0;position:sticky;top:0;z-index:2;flex:0 0 auto;height:min(26dvh,235px);min-height:110px}
+  .studio-frame-bar{order:1;flex-shrink:0}
+  .frame-confirm{order:2;flex-shrink:0}
+  .stage-bar{order:3;flex-shrink:0}
+  .stage-foot{order:4;flex-shrink:0}
+  .stage-capture-state{order:5;flex-shrink:0}
   .stage-bar{gap:5px}
   .transport{flex:1 1 100%;gap:4px}
   .transport button{min-height:38px;font-size:10px;padding:4px 2px}
@@ -180,7 +188,7 @@ body{overflow:hidden}
   .deck-tabs [role="tab"] i{font-size:17px}
   .deck-tabs .tab-divider{margin:0 8px 0 0}
   .deck-tabs .tab-divider::after{left:auto;right:-6px;top:22%;bottom:22%;border-bottom:0;border-right:1px dashed #4b3873}
-  .panel{padding:0 10px 18px}
+  .panel{padding:0 10px 18px;min-height:0;scroll-padding-top:70px}
   .panel-head{margin:0 -10px 2px;padding:10px 10px 8px}
   .panel-head h2{font-size:15px}.panel-head p{font-size:11px}
   .group{padding:10px}
@@ -832,4 +840,12 @@ body.art-viewer-open{overflow:hidden}
   .studio-frame-bar{gap:4px;padding:5px}
   .studio-frame-bar label{font-size:9px;letter-spacing:0}
   .studio-frame-bar select{font-size:10px}
+}
+
+/* Ensure a genuinely usable tool area on mobile, even when stage contents
+ * include expanded framing controls or a new-universe confirmation. */
+@media (max-width:899px) and (orientation:portrait),(max-width:640px){
+  .deck-panels{min-height:0}
+  .panel{touch-action:pan-y;scrollbar-gutter:stable}
+  .stage{scrollbar-gutter:stable}
 }

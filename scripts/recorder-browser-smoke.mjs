@@ -82,6 +82,21 @@ try{
   await page.locator('#export-resolution').selectOption('360');
   await page.locator('#quick-export-aspect').selectOption('current');
   assert.equal(await page.locator('#export-frame-aspect').inputValue(),'current');
+  // Regression: on a 390×844 phone, the expanded frame bar must not eat
+  // the entire drawer; real touch targets must fit inside its scroll region.
+  const phoneShell=await page.evaluate(()=>{
+    const panel=document.querySelector('#panel-export');
+    const stage=document.querySelector('.stage');
+    const bounds=panel?.getBoundingClientRect();
+    const stageBounds=stage?.getBoundingClientRect();
+    return {height:bounds?.height??0,top:bounds?.top??0,
+      stageHeight:stageBounds?.height??0,viewport:innerHeight,
+      panelScrollable:!!panel&&panel.scrollHeight>panel.clientHeight};
+  });
+  assert(phoneShell.height>=110&&phoneShell.top<phoneShell.viewport,
+   'Mobile tool drawer must remain visibly usable with 9:16 frame controls');
+  assert(phoneShell.stageHeight<=phoneShell.viewport*.45,
+   'Mobile stage must fit its own constrained viewport instead of hiding the tool drawer');
   console.log('PASS Z-FRAME: 9:16 export preview, common PNG/GIF/video shape, safe cancel/confirm, genuine portrait lattice');
   assert(await page.locator('#cyclic-reach').isVisible(),'Real chase-field control is available');
   const cyclicGen=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
@@ -2318,6 +2333,10 @@ try{
   // Run the deliberately destructive real-lattice conversion at the END
   // so legacy recipe/download and GIF tests are unaffected by world reset.
   await page.locator('#engine').selectOption('cyclic');
+  // Earlier geometry tests leave the world on a non-square (possibly
+  // rhombille) lattice. Only a square lattice has exactly 96×171 cell sites
+  // at 9:16; explicitly choose the geometry before asserting those numbers.
+  await page.locator('#lattice').selectOption('square');
   await page.locator('#resolution').fill('96');
   if((await page.locator('.transport .primary').getAttribute('aria-label'))==='Pause simulation')
    await page.locator('.transport .primary').click(); // exact frozen state
@@ -2363,7 +2382,34 @@ try{
    'Re-import must restore original generation, not act on old world confirmation');
   assert.equal(await page.locator('#confirm-world-aspect').count(),0,
    'Old destructive confirmation cannot act on freshly imported artwork');
-  console.log('PASS Z-FRAME: genuine tall cellular world and safe aspect-confirm cancellation/recipe import');
+  // Any other structural world regeneration invalidates an armed resize.
+  await page.locator('#quick-world-aspect').selectOption('portrait');
+  assert(await page.locator('#confirm-world-aspect').isVisible());
+  await page.locator('#resolution').fill('112');
+  await page.waitForFunction(()=>document.querySelector('.readouts')?.textContent?.includes('112×112')&&
+   !document.querySelector('#confirm-world-aspect'));
+  assert.equal(await page.locator('#quick-world-aspect').inputValue(),'square');
+  await page.locator('#resolution').fill('96');
+  await page.waitForFunction(()=>document.querySelector('.readouts')?.textContent?.includes('96×96'));
+
+  // While paused, painting does NOT advance generation or guarantee a
+  // population-count change. It still must refresh the actual output preview.
+  await openTab(page,'export');
+  const paintGeneration=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
+  const previewBefore=await page.evaluate(()=>
+    document.querySelector('#export-frame-preview').toDataURL());
+  await page.locator('[aria-label="Quick brush mode: paint"]').click();
+  const paintingCanvas=page.locator('canvas[aria-label^="Interactive cellular automata canvas"]');
+  const paintingBounds=await paintingCanvas.boundingBox();
+  assert(paintingBounds&&paintingBounds.width>0);
+  await paintingCanvas.click({position:{x:paintingBounds.width*.49,y:paintingBounds.height*.52}});
+  const previewAfter=await page.evaluate(()=>
+    document.querySelector('#export-frame-preview').toDataURL());
+  assert.notEqual(previewAfter,previewBefore,
+    'Paused in-place paint must refresh true 9:16/1:1 export preview without any generation advance');
+  assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),
+    paintGeneration,'Paint never advances or resets mathematical generation');
+  console.log('PASS Z-FRAME: tall world, guarded restores/rebuilds, paint-refresh preview and usable phone drawer');
 
 
 }finally{
