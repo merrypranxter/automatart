@@ -44,8 +44,8 @@ The entire old physical lattice is sampled consistently before sequential paint 
 ## LIVE artist controls
 
 - Enable genetics, probability 0–100%, magnitude 1–3, and locus: all/turn/write/metabolism/forage
-- **Color Bloodlines:** every child mutates actual physical pigment writing, +/-2
-- **Mutating Mazes:** every child mutates actual L/R/S/U rule lookup, +/-2
+- **Color Bloodlines:** every child mutates actual physical pigment writing, +/-1 (visible even with default 2-state rules)
+- **Mutating Mazes:** every child mutates actual L/R/S/U rule lookup, +/-1 (visible even with default 2-state rules)
 - **Survival of the Weirdest:** 65% mutation anywhere, selection by true local resource / reproduction
 - **Slow Adaptation:** low probability metabolism-only drift
 - Per-ant matrix: registry ID, depth, parent ID, real alleles for all four traits, birth-descendant and live-genome diversity count
