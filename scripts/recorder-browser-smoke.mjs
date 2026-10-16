@@ -79,24 +79,6 @@ try{
   assert.equal(await page.locator('#snapshot-aspect').inputValue(),'portrait');
   assert.equal(await page.locator('#quick-export-aspect').inputValue(),'portrait');
   await page.locator('#export-frame-fit').selectOption('contain');
-  // Changing ACTUAL simulation aspect modifies neighborhood graph. Guard
-  // this destructive action with explicit, cancellable confirmation.
-  await page.locator('#quick-world-aspect').selectOption('portrait');
-  assert(await page.locator('#confirm-world-aspect').isVisible());
-  assert.equal(await page.locator('#aspect').inputValue(),'portrait');
-  assert.equal(await page.locator('.readouts').innerText(),worldGridBefore,
-   'Merely selecting a new world shape MUST NOT erase/resize artwork');
-  await page.locator('#cancel-world-aspect').click();
-  assert.equal(await page.locator('#quick-world-aspect').inputValue(),'square');
-  assert.equal(await page.locator('.readouts').innerText(),worldGridBefore);
-  await page.locator('#quick-world-aspect').selectOption('portrait');
-  await page.locator('#confirm-world-aspect').click();
-  await page.waitForFunction(()=>document.querySelector('.readouts')?.textContent?.includes('96×171'));
-  assert.equal(await page.locator('#quick-world-aspect').inputValue(),'portrait');
-  assert.equal(await page.locator('#aspect').inputValue(),'portrait');
-  await page.locator('#quick-world-aspect').selectOption('square');
-  await page.locator('#confirm-world-aspect').click();
-  await page.waitForFunction(()=>document.querySelector('.readouts')?.textContent?.includes('96×96'));
   await page.locator('#export-resolution').selectOption('360');
   await page.locator('#quick-export-aspect').selectOption('current');
   assert.equal(await page.locator('#export-frame-aspect').inputValue(),'current');
@@ -2221,6 +2203,37 @@ try{
   assert.equal(await page.locator('.stage-capture-success').count(),0,'X dismisses sticky export banner');
   assert.equal(await page.locator('.finished-export').count(),0,'X also removes finished preview from controls');
   console.log('PASS: 10 engines, 3 lattices, 7 skins, 10 NEW color signals, local GIF palettes and export dismissal');
+  // Run the deliberately destructive real-lattice conversion at the END
+  // so legacy recipe/download and GIF tests are unaffected by world reset.
+  await page.locator('#engine').selectOption('cyclic');
+  await page.locator('#resolution').fill('96');
+  await page.locator('.transport .primary').click(); // pause for exact counters
+  const endWorldGridBefore=await page.locator('.readouts').innerText();
+  assert.equal(await page.locator('#quick-world-aspect').inputValue(),'square');
+  // Changing ACTUAL simulation aspect modifies neighborhood graph. Guard
+  // this destructive action with explicit, cancellable confirmation.
+  await page.locator('#quick-world-aspect').selectOption('portrait');
+  assert(await page.locator('#confirm-world-aspect').isVisible());
+  assert.equal(await page.locator('#aspect').inputValue(),'portrait');
+  assert.equal(await page.locator('.readouts').innerText(),endWorldGridBefore,
+   'Merely selecting a new world shape MUST NOT erase/resize artwork');
+  await page.locator('#cancel-world-aspect').click();
+  assert.equal(await page.locator('#quick-world-aspect').inputValue(),'square');
+  assert.equal(await page.locator('.readouts').innerText(),endWorldGridBefore);
+  await page.locator('#quick-world-aspect').selectOption('portrait');
+  await page.locator('#confirm-world-aspect').click();
+  await page.waitForFunction(()=>document.querySelector('.readouts')?.textContent?.includes('96×171'));
+  assert.equal(await page.locator('#quick-world-aspect').inputValue(),'portrait');
+  assert.equal(await page.locator('#aspect').inputValue(),'portrait');
+  await page.locator('#quick-world-aspect').selectOption('square');
+  await page.locator('#confirm-world-aspect').click();
+  await page.waitForFunction(()=>document.querySelector('.readouts')?.textContent?.includes('96×96'));
+  await page.locator('#export-resolution').selectOption('360');
+  await page.locator('#quick-export-aspect').selectOption('current');
+  assert.equal(await page.locator('#export-frame-aspect').inputValue(),'current');
+
+  console.log('PASS Z-FRAME: confirmed real vertical lattice reset at end of Chromium suite, cancel preserved state');
+
 }finally{
   await browser?.close();
   server.kill('SIGTERM');
