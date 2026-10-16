@@ -201,6 +201,8 @@ export interface World {
   hodgeStates?:number;
   /** Saved agent coordinates and headings are part of the Turmite world. */
   turmiteAgents?:TurmiteAgent[];
+  /** Runtime mode metadata for honest living/dormant rendering, not biology. */
+  turmiteLifeEnabled?:boolean;
   /** Actual 8-bit physical scent field, independent of painted track. */
   turmitePheromones?:Uint8Array;
   turmiteRivalPheromones?:Uint8Array;
