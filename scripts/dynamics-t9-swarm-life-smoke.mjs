@@ -113,6 +113,7 @@ try{
   turmiteDuet:{...INITIAL_SETTINGS.turmiteDuet,enabled:true}
  };
  let world=createWorld(settings);
+ assert.equal(world.turmiteLifeEnabled,true);
  assert.equal(world.turmiteAgents.length,8);
  assert.equal(world.turmiteAgents.filter(lifeIsActive).length,2);
  assert(world.turmiteAgents.slice(2).every(a=>a.energy===0&&a.alive===false));
