@@ -2008,6 +2008,32 @@ try{
   assert.deepEqual(t9Loaded.settings.turmiteLife,t9After.settings.turmiteLife);
   assert.deepEqual(t9Loaded.world.turmiteAgents,t9After.world.turmiteAgents);
   assert.equal(t9Loaded.world.arrays.cells,t9After.world.arrays.cells);
+  // Reviewed T9 bypass: after death, toggling life OFF must reactivate
+  // every slot in both real T8 phase coherence and visible agent markers.
+  const bypassRecipe=structuredClone(t9After);
+  assert(bypassRecipe.world.turmiteAgents.length>=2);
+  bypassRecipe.world.turmiteAgents[0].alive=false;
+  bypassRecipe.world.turmiteAgents[0].energy=0;
+  bypassRecipe.world.turmiteAgents[0].rhythmPhase=0;
+  bypassRecipe.world.turmiteAgents[1].alive=true;
+  bypassRecipe.world.turmiteAgents[1].rhythmPhase=128;
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t9-bypass-two-clocks.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(bypassRecipe))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-life-dormant')?.textContent==='1'&&
+   document.querySelector('#turmite-rhythm-order')?.textContent==='1.000');
+  const lifeCanvas=page.locator('canvas[aria-label^="Interactive cellular automata canvas"]');
+  const withLife=await lifeCanvas.evaluate(c=>c.toDataURL());
+  await page.locator('#turmite-life-off').click();
+  await page.waitForFunction(()=>document.querySelector('#turmite-life-living')?.textContent==='2'&&
+   document.querySelector('#turmite-rhythm-order')?.textContent==='0.000');
+  const bypassCanvas=await lifeCanvas.evaluate(c=>c.toDataURL());
+  assert.notEqual(bypassCanvas,withLife,
+   'Bypassed formerly dormant ant must render with active marker and heading again');
+  assert.equal(await page.locator('#turmite-life-matrix [data-life-status="0"]').innerText(),
+   '● ACTIVE');
+  console.log('PASS T9 review: bypassed dead slots visibly reactivate and count in Kuramoto coherence');
   console.log('PASS T9: live ecological math, four presets, no-reset knobs, real ant energy/age and exact recipe reload');
 
 
