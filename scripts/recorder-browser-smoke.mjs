@@ -90,14 +90,14 @@ try{
   await page.locator('#threshold').fill('2');
   assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),cyclicGen,
    'Changing chase dynamics does not reset the running cells');
-  const cyclicDownload=page.waitForEvent('download',{timeout:10000});
-  await page.getByRole('button',{name:'SAVE RECIPE'}).click();
-  console.log('RECIPE SAVE DIAGNOSTICS',JSON.stringify({
-   status:await page.locator('.status-msg').allTextContents().catch(()=>[]),
-   errors:errors.map(String),
-   activeTab:await page.locator('[role="tab"][aria-selected="true"]').allTextContents().catch(()=>[]),
-   world:await page.locator('.readouts').innerText()
-  }));
+  // The framed preview makes the export drawer substantially taller.
+  // A real user opens that panel and scrolls to Recipes; do likewise
+  // explicitly before expecting a trusted browser download event.
+  await openTab(page,'export');
+  const saveRecipeButton=page.getByRole('button',{name:'SAVE RECIPE'});
+  await saveRecipeButton.scrollIntoViewIfNeeded({timeout:12000});
+  const cyclicDownload=page.waitForEvent('download',{timeout:20000});
+  await saveRecipeButton.click({timeout:12000});
   const cyclicFile=await cyclicDownload;
   const tunedCyclic=JSON.parse(await readFile(await cyclicFile.path(),'utf8'));
   assert.equal(tunedCyclic.settings.cyclicReach,3);
