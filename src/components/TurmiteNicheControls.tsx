@@ -87,6 +87,8 @@ export default function TurmiteNicheControls({settings:s,setSettings,world,selec
   </div>
   <p className="fineprint" id="turmite-niche-fragment">At ant #{selectedAgent+1}: {currentFragment?
    currentFragment.locus.toUpperCase()+' = '+currentFragment.allele:'No DNA fragment present'}.
+   {site&&site.code&&(!n.enabled||site.strength<n.threshold)?' This fragment is genetically '+
+    (site.matching?'compatible':'different')+' but ecological effects are inactive at this strength.':''}
    Steering reads the four neighboring OLD sites, while energy uses the ant's current OLD site. Genetics affect reproduction via survival and nursery placement.</p>
   <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:4}}
    id="turmite-niche-compass">
