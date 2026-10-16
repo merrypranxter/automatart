@@ -3,6 +3,7 @@ import {worldDimensions} from './types';
 import {createWorld} from './sim';
 import {validTurmiteRule,normalizeTurmiteAgentMemories,DEFAULT_TURMITE_MEMORY} from './spins-turmites';
 import type {TurmiteAgent} from './spins-turmites';
+import {validateLifecycleAgent} from './turmite-life';
 import type {MargolusEpoch} from './margolus-rules';
 import {validMargolusEpochs} from './margolus-rules';
 
@@ -110,7 +111,8 @@ export function restoreWorldSnapshot(value:unknown,settings:SimSettings):World{
           (agent.memory!==undefined&&(!Number.isInteger(agent.memory)||
            agent.memory<0||agent.memory>23))||
           (agent.rhythmPhase!==undefined&&(!Number.isInteger(agent.rhythmPhase)||
-           agent.rhythmPhase<0||agent.rhythmPhase>255)))
+           agent.rhythmPhase<0||agent.rhythmPhase>255))||
+          !validateLifecycleAgent(agent))
         throw new Error('Invalid saved Turmite coordinate');
     }
     for(let i=0;i<n;i++)if(world.cells[i]>=settings.turmiteRule.length)
