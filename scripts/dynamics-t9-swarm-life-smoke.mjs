@@ -9,7 +9,8 @@ const files=[
  ['src/engine/types.ts','scripts/.t9-types.mjs'],
  ['src/engine/sim.ts','scripts/.t9-sim.mjs'],
  ['src/engine/world-snapshot.ts','scripts/.t9-snap.mjs'],
- ['src/engine/capture.ts','scripts/.t9-capture.mjs']
+ ['src/engine/capture.ts','scripts/.t9-capture.mjs'],
+ ['src/engine/turmite-rhythm.ts','scripts/.t9-rhythm.mjs']
 ];
 try{
  await Promise.all(files.map(([entry,outfile])=>build({entryPoints:[entry],outfile,
