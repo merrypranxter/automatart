@@ -88,7 +88,7 @@ export function stepGeneSpill<T extends ExchangeAgent>(
   if((lifeEnabled&&(recipient.alive===false||next.alive===false))||
    // A newborn from a formerly vacant slot cannot take part in its birth
    // microstep, even when placed adjacent to the parent.
-   (recipient.alive===false&&next.alive===true))continue;
+   (lifeEnabled&&recipient.alive===false&&next.alive===true))continue;
   const p=recipient.y*w+recipient.x;
   if(settings.gate==='pigment'&&oldCells[p]===0)continue;
   if(settings.gate==='scent'&&(!oldA||oldA[p]<settings.threshold))continue;
