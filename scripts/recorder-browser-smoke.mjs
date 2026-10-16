@@ -1948,6 +1948,68 @@ try{
   assert.deepEqual(t8Chem.world.turmiteAgents,t8Stepped.world.turmiteAgents);
   console.log('PASS T8: signed 256-state rhythms, corrected T5+T8 lookup, chemical enable, four presets and exact saved phases');
 
+  // T9 physical ecology: preset and controls never reset living art.
+  // Existing one-ant snapshots still load with a legacy unaged founder.
+  const [t9BeforeDownload]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t9Before=JSON.parse(await readFile(await t9BeforeDownload.path(),'utf8'));
+  assert.equal(await page.locator('#turmite-life-enabled').isChecked(),false);
+  await page.locator('#turmite-life-garden').click();
+  assert.equal(await page.locator('#turmite-life-enabled').isChecked(),true);
+  await page.locator('#turmite-life-metabolism').fill('8');
+  await page.locator('#turmite-life-pigmentFood').fill('18');
+  await page.locator('#turmite-life-chemicalFood').fill('9');
+  await page.locator('#turmite-life-birthEnergy').fill('100');
+  await page.locator('#turmite-life-birthCost').fill('40');
+  const [t9EditedDownload]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t9Edited=JSON.parse(await readFile(await t9EditedDownload.path(),'utf8'));
+  assert.equal(t9Edited.world.generation,t9Before.world.generation);
+  assert.equal(t9Edited.world.arrays.cells,t9Before.world.arrays.cells);
+  assert.deepEqual(t9Edited.world.turmiteAgents,t9Before.world.turmiteAgents,
+   'Changing T9 biology cannot delete, move or reset original art');
+  assert.equal(t9Edited.settings.turmiteLife.metabolism,8);
+  await page.getByRole('button',{name:'STEP +1'}).click();
+  const [t9AfterDownload]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t9After=JSON.parse(await readFile(await t9AfterDownload.path(),'utf8'));
+  assert.equal(t9After.world.generation,t9Edited.world.generation+1);
+  assert(t9After.world.turmiteAgents.every(a=>typeof a.alive==='boolean'&&
+    Number.isInteger(a.age)&&Number.isInteger(a.energy)));
+  assert.equal(await page.locator('#turmite-life-matrix [data-life-status]').count(),
+    t9After.world.turmiteAgents.length);
+  await page.locator('#turmite-life-famine').click();
+  assert.equal(await page.locator('#turmite-life-breeding').inputValue(),'off');
+  await page.locator('#turmite-life-parasites').click();
+  assert.equal(await page.locator('#turmite-life-breeding').inputValue(),'split');
+  await page.locator('#turmite-life-fossils').click();
+  assert.equal(await page.locator('#turmite-life-metabolism').inputValue(),'0');
+  await page.locator('#turmite-life-off').click();
+  const [t9FrozenDownload]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t9Frozen=JSON.parse(await readFile(await t9FrozenDownload.path(),'utf8'));
+  assert.equal(t9Frozen.settings.turmiteLife.enabled,false);
+  assert.deepEqual(t9Frozen.world.turmiteAgents,t9After.world.turmiteAgents,
+   'Bypassing T9 must retain all saved life registers for re-enabling');
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'t9-swarm-life.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(t9After))
+  });
+  await page.waitForFunction(()=>document.querySelector('#turmite-life-enabled')?.checked===true&&
+   document.querySelector('#turmite-life-metabolism')?.value==='8');
+  const [t9LoadedDownload]=await Promise.all([
+    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const t9Loaded=JSON.parse(await readFile(await t9LoadedDownload.path(),'utf8'));
+  assert.deepEqual(t9Loaded.settings.turmiteLife,t9After.settings.turmiteLife);
+  assert.deepEqual(t9Loaded.world.turmiteAgents,t9After.world.turmiteAgents);
+  assert.equal(t9Loaded.world.arrays.cells,t9After.world.arrays.cells);
+  console.log('PASS T9: live ecological math, four presets, no-reset knobs, real ant energy/age and exact recipe reload');
+
 
 
   await page.locator('#engine').selectOption('life');
