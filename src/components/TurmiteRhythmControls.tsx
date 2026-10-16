@@ -8,7 +8,7 @@ interface Props{settings:SimSettings;setSettings:Dispatch<SetStateAction<SimSett
 export default function TurmiteRhythmControls({settings:s,setSettings,world,selectedAgent}:Props){
  const r=s.turmiteRhythm??DEFAULT_TURMITE_RHYTHM;
  const ants=world.turmiteAgents??[];
- const coherence=rhythmOrderParameter(ants);
+ const coherence=rhythmOrderParameter(ants,s.turmiteLife?.enabled??false);
  const set=(patch:Partial<TurmiteRhythm>,requiresChemical=false)=>setSettings(old=>({
   ...old,turmiteRhythm:{...(old.turmiteRhythm??DEFAULT_TURMITE_RHYTHM),...patch},
   ...(requiresChemical?{turmitePheromoneRules:{
