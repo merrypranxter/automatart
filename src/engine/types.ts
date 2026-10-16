@@ -12,6 +12,7 @@ import type {TurmiteLife} from './turmite-life';
 import type {TurmiteEvolution} from './turmite-genetics';
 import type {TurmiteGeneSpill} from './turmite-gene-spill';
 import type {TurmiteDnaFossils} from './turmite-dna-fossils';
+import type {TurmiteNiches} from './turmite-niches';
 
 export type EngineId = 'life' | 'brians' | 'cyclic' | 'wolfram' | 'generations' | 'excitable' | 'larger' | 'species' | 'oriented' | 'margolus' | 'wireworld' | 'sandpile' | 'hodgepodge' | 'forestfire' | 'ising' | 'turmites' | 'hpp';
 export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'maze' | 'mazectric' | 'replicator' | 'diamoeba' | 'coral' | 'amoeba' | 'custom';
@@ -137,6 +138,8 @@ export interface SimSettings {
   turmiteGeneSpill:TurmiteGeneSpill;
   /** T12: a persistent actual environmental pool of encoded inherited DNA. */
   turmiteDnaFossils:TurmiteDnaFossils;
+  /** T13: genuine DNA landscape-driven movement, metabolism and nursery siting. */
+  turmiteNiches:TurmiteNiches;
   /** T1: actual 1..8 complete ordered agent substeps per displayed generation. */
   turmiteSteps:number;
   /** T2: N distinct deterministic transition programs, assigned by agent ID. */
@@ -273,6 +276,7 @@ export const INITIAL_SETTINGS: SimSettings = {
    turmiteEvolution:{enabled:false,mutationRate:30,mutationSize:1,locus:'all'},
    turmiteGeneSpill:{enabled:false,radius:1,probability:70,locus:'all',mode:'copy',gate:'any',threshold:32},
    turmiteDnaFossils:{enabled:false,deposit:160,decay:3,spread:3,uptake:65,threshold:24,locus:'all',mode:'copy'},
+   turmiteNiches:{enabled:false,policy:'kin',tolerance:0,threshold:32,steering:4,nutrient:12,hazard:6,nursery:false},
    turmiteSteps:1,turmiteSpeciesCount:1,turmiteSpeciesStride:0,turmiteSpeciesMirror:false,turmiteHeadingShear:0,turmiteContact:'shared',turmiteFormation:'orbit',turmiteCount:1,turmiteBrush:1,
   hppBrush:15,hppTool:'particles'
 };
