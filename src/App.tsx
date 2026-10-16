@@ -44,6 +44,7 @@ import {DEFAULT_TURMITE_DUET,validTurmiteDuet} from './engine/turmite-duet';
 import {DEFAULT_TURMITE_RHYTHM,validTurmiteRhythm} from './engine/turmite-rhythm';
 import {DEFAULT_TURMITE_LIFE,validTurmiteLife} from './engine/turmite-life';
 import {DEFAULT_TURMITE_EVOLUTION,validTurmiteEvolution} from './engine/turmite-genetics';
+import {DEFAULT_TURMITE_GENE_SPILL,validTurmiteGeneSpill} from './engine/turmite-gene-spill';
 import CyclicDynamicsControls from './components/CyclicDynamicsControls';
 import WaveDynamicsControls from './components/WaveDynamicsControls';
 import BrainDynamicsControls from './components/BrainDynamicsControls';
@@ -1023,6 +1024,8 @@ export default function App(){
       if(!validTurmiteLife(s.turmiteLife))throw new Error('Invalid T9 lifecycle program');
       s.turmiteEvolution=s.turmiteEvolution??{...DEFAULT_TURMITE_EVOLUTION};
       if(!validTurmiteEvolution(s.turmiteEvolution))throw new Error('Invalid T10 genome mutation program');
+      s.turmiteGeneSpill=s.turmiteGeneSpill??{...DEFAULT_TURMITE_GENE_SPILL};
+      if(!validTurmiteGeneSpill(s.turmiteGeneSpill))throw new Error('Invalid T11 physical gene-contact program');
       s.turmiteWriteMode=s.turmiteWriteMode??'next';
       s.turmiteWriteStride=s.turmiteWriteStride??1;
       s.turmiteWriteTable=s.turmiteWriteTable??Array.from({length:24},(_,i)=>(i+1)%24);
