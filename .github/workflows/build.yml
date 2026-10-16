@@ -69,6 +69,8 @@ jobs:
         run: node scripts/dynamics-t7-chemical-civil-war-smoke.mjs
       - name: Verify T8 true spatially coupled ant phase oscillators, live pigment feedback and saved replay
         run: node scripts/dynamics-t8-kuramites-smoke.mjs
+      - name: Verify T9 true metabolic ant lifecycles, stable births/deaths and exact preserved recipes
+        run: node scripts/dynamics-t9-swarm-life-smoke.mjs
       - name: Verify C4 HPP conservation, boundaries, wall painting, recipes and recording
         run: node scripts/c4-hpp-smoke.mjs
       - name: Verify D1a true rhombille tile edge graph, tap projection and CA compatibility
