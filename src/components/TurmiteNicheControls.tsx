@@ -1,6 +1,6 @@
 import type {Dispatch,SetStateAction} from 'react';
 import type {SimSettings,World} from '../engine/types';
-import {DEFAULT_TURMITE_NICHES,nicheEnergyAt,siteNicheFitness} from '../engine/turmite-niches';
+import {DEFAULT_TURMITE_NICHES,nicheEnergyAt,siteNicheFitness,nicheDirectionSite} from '../engine/turmite-niches';
 import type {TurmiteNiches} from '../engine/turmite-niches';
 import {DEFAULT_TURMITE_EVOLUTION} from '../engine/turmite-genetics';
 import {DEFAULT_TURMITE_LIFE} from '../engine/turmite-life';
@@ -13,10 +13,13 @@ export default function TurmiteNicheControls({settings:s,setSettings,world,selec
  const code=world.turmiteDnaCode,strength=world.turmiteDnaStrength;
  const agent=agents[selectedAgent];
  const valid=!!agent&&!!code&&!!strength;
+ const geneticActive=n.enabled&&(s.turmiteEvolution?.enabled??false);
+ const energyActive=geneticActive&&(s.turmiteLife?.enabled??false)&&agent?.alive!==false;
+ const effectiveNiche={...n,enabled:geneticActive};
  const index=valid?agent!.y*world.width+agent!.x:0;
- const site=valid?siteNicheFitness(agent!,code,strength,index,n):null;
+ const site=valid?siteNicheFitness(agent!,code,strength,index,effectiveNiche):null;
  const currentFragment=valid?decodeDnaFragment(code![index]):null;
- const localGain=valid?nicheEnergyAt(agent!,index,code,strength,n):0;
+ const localGain=valid&&energyActive?nicheEnergyAt(agent!,index,code,strength,effectiveNiche):0;
  const set=(patch:Partial<TurmiteNiches>,activate=false)=>setSettings(old=>({
   ...old,turmiteNiches:{...(old.turmiteNiches??DEFAULT_TURMITE_NICHES),...patch},
   ...(activate?{
@@ -25,14 +28,12 @@ export default function TurmiteNicheControls({settings:s,setSettings,world,selec
    turmiteDnaFossils:{...(old.turmiteDnaFossils??DEFAULT_TURMITE_DNA_FOSSILS),enabled:true}
   }:{})
  }));
- const directions=agent?[
-  ['N',0,-1],['E',1,0],['S',0,1],['W',-1,0]
- ] as const:[];
- const neighbors=directions.map(([name,dx,dy])=>{
-  let x=agent!.x+dx,y=agent!.y+dy;
-  if(s.wrap){x=(x+world.width)%world.width;y=(y+world.height)%world.height;}
-  const p=x>=0&&y>=0&&x<world.width&&y<world.height?y*world.width+x:-1;
-  const f=siteNicheFitness(agent!,code,strength,p,n);
+ const directions=agent?['N','E','S','W'] as const:[];
+ const neighbors=directions.map((name,i)=>{
+  // The visible compass always scores the REAL reflected destination.
+  const p=nicheDirectionSite(agent!.x,agent!.y,i as 0|1|2|3,
+   world.width,world.height,s.wrap);
+  const f=siteNicheFitness(agent!,code,strength,p,effectiveNiche);
   return {name,p,...f};
  });
  return <div aria-label="T13 genuine genetic habitat and ecological niche laboratory">
@@ -82,7 +83,7 @@ export default function TurmiteNicheControls({settings:s,setSettings,world,selec
   </div>
   <div className="c3-readouts" id="turmite-niche-inspector">
    <div><b id="turmite-niche-compat">{!site||!site.code?'—':site.matching?'MATCH':'DIFFERENT'}</b><span>ANT #{selectedAgent+1} · LOCAL DNA</span></div>
-   <div><b id="turmite-niche-energy">{localGain>0?'+':''}{localGain}</b><span>TRUE ENERGY / STEP</span></div>
+   <div><b id="turmite-niche-energy">{energyActive?(localGain>0?'+':'')+localGain:'—'}</b><span>{energyActive?'TRUE ENERGY / STEP':'ENERGY INACTIVE (T9/T10 OFF)'}</span></div>
    <div><b id="turmite-niche-strength">{site?.strength??0}</b><span>OLD DNA STRENGTH</span></div>
   </div>
   <p className="fineprint" id="turmite-niche-fragment">At ant #{selectedAgent+1}: {currentFragment?
