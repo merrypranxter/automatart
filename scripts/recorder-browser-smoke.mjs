@@ -2233,7 +2233,26 @@ try{
   await page.locator('#quick-export-aspect').selectOption('current');
   assert.equal(await page.locator('#export-frame-aspect').inputValue(),'current');
 
-  console.log('PASS Z-FRAME: confirmed real vertical lattice reset at end of Chromium suite, cancel preserved state');
+  // A stale pending confirmation must never outlive a recipe restore.
+  const [shapeSavedDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const shapeSaved=JSON.parse(await readFile(await shapeSavedDownload.path(),'utf8'));
+  await page.locator('#quick-world-aspect').selectOption('portrait');
+  assert(await page.locator('#confirm-world-aspect').isVisible());
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'saved-square-before-pending-shape.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(shapeSaved))
+  });
+  await page.waitForFunction(()=>document.querySelector('#quick-world-aspect')?.value==='square'&&
+   !document.querySelector('#confirm-world-aspect'));
+  assert.equal(await page.locator('.readouts b').first().innerText(),
+   String(shapeSaved.world.generation),
+   'Re-import must restore original generation, not act on old world confirmation');
+  assert.equal(await page.locator('#confirm-world-aspect').count(),0,
+   'Old destructive confirmation cannot act on freshly imported artwork');
+  console.log('PASS Z-FRAME: genuine tall cellular world and safe aspect-confirm cancellation/recipe import');
+
 
 }finally{
   await browser?.close();
