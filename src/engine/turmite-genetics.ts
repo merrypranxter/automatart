@@ -41,10 +41,11 @@ export function validTurmiteGenome(g:unknown):g is TurmiteGenome{
  const v=g as Record<string,unknown>;
  return LOCI.every(k=>Number.isInteger(v[k])&&(v[k] as number)>=-3&&(v[k] as number)<=3);
 }
-export function validGeneticAgent(a:GeneticAgent):boolean{
+export function validGeneticAgent(a:GeneticAgent,capacity=12):boolean{
+ if(!Number.isInteger(capacity)||capacity<1||capacity>12)return false;
  return (a.genome===undefined||validTurmiteGenome(a.genome))&&
   (a.parentId===undefined&&(a.depth===undefined||a.depth===0)||
-   (Number.isInteger(a.parentId)&&a.parentId!>=0&&a.parentId!<12))&&
+   (Number.isInteger(a.parentId)&&a.parentId!>=0&&a.parentId!<capacity))&&
   (a.depth===undefined||(Number.isInteger(a.depth)&&a.depth>=0&&a.depth<=4096))&&
   (a.brood===undefined||(Number.isInteger(a.brood)&&a.brood>=0&&a.brood<=1e9));
 }
@@ -87,7 +88,7 @@ export function inheritGenome(
 export function genomeDiversity(agents:readonly (GeneticAgent&{alive?:boolean})[],
  lifeEnabled:boolean):number{
  const living=agents.filter(a=>!lifeEnabled||a.alive!==false);
- if(living.length<2)return 0;
+ if(living.length===0)return 0;
  const signatures=new Set(living.map(a=>LOCI.map(k=>genomeOf(a)[k]).join(',')));
  return signatures.size;
 }
