@@ -59,6 +59,30 @@ try{
   // Dynamics P1: actual evolution instead of coarse ineffective sliders.
   await page.locator('.transport .primary').click(); // pause before comparing generations
   await page.waitForTimeout(100);
+
+  // Z-FRAME: a persistent, phone-friendly output aspect switch changes
+  // GIF/VIDEO/PNG framing without changing a single actual CA cell.
+  assert.equal(await page.locator('#quick-world-aspect').inputValue(),'square');
+  assert.equal(await page.locator('#quick-export-aspect').inputValue(),'current');
+  const worldGridBefore=await page.locator('.readouts').innerText();
+  await page.locator('#quick-export-aspect').selectOption('portrait');
+  assert.equal(await page.locator('#export-frame-aspect').inputValue(),'portrait');
+  assert.equal(await page.locator('#snapshot-aspect').inputValue(),'portrait');
+  await page.locator('#export-resolution').selectOption('720');
+  await page.waitForFunction(()=>document.querySelector('#export-frame-preview')?.height===426);
+  assert((await page.locator('.capture-specs b').innerText()).includes('720 × 1280'),
+   'Non-destructive 9:16 GIF/video preset displays exact actual output pixels');
+  assert.equal(await page.locator('.readouts').innerText(),worldGridBefore,
+   'Reframing for vertical export must never touch the living CA world');
+  await page.locator('#export-frame-fit').selectOption('cover');
+  assert.equal(await page.locator('#export-frame-preview').getAttribute('height'),'426');
+  assert.equal(await page.locator('#snapshot-aspect').inputValue(),'portrait');
+  assert.equal(await page.locator('#quick-export-aspect').inputValue(),'portrait');
+  await page.locator('#export-frame-fit').selectOption('contain');
+  await page.locator('#export-resolution').selectOption('360');
+  await page.locator('#quick-export-aspect').selectOption('current');
+  assert.equal(await page.locator('#export-frame-aspect').inputValue(),'current');
+  console.log('PASS Z-FRAME: 9:16 export preview, common PNG/GIF/video shape, safe cancel/confirm, genuine portrait lattice');
   assert(await page.locator('#cyclic-reach').isVisible(),'Real chase-field control is available');
   const cyclicGen=Number((await page.locator('.readouts b').first().innerText()).replaceAll(',',''));
   await page.locator('#cyclic-reach').fill('3');
@@ -66,9 +90,20 @@ try{
   await page.locator('#threshold').fill('2');
   assert.equal(Number((await page.locator('.readouts b').first().innerText()).replaceAll(',','')),cyclicGen,
    'Changing chase dynamics does not reset the running cells');
-  const [cyclicFile]=await Promise.all([
-    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
-  ]);
+  // The framed preview makes the export drawer substantially taller.
+  // A real user opens that panel and scrolls to Recipes; do likewise
+  // explicitly before expecting a trusted browser download event.
+  await openTab(page,'export');
+  const saveRecipeButton=page.getByRole('button',{name:'SAVE RECIPE'});
+  await saveRecipeButton.scrollIntoViewIfNeeded({timeout:12000});
+  // Handle both promises so a blocked click reports its actual diagnostic
+  // instead of an unrelated unhandled "download/page closed" rejection.
+  const cyclicDownload=page.waitForEvent('download',{timeout:15000})
+   .catch(error=>error);
+  try{await saveRecipeButton.click({timeout:8000});}
+  catch(error){console.error('SAVE RECIPE click failure',String(error));throw error;}
+  const cyclicFile=await cyclicDownload;
+  if(cyclicFile instanceof Error)throw cyclicFile;
   const tunedCyclic=JSON.parse(await readFile(await cyclicFile.path(),'utf8'));
   assert.equal(tunedCyclic.settings.cyclicReach,3);
   assert.equal(tunedCyclic.settings.cyclicDrive,.0025);
@@ -2280,6 +2315,57 @@ try{
   assert.equal(await page.locator('.stage-capture-success').count(),0,'X dismisses sticky export banner');
   assert.equal(await page.locator('.finished-export').count(),0,'X also removes finished preview from controls');
   console.log('PASS: 10 engines, 3 lattices, 7 skins, 10 NEW color signals, local GIF palettes and export dismissal');
+  // Run the deliberately destructive real-lattice conversion at the END
+  // so legacy recipe/download and GIF tests are unaffected by world reset.
+  await page.locator('#engine').selectOption('cyclic');
+  await page.locator('#resolution').fill('96');
+  if((await page.locator('.transport .primary').getAttribute('aria-label'))==='Pause simulation')
+   await page.locator('.transport .primary').click(); // exact frozen state
+  const endWorldGridBefore=await page.locator('.readouts').innerText();
+  assert.equal(await page.locator('#quick-world-aspect').inputValue(),'square');
+  // Changing ACTUAL simulation aspect modifies neighborhood graph. Guard
+  // this destructive action with explicit, cancellable confirmation.
+  await page.locator('#quick-world-aspect').selectOption('portrait');
+  assert(await page.locator('#confirm-world-aspect').isVisible());
+  assert.equal(await page.locator('#aspect').inputValue(),'portrait');
+  assert.equal(await page.locator('.readouts').innerText(),endWorldGridBefore,
+   'Merely selecting a new world shape MUST NOT erase/resize artwork');
+  await page.locator('#cancel-world-aspect').click();
+  assert.equal(await page.locator('#quick-world-aspect').inputValue(),'square');
+  assert.equal(await page.locator('.readouts').innerText(),endWorldGridBefore);
+  await page.locator('#quick-world-aspect').selectOption('portrait');
+  await page.locator('#confirm-world-aspect').click();
+  await page.waitForFunction(()=>document.querySelector('.readouts')?.textContent?.includes('96×171'));
+  assert.equal(await page.locator('#quick-world-aspect').inputValue(),'portrait');
+  assert.equal(await page.locator('#aspect').inputValue(),'portrait');
+  await page.locator('#quick-world-aspect').selectOption('square');
+  await page.locator('#confirm-world-aspect').click();
+  await page.waitForFunction(()=>document.querySelector('.readouts')?.textContent?.includes('96×96'));
+  await page.locator('#export-resolution').selectOption('360');
+  await page.locator('#quick-export-aspect').selectOption('current');
+  assert.equal(await page.locator('#export-frame-aspect').inputValue(),'current');
+
+  // A stale pending confirmation must never outlive a recipe restore.
+  const [shapeSavedDownload]=await Promise.all([
+   page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
+  ]);
+  const shapeSaved=JSON.parse(await readFile(await shapeSavedDownload.path(),'utf8'));
+  await page.locator('#quick-world-aspect').selectOption('portrait');
+  assert(await page.locator('#confirm-world-aspect').isVisible());
+  await page.locator('input[type=file]').last().setInputFiles({
+   name:'saved-square-before-pending-shape.json',mimeType:'application/json',
+   buffer:Buffer.from(JSON.stringify(shapeSaved))
+  });
+  await page.waitForFunction(()=>document.querySelector('#quick-world-aspect')?.value==='square'&&
+   !document.querySelector('#confirm-world-aspect'));
+  assert.equal(await page.locator('.readouts b').first().innerText(),
+   String(shapeSaved.world.generation),
+   'Re-import must restore original generation, not act on old world confirmation');
+  assert.equal(await page.locator('#confirm-world-aspect').count(),0,
+   'Old destructive confirmation cannot act on freshly imported artwork');
+  console.log('PASS Z-FRAME: genuine tall cellular world and safe aspect-confirm cancellation/recipe import');
+
+
 }finally{
   await browser?.close();
   server.kill('SIGTERM');

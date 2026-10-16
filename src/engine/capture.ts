@@ -2,9 +2,8 @@ import { GIFEncoder } from 'gifenc';
 import {FixedWebMMuxer,offlineVideoCodec} from './fixed-webm.js';
 import { indexGifFrame } from './gif-palette';
 import { createWorld, stepWorld } from './sim';
-import { renderWorld } from './render';
-import { worldDimensions } from './types';
-import { geometryExtent } from './topology';
+import {exportFrameLayout,renderExportFrame} from './export-frame';
+import type {ExportFrameAspect,ExportFrameFit} from './export-frame';
 import type { Appearance, SimSettings, World } from './types';
 
 export type CaptureFormat = 'gif' | 'video';
@@ -16,6 +15,9 @@ export interface CaptureOptions {
   seconds: number;
   fps: number;
   resolution: ExportResolution;
+  /** Output-only framing; never resizes the actual cellular automaton. */
+  frameAspect?:ExportFrameAspect;
+  frameFit?:ExportFrameFit;
   restart: boolean;
   stepsPerSecond: number;
 }
@@ -37,16 +39,11 @@ export interface CaptureResult {
 export class CaptureCancelled extends Error {
   constructor(){super('Recording cancelled');this.name='CaptureCancelled';}
 }
-export function recommendedDimensions(s:SimSettings,size:ExportResolution):[number,number]{
-  const [w,h]=worldDimensions(s);
-  // Preserve the ACTUAL cell grid ratio. The rendering canvas must never resize
-  // after captureStream() has been called or some browsers lose the video track.
-  let width=['landscape','landscape43','landscape54','landscape32'].includes(s.aspect) ? Math.round(size*(w/h)) : size;
-  if(width%2)width++;
-  const [gx,gy]=geometryExtent(s.lattice,w,h);
-  let height=Math.round(width*(s.lattice==='rhombille'?gy/gx:h/w));
-  if(height%2)height++;
-  return [width,height];
+export function recommendedDimensions(
+ s:SimSettings,size:ExportResolution,aspect:ExportFrameAspect='current'
+):[number,number]{
+ const l=exportFrameLayout(s,size,aspect);
+ return [l.width,l.height];
 }
 export function cloneWorld(w:World):World{
   // Preserve every rule graph field, including directional mask. This clone
@@ -203,7 +200,9 @@ export async function captureAnimation(
     stepsPerSecond:Math.max(1,Math.min(120,Number(options.stepsPerSecond)||18))
   };
   const cursor=createCaptureCursor(opt.restart?createWorld(s):startingWorld,s,opt.fps,opt.stepsPerSecond);
-  const [width,height]=recommendedDimensions(s,opt.resolution);
+  const layout=exportFrameLayout(s,opt.resolution,
+    opt.frameAspect??'current',opt.frameFit??'contain');
+  const {width,height}=layout;
   const totalFrames=Math.ceil(opt.seconds*opt.fps);
   // Do NOT reject an export on width × height × frame count: this is raw
   // pixel work, NOT compressed GIF bytes. The Worker processes one frame at a
@@ -212,6 +211,7 @@ export async function captureAnimation(
   const maxGifBytes=/iPhone|iPad|Android/i.test(navigator.userAgent)
     ?96*1024*1024:256*1024*1024;
   const canvas=document.createElement('canvas');
+  const scratch=document.createElement('canvas');
   canvas.width=width;canvas.height=height;
   canvas.className='capture-preview-canvas';
   const host=document.getElementById('capture-canvas-mount');
@@ -236,7 +236,7 @@ export async function captureAnimation(
         }
         for(let i=0;i<frameLimit;i++){
           notCancelled(signal);
-          renderWorld(canvas,cursor.current,a,width,height);
+          renderExportFrame(canvas,scratch,cursor.current,a,layout);
           const pixels=ctx.getImageData(0,0,width,height).data;
           let reachedSizeLimit=false;
           if(worker){
@@ -302,7 +302,7 @@ export async function captureAnimation(
         for(let i=0;i<totalFrames;i++){
           notCancelled(signal);
           if(encoderError)throw encoderError;
-          renderWorld(canvas,cursor.current,a,width,height);
+          renderExportFrame(canvas,scratch,cursor.current,a,layout);
           const frame=new Frame(canvas,{
             timestamp:Math.round(i*1e6/opt.fps),
             duration:Math.round(1e6/opt.fps)
@@ -343,7 +343,7 @@ export async function captureAnimation(
     if(!mime||typeof canvas.captureStream!=='function')
       throw new Error('This browser cannot record canvas video. GIF export is available instead.');
     // Let WebKit/Chromium see the canvas before capturing; do NOT resize it later.
-    renderWorld(canvas,cursor.current,a,width,height);
+    renderExportFrame(canvas,scratch,cursor.current,a,layout);
     await nextPaint();
     notCancelled(signal);
     // AUTOMATIC canvas capture is sufficient here. Do not call
@@ -379,7 +379,7 @@ export async function captureAnimation(
         notCancelled(signal);
         await delay(Math.max(0,nextFrameAt-performance.now()));
         notCancelled(signal);
-        renderWorld(canvas,cursor.current,a,width,height);
+        renderExportFrame(canvas,scratch,cursor.current,a,layout);
         // Let the compositor publish painted canvas pixels. The MediaStream
         // already captures at opt.fps; don't request duplicate manual frames.
         await nextPaint();
