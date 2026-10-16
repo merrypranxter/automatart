@@ -2313,8 +2313,11 @@ try{
    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
   ]);
   const t13Before=JSON.parse(await readFile(await t13BeforeDownload.path(),'utf8'));
+  await page.locator('#turmite-life-breeding').selectOption('off');
   await page.locator('#turmite-niche-garden').click();
   assert.equal(await page.locator('#turmite-niche-enabled').isChecked(),true);
+  assert.equal(await page.locator('#turmite-life-breeding').inputValue(),'bud',
+   'Genetic Garden actually restores real newborn creation when the former T9 setting was off');
   assert.equal(await page.locator('#turmite-life-enabled').isChecked(),true);
   assert.equal(await page.locator('#turmite-genetics-enabled').isChecked(),true);
   assert.equal(await page.locator('#turmite-dna-enabled').isChecked(),true);
