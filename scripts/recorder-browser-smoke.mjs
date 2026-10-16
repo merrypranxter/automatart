@@ -1511,7 +1511,10 @@ try{
    buffer:Buffer.from(JSON.stringify(t4Edited))
   });
   await page.waitForFunction(()=>document.querySelector('#turmite-alchemy-enabled')?.checked===true&&
-   document.querySelector('#turmite-alchemy-species')?.value==='3');
+   document.querySelector('#turmite-alchemy-species')?.value==='3'&&
+   // A prior editor already has enabled/species 3 before file import; wait
+   // for the actual RESTORED table value before asserting its correctness.
+   document.querySelector('#turmite-alchemy-table [data-alchemy-source="0"]')?.value==='2');
   assert.equal(await page.locator('#turmite-alchemy-table [data-alchemy-source="0"]').inputValue(),'2');
   const [t4RestoredFile]=await Promise.all([
    page.waitForEvent('download'),page.getByRole('button',{name:'SAVE RECIPE'}).click()
