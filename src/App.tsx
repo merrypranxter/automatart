@@ -10,6 +10,8 @@ import AlienPaintControls from './components/AlienPaintControls';
 import { renderWorld } from './engine/render';
 import {INITIAL_SNAPSHOT_OPTIONS,snapshotLayout,renderSnapshot,snapshotPng,snapshotFilename} from './engine/snapshot';
 import type {SnapshotAspect,SnapshotSize} from './engine/snapshot';
+import {FRAME_OPTIONS,exportFrameLayout,renderExportFrame} from './engine/export-frame';
+import type {ExportFrameFit} from './engine/export-frame';
 import { randomColors, rotatedColors, shuffledColors } from './engine/funhouse';
 import MutantControls from './components/MutantControls';
 import NeighborhoodControls from './components/NeighborhoodControls';
@@ -193,7 +195,9 @@ export default function App(){
   const [population,setPopulation]=useState(0);
   const [resetNumber,setResetNumber]=useState(0);
   const [message,setMessage]=useState('');
-  const [snapshotAspect,setSnapshotAspect]=useState<SnapshotAspect>(INITIAL_SNAPSHOT_OPTIONS.aspect);
+  const [frameAspect,setFrameAspect]=useState<SnapshotAspect>(INITIAL_SNAPSHOT_OPTIONS.aspect);
+  const [frameFit,setFrameFit]=useState<ExportFrameFit>('contain');
+  const [pendingWorldAspect,setPendingWorldAspect]=useState<AspectId|null>(null);
   const [snapshotSize,setSnapshotSize]=useState<SnapshotSize>(INITIAL_SNAPSHOT_OPTIONS.shortSide);
   const [snapshotBusy,setSnapshotBusy]=useState(false);
   const [lastStill,setLastStill]=useState<{
@@ -235,6 +239,7 @@ export default function App(){
   const canvasRef=useRef<HTMLCanvasElement>(null);
   const stageRef=useRef<HTMLElement>(null);
   const viewerWrapRef=useRef<HTMLDivElement>(null);
+  const exportPreviewRef=useRef<HTMLCanvasElement>(null);
   const [viewerFullscreen,setViewerFullscreen]=useState(false);
   const [activeTab,setActiveTab]=useState<TabId>(initialTab);
   const selectTab=(id:TabId)=>{
@@ -327,6 +332,19 @@ export default function App(){
   };
   const updateSetting=<K extends keyof SimSettings>(key:K,value:SimSettings[K])=>
     setSettings(s=>({...s,[key]:value}));
+  const armWorldAspect=(aspect:AspectId)=>{
+    setPendingWorldAspect(aspect===settings.aspect?null:aspect);
+  };
+  const confirmWorldAspect=()=>{
+    if(!pendingWorldAspect||capturing)return;
+    // World dimensions are part of the REAL neighbor graph. Reshaping is
+    // always a fresh simulation, never an accidental mid-run remapping.
+    cancelBatch();setPlaying(false);setTurmitePlacement(null);
+    setSettings(s=>({...s,aspect:pendingWorldAspect}));
+    setPendingWorldAspect(null);
+    setMessage('Started a NEW real '+ASPECTS.find(a=>a.value===pendingWorldAspect)?.name+
+      ' cellular universe. Export framing never resets your original art.');
+  };
   // Make memory-cycle changes persistent in the real per-agent registers,
   // not merely in the UI. No painting, relocation, or time reset.
   const updateTurmiteMemory=(patch:Partial<SimSettings['turmiteMemory']>)=>{
@@ -776,7 +794,7 @@ export default function App(){
       const source=cloneWorld(worldRef.current);
       const canvas=document.createElement('canvas');
       const dimensions=renderSnapshot(canvas,source,settings,appearance,{
-        aspect:snapshotAspect,shortSide:snapshotSize
+        aspect:frameAspect,shortSide:snapshotSize,fit:frameFit
       });
       const blob=await snapshotPng(canvas);
       const name=snapshotFilename(settings,source,dimensions);
@@ -1084,7 +1102,8 @@ export default function App(){
       if(controller.signal.aborted)throw new CaptureCancelled();
       const result=await captureAnimation(startedAt,settings,appearance,{
         format:captureFormat,mode:durationMode,seconds:safeSeconds,
-        fps:exportFps,resolution,restart:restartCapture,stepsPerSecond:speed
+        fps:exportFps,resolution,frameAspect,frameFit,
+        restart:restartCapture,stepsPerSecond:speed
       },setCaptureProgress,controller.signal);
       const label=result.ended==='settled'?'settled naturally':
         result.ended==='size-limit'?'stopped at the real compressed GIF size limit (partial animation saved)':
@@ -1110,12 +1129,22 @@ export default function App(){
       setPlaying(resumeAfter);
     }
   }
+  useEffect(()=>{
+    if(activeTab!=='export'||capturing)return;
+    const target=exportPreviewRef.current;
+    if(!target)return;
+    const scratch=document.createElement('canvas');
+    // The preview is cheap, but uses the SAME exact framing/render equations
+    // as full-res PNG, real GIF Worker frames and frame-perfect WebM.
+    const l=exportFrameLayout(settings,240,frameAspect,frameFit);
+    renderExportFrame(target,scratch,worldRef.current,appearance,l);
+  },[activeTab,generation,frameAspect,frameFit,settings,appearance,capturing]);
   const activeEngine=ENGINES.find(e=>e.id===settings.engine);
-  const outputSize=recommendedDimensions(settings,resolution);
-  const stillLayout=snapshotLayout(settings,{aspect:snapshotAspect,shortSide:snapshotSize});
+  const outputSize=recommendedDimensions(settings,resolution,frameAspect);
+  const stillLayout=snapshotLayout(settings,{aspect:frameAspect,shortSide:snapshotSize,fit:frameFit});
   const videoSupported=typeof window!=='undefined'&&chooseVideoMime()!==null;
   const predictedFrames=(durationMode==='settled'?600:durationPreset==='custom'?customSeconds:Number(durationPreset))*exportFps;
-  const largeGifWarningKey='gif:'+durationMode+':'+durationPreset+':'+customSeconds+':'+resolution+':'+exportFps;
+  const largeGifWarningKey='gif:'+durationMode+':'+durationPreset+':'+customSeconds+':'+resolution+':'+exportFps+':'+frameAspect+':'+frameFit;
   const largeGif=(captureFormat==='gif'&&(predictedFrames>250||resolution>=720&&predictedFrames>80));
   const densityLabel=Math.round(settings.density*100)+'%';
   const neighborMax=maxNeighborCount(settings);
@@ -1153,6 +1182,29 @@ export default function App(){
             <button type="button" className="viewer-toggle" aria-pressed={viewerFullscreen} onClick={()=>void toggleViewerFullscreen()} title="Fullscreen artwork viewer (Esc to exit)">{viewerFullscreen?'✕ EXIT':'⛶ FULLSCREEN'}</button>
           </div>
         </div>
+        {!viewerFullscreen&&<div className="studio-frame-bar" aria-label="Quick artwork and export aspect ratio controls">
+          <label htmlFor="quick-world-aspect"><b>LIVE WORLD SHAPE</b>
+            <select id="quick-world-aspect" value={pendingWorldAspect??settings.aspect}
+              disabled={capturing} onChange={e=>armWorldAspect(e.target.value as AspectId)}>
+              {ASPECTS.map(a=><option value={a.value} key={a.value}>{a.name}</option>)}
+            </select>
+          </label>
+          <label htmlFor="quick-export-aspect"><b>PNG · GIF · VIDEO FRAME</b>
+            <select id="quick-export-aspect" value={frameAspect} disabled={capturing}
+              onChange={e=>setFrameAspect(e.target.value as SnapshotAspect)}>
+              {FRAME_OPTIONS.map(a=><option key={a.value} value={a.value}>{a.label}</option>)}
+            </select>
+          </label>
+          <button className="frame-edit-open" type="button" onClick={()=>selectTab('export')}>
+            ⤢ FRAME STUDIO
+          </button>
+        </div>}
+        {pendingWorldAspect&&!viewerFullscreen&&<div className="frame-confirm" role="status">
+          <strong>START A NEW {ASPECTS.find(a=>a.value===pendingWorldAspect)?.name} UNIVERSE?</strong>
+          <span>Changing the actual cellular grid rebuilds its neighbor network and resets the current artwork. Exporting this world in any other frame never resets it.</span>
+          <button id="confirm-world-aspect" type="button" onClick={confirmWorldAspect}>YES · START NEW WORLD</button>
+          <button id="cancel-world-aspect" type="button" onClick={()=>setPendingWorldAspect(null)}>KEEP MY CURRENT ART</button>
+        </div>}
         <div className="canvas-wrap" ref={viewerWrapRef}>
           <div className="art-canvas-layer">
             <canvas ref={canvasRef} aria-label={turmitePlacement?'Interactive cellular automata canvas. Tap once to place selected Turmite agent.':'Interactive cellular automata canvas. Drag to paint cells.'} onPointerDown={onPointerDown} onPointerMove={onPointerMove}
@@ -1246,7 +1298,8 @@ export default function App(){
           <div className="group">
             <h3 className="group-head">CANVAS <small>restarts the universe</small></h3>
             <label className="input-label" htmlFor="aspect">Canvas geometry</label>
-            <select id="aspect" value={settings.aspect} onChange={e=>updateSetting('aspect',e.target.value as AspectId)}>
+            <select id="aspect" value={pendingWorldAspect??settings.aspect} disabled={capturing}
+              onChange={e=>armWorldAspect(e.target.value as AspectId)}>
               {ASPECTS.map(a=><option value={a.value} key={a.value}>{a.name}</option>)}
             </select>
             <label className="input-label" htmlFor="resolution">Simulation grid <em>{settings.lattice==='rhombille'?worldRef.current.width+' diamond columns / '+worldRef.current.height+' rows':settings.cellCount+' cells across'}</em></label>
@@ -1537,6 +1590,27 @@ export default function App(){
           <PanelHead id="export"/>
           <div className="recorder-panel" ref={recorderRef}>
             <div className="recorder-heading"><span>✹ ANIMATION RECORDER</span><span className="recorder-ready">GIF · MP4 / WEBM</span></div>
+            <div className="frame-export-controls">
+              <label htmlFor="export-frame-aspect"><b>OUTPUT FRAME / ALL FORMATS</b>
+                <select id="export-frame-aspect" value={frameAspect} disabled={capturing}
+                  onChange={e=>setFrameAspect(e.target.value as SnapshotAspect)}>
+                  {FRAME_OPTIONS.map(a=><option key={a.value} value={a.value}>{a.label}</option>)}
+                </select>
+              </label>
+              <label htmlFor="export-frame-fit"><b>HOW ART FITS THE FRAME</b>
+                <select id="export-frame-fit" value={frameFit} disabled={capturing}
+                  onChange={e=>setFrameFit(e.target.value as ExportFrameFit)}>
+                  <option value="contain">FIT · WHOLE ART · DARK MATTE IF NEEDED</option>
+                  <option value="cover">FILL · CENTER CROP · NO DISTORTION</option>
+                </select>
+              </label>
+            </div>
+            <p className="fineprint">Switching output frames is LIVE and non-destructive. It never changes the cell grid, generation or patterns. For an actual 9:16 mathematical world, use LIVE WORLD SHAPE above and confirm a new universe.</p>
+            <div className="frame-preview" aria-label="Live framing preview for all three export formats">
+              <b>LIVE OUTPUT COMPOSITION · {outputSize[0]} × {outputSize[1]} PIXELS</b>
+              <canvas ref={exportPreviewRef} id="export-frame-preview" aria-label="Current real artwork in chosen export frame" />
+              <small>{frameFit==='contain'?'Complete artwork, no crop':'Frame filled, center cropped'} · no stretching · preview is downsampled only; exports use real selected resolution</small>
+            </div>
             <label className="input-label" htmlFor="export-format">Animation format</label>
             <select id="export-format" value={captureFormat} disabled={capturing}
               onChange={e=>{
@@ -1655,9 +1729,9 @@ export default function App(){
           <section className="snapshot-studio" aria-label="High-resolution snapshot studio">
             <div className="snapshot-heading"><b>📷 SNAPSHOT STUDIO</b><span>EXACT PIXELS · CURRENT GENERATION</span></div>
             <div className="snapshot-options">
-              <label htmlFor="snapshot-aspect">Canvas frame
-                <select id="snapshot-aspect" value={snapshotAspect} disabled={snapshotBusy||capturing}
-                  onChange={e=>setSnapshotAspect(e.target.value as SnapshotAspect)}>
+              <label htmlFor="snapshot-aspect">Canvas frame · shared with GIF/video
+                <select id="snapshot-aspect" value={frameAspect} disabled={snapshotBusy||capturing}
+                  onChange={e=>setFrameAspect(e.target.value as SnapshotAspect)}>
                   <option value="current">MATCH UNIVERSE · NO MATTE</option>
                   <option value="square">1:1 · SQUARE</option>
                   <option value="portrait">9:16 · PORTRAIT</option>
@@ -1671,12 +1745,13 @@ export default function App(){
                   <option value={1080}>1080 PX</option>
                   <option value={1440}>1440 PX</option>
                   <option value={2160}>2160 PX · 4K FRAME</option>
+                  <option value={4320}>4320 PX · 8K FRAME (DESKTOP / RAM HEAVY)</option>
                 </select>
               </label>
             </div>
             <div className="snapshot-dimensions">
               <b>{stillLayout.width.toLocaleString()} × {stillLayout.height.toLocaleString()} PX</b>
-              <span>{stillLayout.letterboxed?'CENTERED / NO STRETCH / DARK MATTE':'NATIVE RATIO / NO CROP'}</span>
+              <span>{stillLayout.cropped?'CENTER CROP / NO STRETCH':stillLayout.letterboxed?'WHOLE ART / DARK MATTE':'NATIVE RATIO / NO CROP'}</span>
             </div>
             {stillLayout.width*stillLayout.height>6_000_000&&
               <p className="snapshot-advice">Large PNG: it can take a moment to process on iPhone. If Safari runs out of memory, use the 1080 or 1440 option.</p>}
