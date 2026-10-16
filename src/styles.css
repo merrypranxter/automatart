@@ -157,13 +157,21 @@ body{overflow:hidden}
   .species-pick{order:3;flex:1 1 100%;padding:3px 4px 3px 10px}
   .species-pick label{display:block;font-size:9px}
   .species-pick select{min-height:38px;font-size:16px}
-  /* Constrain the studio stage: new frame selectors must NOT squash the\n     separate scrollable tool drawer below the fold on small phones. */\n  .stage{padding:7px;gap:6px;min-height:0;max-height:42dvh;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+  /* Constrain the studio stage: new frame selectors must NOT squash the
+     separate scrollable tool drawer below the fold on small phones. */
+  .stage{padding:7px;gap:6px;min-height:0;max-height:42dvh;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
   .stage{position:relative}
   .stage-header{position:absolute;top:13px;right:13px;z-index:4;padding:0}
   .stage-header>div:first-child,.stage-view-actions .live-label{display:none}
   .stage-view-actions button{min-height:30px;padding:4px 8px;background:#0d0820d9}
   .canvas-corner.tr{display:none}
-  /* Artwork leads and remains in view when stage controls scroll. */\n  .canvas-wrap{order:0;position:sticky;top:0;z-index:2;flex:0 0 auto;height:min(26dvh,235px);min-height:110px}\n  .studio-frame-bar{order:1;flex-shrink:0}\n  .frame-confirm{order:2;flex-shrink:0}\n  .stage-bar{order:3;flex-shrink:0}\n  .stage-foot{order:4;flex-shrink:0}\n  .stage-capture-state{order:5;flex-shrink:0}
+  /* Artwork leads and remains in view when stage controls scroll. */
+  .canvas-wrap{order:0;position:sticky;top:0;z-index:2;flex:0 0 auto;height:min(26dvh,235px);min-height:110px}
+  .studio-frame-bar{order:1;flex-shrink:0}
+  .frame-confirm{order:2;flex-shrink:0}
+  .stage-bar{order:3;flex-shrink:0}
+  .stage-foot{order:4;flex-shrink:0}
+  .stage-capture-state{order:5;flex-shrink:0}
   .stage-bar{gap:5px}
   .transport{flex:1 1 100%;gap:4px}
   .transport button{min-height:38px;font-size:10px;padding:4px 2px}
