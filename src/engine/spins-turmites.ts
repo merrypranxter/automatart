@@ -309,7 +309,8 @@ export function stepTurmites(cells:Uint8Array,w:number,h:number,wrap:boolean,
  // Synchronous old-phase read; all coupled rhythms update only AFTER
  // physical T1–T7 decisions. This cannot give later ants future knowledge.
  const oldLifeCells=life.enabled?next.slice():next;
- const nextPhases=rhythm.enabled?stepRhythmPhases(current,dynamics.speciesCount,
+ const nextPhases=rhythm.enabled?stepRhythmPhases(life.enabled?current:
+    current.map(a=>({...a,alive:true})),dynamics.speciesCount,
    w,h,wrap,rhythm,field,rival):undefined;
  const moved:TurmiteAgent[]=[];
  // Read REAL co-location at the start of each round (before any agents
