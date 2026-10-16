@@ -96,9 +96,14 @@ try{
   await openTab(page,'export');
   const saveRecipeButton=page.getByRole('button',{name:'SAVE RECIPE'});
   await saveRecipeButton.scrollIntoViewIfNeeded({timeout:12000});
-  const cyclicDownload=page.waitForEvent('download',{timeout:20000});
-  await saveRecipeButton.click({timeout:12000});
+  // Handle both promises so a blocked click reports its actual diagnostic
+  // instead of an unrelated unhandled "download/page closed" rejection.
+  const cyclicDownload=page.waitForEvent('download',{timeout:15000})
+   .catch(error=>error);
+  try{await saveRecipeButton.click({timeout:8000});}
+  catch(error){console.error('SAVE RECIPE click failure',String(error));throw error;}
   const cyclicFile=await cyclicDownload;
+  if(cyclicFile instanceof Error)throw cyclicFile;
   const tunedCyclic=JSON.parse(await readFile(await cyclicFile.path(),'utf8'));
   assert.equal(tunedCyclic.settings.cyclicReach,3);
   assert.equal(tunedCyclic.settings.cyclicDrive,.0025);
