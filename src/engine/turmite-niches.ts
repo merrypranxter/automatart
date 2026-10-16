@@ -39,6 +39,17 @@ const pos=(x:number,y:number,w:number,h:number,wrap:boolean):number=>{
  else if(x<0||x>=w||y<0||y>=h)return -1;
  return y*w+x;
 };
+/** Shared exact next-cell index for steering and UI compass. A finite-world
+ * out-of-bounds command is reversed by the ACTUAL Turmite stepper.
+ * Expose that same reflected destination so the inspector cannot disagree.
+ */
+export function nicheDirectionSite(
+ x:number,y:number,heading:0|1|2|3,w:number,h:number,wrap:boolean
+):number{
+ const [dx,dy]=VECTORS[heading];
+ const old=pos(x+dx,y+dy,w,h,wrap);
+ return old>=0?old:pos(x-dx,y-dy,w,h,false);
+}
 export interface NicheSite {code:number;strength:number;matching:boolean;fitness:number}
 /** The real local genotype-environment fitness for a site, no future reads. */
 export function siteNicheFitness(
@@ -70,13 +81,8 @@ export function nicheSteerHeading(
  n:TurmiteNiches
 ):0|1|2|3{
  if(!n.enabled||n.steering===0||!code||!strength)return heading;
- // At a finite boundary the actual physics REFLECTS a heading off-grid.
- // Score that reflected REAL destination, never fictitious off-grid zero
- // (which would incorrectly attract 'avoid foreign' ants into obstacles).
- const at=(dir:number)=>{
-  const result=pos(x+VECTORS[dir][0],y+VECTORS[dir][1],w,h,wrap);
-  return result>=0?result:pos(x-VECTORS[dir][0],y-VECTORS[dir][1],w,h,false);
- };
+ // The same finite-edge reflection is shared with the UI compass.
+ const at=(dir:number)=>nicheDirectionSite(x,y,dir as 0|1|2|3,w,h,wrap);
  const old=siteNicheFitness(a,code,strength,at(heading),n).fitness;
  let best=old,chosen=heading;
  for(let k=1;k<4;k++){
