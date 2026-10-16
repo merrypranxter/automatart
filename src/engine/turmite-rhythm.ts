@@ -30,7 +30,7 @@ export function validTurmiteRhythm(v:TurmiteRhythm):boolean{
   Number.isInteger(v.writeBias)&&v.writeBias>=-3&&v.writeBias<=3;
 }
 export interface PhaseAgent{
- x:number;y:number;rhythmPhase?:number;
+ x:number;y:number;rhythmPhase?:number;alive?:boolean;
 }
 export function initialRhythmPhase(id:number):number{
  if(!Number.isInteger(id)||id<0||id>=12)throw new Error('Invalid T8 identity');
@@ -89,10 +89,11 @@ export function stepRhythmPhases(
   throw new Error('Invalid T8 agent coordinate');
  if(!settings.enabled)return phases;
  return agents.map((ant,i)=>{
+  if(ant.alive===false)return phases[i]; // Dormant clocks do not run.
   const p=ant.y*w+ant.x,phase=phases[i],r=settings.radius;
   let sum=0,totalWeight=0;
   for(let j=0;j<agents.length;j++){
-   if(j===i)continue;
+   if(j===i||agents[j].alive===false)continue;
    const other=agents[j];
    const dx=torusDistance(ant.x,other.x,w,wrap);
    const dy=torusDistance(ant.y,other.y,h,wrap);
@@ -112,11 +113,12 @@ export function stepRhythmPhases(
  });
 }
 export function rhythmOrderParameter(agents:readonly PhaseAgent[]):number{
- if(agents.length===0)return 0;
+ const living=agents.map((a,i)=>({a,i})).filter(x=>x.a.alive!==false);
+ if(living.length===0)return 0;
  let cosine=0,sine=0;
- for(let i=0;i<agents.length;i++){
-  const theta=phaseOf(agents[i],i)*2*Math.PI/256;
+ for(const {a:agent,i} of living){
+  const theta=phaseOf(agent,i)*2*Math.PI/256;
   cosine+=Math.cos(theta);sine+=Math.sin(theta);
  }
- return Math.sqrt(cosine*cosine+sine*sine)/agents.length;
+ return Math.sqrt(cosine*cosine+sine*sine)/living.length;
 }
