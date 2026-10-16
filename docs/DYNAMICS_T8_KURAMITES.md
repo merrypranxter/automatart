@@ -18,7 +18,7 @@ P'_i       = (P_i + frequency + detune * species_i
               + coupling_i + chem_i) mod 256
 ```
 
-The real implementation uses a fixed quantized 256-entry sine lookup, so repeated/batched computation and saved recordings are deterministic. This is explicitly a **discrete, spatially weighted approximation** of continuous-time Kuramoto coupling, not a claim of exact differential-equation integration. Positive K tends to synchronize; negative K repels phases. Signed chemical influence shifts clock rates based on the *actual old physical* T6/T7 chemical values. All clocks compute the new phase synchronously from the same pre-step phases, positions and chemistry; they **do not** read another agent's just-updated phase.
+The real implementation uses a fixed quantized 256-entry sine lookup **and sign-symmetric half-tick rounding** (positive and negative forces have opposite equal magnitudes at ties), so repeated/batched computation and saved recordings are deterministic. This is explicitly a **discrete, spatially weighted approximation** of continuous-time Kuramoto coupling, not a claim of exact differential-equation integration. Positive K tends to synchronize; negative K repels phases. Signed chemical influence shifts clock rates based on the *actual old physical* T6/T7 chemical values. All clocks compute the new phase synchronously from the same pre-step phases, positions and chemistry; they **do not** read another agent's just-updated phase.
 
 ### How the clock changes actual mathematics
 
