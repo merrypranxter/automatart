@@ -118,12 +118,19 @@ export function nicheNurseryHeading(
  n:TurmiteNiches
 ):0|1|2|3{
  if(!n.enabled||!n.nursery||!code||!strength)return heading;
+ // Nurseries CLAMP at finite edges in the T9 physics, unlike ant motion
+ // (which reflects). An outward site does not physically exist as an
+ // adjacent nursery. Exclude it: neutral off-grid score must never beat a
+ // hostile but real in-world nursery cell.
  const at=(dir:number)=>pos(x+VECTORS[dir][0],y+VECTORS[dir][1],w,h,wrap);
- let best=nicheEnergyAt(a,at(heading),code,strength,n);
+ const first=at(heading);
+ let best=first>=0?nicheEnergyAt(a,first,code,strength,n):-Infinity;
  let selected=heading;
  for(let k=1;k<4;k++){
   const candidate=((heading+k)%4) as 0|1|2|3;
-  const energy=nicheEnergyAt(a,at(candidate),code,strength,n);
+  const p=at(candidate);
+  if(p<0)continue;
+  const energy=nicheEnergyAt(a,p,code,strength,n);
   if(energy>best){best=energy;selected=candidate;}
  }
  return selected;
