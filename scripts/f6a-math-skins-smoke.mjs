@@ -69,7 +69,11 @@ try{
     assert.notEqual(base,render({...app,[param]:value}),
      skin+' '+param+' must visibly affect art across '+lattice);
    }
-   const next=stepWorld(world,s);
+   // Discrete crystal sectors are permitted to remain unchanged for a
+   // single tick. Compare over sustained real CA evolution, not a forced
+   // visual flicker on every frame.
+   let next=world;
+   for(let tick=0;tick<24;tick++)next=stepWorld(next,s);
    const later=createCanvas(1,1);
    renderWorld(later,next,app,320);
    const laterHash=sha(later.getContext('2d').getImageData(0,0,later.width,later.height).data);
