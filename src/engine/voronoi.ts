@@ -140,3 +140,24 @@ export function voronoiNeighbors(w:number,h:number,seed:number,id:number,jitter=
 }
 /** A finite clipped Voronoi patch does not have a fictional toroidal seam. */
 export function voronoiCanWrap():false{return false;}
+
+/** Exact Euclidean nearest-site picking at any pointer precision.
+ * This evaluates the geometry, not the 200px artist preview texture.
+ * For a point within bin (x,y), its bin's generator is at most
+ * sqrt(2)*(.5+.42) away, so a generator >=3 bins away along either
+ * axis cannot win; +/-2 bins is an exact complete search. */
+export function voronoiHitTest(w:number,h:number,seed:number,
+ jitter:number,u:number,v:number):number|null{
+ if(!Number.isFinite(u)||!Number.isFinite(v)||u<0||u>=1||v<0||v>=1)return null;
+ const patch=voronoiPatch(w,h,seed,jitter);
+ const px=u*w,py=v*h,x=Math.floor(px),y=Math.floor(py);
+ let best=-1,bestDist=Infinity;
+ for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
+  const xx=x+dx,yy=y+dy;
+  if(xx<0||xx>=w||yy<0||yy>=h)continue;
+  const id=yy*w+xx,site=patch.cells[id].site;
+  const dist=(site[0]-px)**2+(site[1]-py)**2;
+  if(dist<bestDist){bestDist=dist;best=id;}
+ }
+ return best<0?null:best;
+}

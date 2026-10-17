@@ -23,7 +23,7 @@ export type AspectId = 'square' | 'portrait' | 'landscape' | 'portrait34' | 'lan
 export type ColorBy = 'state' | 'age' | 'neighbors' | 'events' | 'radius' | 'x' | 'activity' | 'entropy' | 'boundaries' | 'diversity' | 'flow' | 'birthFlash' | 'deathHeat' | 'generationWave' | 'angular' | 'diagonal' | 'gradient';
 export type SkinId = 'pixels' | 'soft' | 'glow' | 'contours' | 'mercury' | 'relief' | 'glass';
 export type NeighborShape = 'moore' | 'vonNeumann' | 'square2' | 'diamond2' | 'directional' | 'custom';
-export type LatticeId = 'square' | 'hex' | 'triangle' | 'rhombille' | 'kagome' | 'squareoct' | 'penrose';
+export type LatticeId = 'square' | 'hex' | 'triangle' | 'rhombille' | 'kagome' | 'squareoct' | 'penrose' | 'voronoi';
 export type OrientedSymmetry = 'fixed' | 'rotations' | 'dihedral';
 export type OrientedMatch = 'exact' | 'contains';
 import type {MargolusEpoch,MargolusRule,MargolusMode} from './margolus-rules';
@@ -44,6 +44,8 @@ export interface SimSettings {
   customStencilMask: number;
   customStencilSize: 3|5;
   lattice: LatticeId;
+  /** Actual seeded Voronoi site displacement in physical tile units (0–0.42). */
+  voronoiJitter:number;
   orientedMask: number;
   orientedSymmetry: OrientedSymmetry;
   orientedMatch: OrientedMatch;
@@ -199,6 +201,9 @@ export interface World {
   /** Fraction of actual Cyclic rule-neighbor relationships changing relative phase. */
   stepStructural?:number;
   lattice?: LatticeId;
+  /** Exact source geometry, retained across rule-only edits and snapshots. */
+  voronoiSeed?:number;
+  voronoiJitter?:number;
   wrap?:boolean;
   neighborShape?:NeighborShape;
   neighborMask?:number;
@@ -245,7 +250,7 @@ export const INITIAL_SETTINGS: SimSettings = {
   engine: 'cyclic', lifeRule:'conway', cellCount:96, aspect:'square',
   seed:82641, density:0.36, wrap:true, pattern:'noise',
   neighborShape:'moore',neighborMask:255,customStencilMask:DEFAULT_STENCIL_MASK,
-  customStencilSize:5,lattice:'square',
+  customStencilSize:5,lattice:'square',voronoiJitter:.34,
   orientedMask:34,orientedSymmetry:'rotations',orientedMatch:'exact',
   orientedSurviveMin:2,orientedSurviveMax:3,
   customBirth:[3],customSurvive:[2,3],trailDecay:0.89,
@@ -312,7 +317,7 @@ export const LIFE_RULES: Record<LifeRule,{birth:number[];survive:number[];label:
 export function worldDimensions(s:SimSettings):[number,number] {
   // Three rhombi per underlying hexagonal motif. Keep complete hexes and
   // even offset rows so the periodic rhombille graph remains reciprocal.
-  const w=s.lattice==='penrose'?Math.min(64,s.cellCount):
+  const w=(s.lattice==='penrose'||s.lattice==='voronoi')?Math.min(64,s.cellCount):
     (s.lattice==='rhombille'||s.lattice==='kagome')?Math.ceil(s.cellCount/3)*3:s.cellCount;
   const scale=s.lattice==='squareoct'?SQUAREOCT_VERTICAL_SCALE:s.lattice==='kagome'?KAGOME_VERTICAL_SCALE:s.lattice==='rhombille'?RHOMBILLE_VERTICAL_SCALE:1;
   const aspectRatio:Record<AspectId,number>={square:1,portrait:16/9,landscape:9/16,portrait34:4/3,landscape43:3/4,portrait45:5/4,landscape54:4/5,portrait23:3/2,landscape32:2/3};

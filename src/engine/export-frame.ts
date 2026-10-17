@@ -36,7 +36,7 @@ const even=(n:number)=>Math.max(2,2*Math.round(n/2));
 function displayRatio(s:SimSettings):number{
  const [w,h]=worldDimensions(s);
  const [gx,gy]=geometryExtent(s.lattice,w,h);
- return (s.lattice==='rhombille'||s.lattice==='kagome'||s.lattice==='squareoct'||s.lattice==='penrose')?gx/gy:w/h;
+ return (s.lattice==='rhombille'||s.lattice==='kagome'||s.lattice==='squareoct'||s.lattice==='penrose'||s.lattice==='voronoi')?gx/gy:w/h;
 }
 export function exportFrameLayout(
  s:SimSettings,shortSide:number,aspect:ExportFrameAspect='current',

@@ -13,6 +13,7 @@ import {applyMargolusMap,recordMargolusEpoch,lastEpochFor,activeMargolusRule} fr
 import type {MargolusEpoch} from './margolus-rules';
 import {brainNaturalBirth,brainStimulusAt} from './brain-dynamics';
 import {penrosePatch} from './penrose';
+import {voronoiPatch} from './voronoi';
 
 function seededRandom(seed:number):()=>number{
   let a=seed>>>0;
@@ -31,13 +32,14 @@ export function createWorld(s:SimSettings):World{
   const hppWalls=s.engine==='hpp'?new Uint8Array(n):undefined;
   const rand=seededRandom(s.seed),cx=(width-1)/2,cy=(height-1)/2;
   const penrose=s.lattice==='penrose'?penrosePatch(width,height):null;
-  const extent=penrose?.extent,physicalMin=extent?Math.min(...extent):1;
+  const voronoi=s.lattice==='voronoi'?voronoiPatch(width,height,s.seed,s.voronoiJitter):null;
+  const extent=penrose?.extent??voronoi?.extent,physicalMin=extent?Math.min(...extent):1;
   const minSide=Math.min(width,height);
   for(let y=0;y<height;y++)for(let x=0;x<width;x++){
     const p=y*width+x;
-    const real=penrose?.tiles[p].centroid;
+    const real=penrose?.tiles[p].centroid??voronoi?.cells[p].centroid;
     const px=real?real[0]-extent![0]/2:x-cx,py=real?real[1]-extent![1]/2:y-cy;
-    const dx=px/(penrose?physicalMin:minSide),dy=py/(penrose?physicalMin:minSide),r=Math.hypot(dx,dy);
+    const dx=px/(extent?physicalMin:minSide),dy=py/(extent?physicalMin:minSide),r=Math.hypot(dx,dy);
     let chance=s.density;
     if(s.pattern==='center')chance=r<0.16?s.density*1.7:0;
     if(s.pattern==='rings')chance=Math.sin(r*85)>0.55?s.density*1.8:s.density*0.05;
@@ -79,7 +81,8 @@ export function createWorld(s:SimSettings):World{
   }
   const turmiteAgents=s.engine==='turmites'?initializeLifecycle(
     seedTurmites(width,height,s.turmiteCount,s.seed,s.turmiteFormation??'orbit'),s.turmiteLife):undefined;
-  return {engine:s.engine,lattice:s.lattice,wrap:s.lattice==='penrose'?false:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
+  return {engine:s.engine,lattice:s.lattice,voronoiSeed:s.lattice==='voronoi'?s.seed:undefined,
+    voronoiJitter:s.lattice==='voronoi'?s.voronoiJitter:undefined,wrap:(s.lattice==='penrose'||s.lattice==='voronoi')?false:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width,height,generation:0,cells,grains,hppWalls,turmiteAgents,
     turmiteLifeEnabled:s.engine==='turmites'?s.turmiteLife.enabled:undefined,
@@ -105,7 +108,8 @@ function valueAt(cells:Uint8Array|Uint32Array,w:number,h:number,x:number,y:numbe
 export function stepWorld(prev:World,s:SimSettings):World{
   const {width:w,height:h,cells,ages,traces}=prev,n=w*h;
   const penrose=s.lattice==='penrose'?penrosePatch(w,h):null;
-  if(penrose&&s.wrap)throw new Error('Aperiodic Penrose worlds cannot wrap');
+  const voronoi=s.lattice==='voronoi'?voronoiPatch(w,h,s.seed,s.voronoiJitter):null;
+  if((penrose||voronoi)&&s.wrap)throw new Error('Finite Penrose/Voronoi worlds cannot wrap');
   const next=new Uint8Array(n),nextAges=new Uint16Array(n);
   let nextGrains:Uint32Array|undefined;
   const neighbors=new Uint8Array(n),events=new Uint8Array(n),nextTraces=new Float32Array(n);
@@ -236,7 +240,7 @@ export function stepWorld(prev:World,s:SimSettings):World{
           if(value>0){orientedBits|=1<<d;count++;}
         }
       }else{
-        const offsets=penrose?penrose.tiles[p].neighbors.map(id=>
+        const offsets=penrose||voronoi?(penrose?penrose.tiles[p].neighbors:voronoi!.cells[p].neighbors).map(id=>
           [id%w-x,Math.floor(id/w)-y] as [number,number]):
           s.engine==='larger'?null:neighborOffsets(s.lattice,x,y,s.neighborShape,s.neighborMask,s.customStencilMask,s.customStencilSize);
         if(offsets){
@@ -352,16 +356,18 @@ export function stepWorld(prev:World,s:SimSettings):World{
       :(old!==0&&now===0?1:old!==now?0.12:0);
     nextFossils[i]=Math.max(deposit,(prev.fossils?.[i]??0)*0.986);
   }
-  const stepStructural=s.engine==='cyclic'?(penrose?(()=>{
+  const graph=penrose?.tiles??voronoi?.cells;
+  const stepStructural=s.engine==='cyclic'?(graph?(()=>{
     let total=0,changed=0;
-    for(let p=0;p<n;p++)for(const q of penrose.tiles[p].neighbors){
+    for(let p=0;p<n;p++)for(const q of graph[p].neighbors){
       const before=(cells[q]-cells[p]+s.cyclicStates)%s.cyclicStates;
       const after=(next[q]-next[p]+s.cyclicStates)%s.cyclicStates;
       if(before!==after)changed++;total++;
     }
     return total?changed/total:0;
   })():cyclicStructuralChange(cells,next,w,h,s.cyclicStates,s.wrap,s)):undefined;
-  return {engine:s.engine,lattice:s.lattice,wrap:s.lattice==='penrose'?false:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
+  return {engine:s.engine,lattice:s.lattice,voronoiSeed:s.lattice==='voronoi'?s.seed:undefined,
+    voronoiJitter:s.lattice==='voronoi'?s.voronoiJitter:undefined,wrap:(s.lattice==='penrose'||s.lattice==='voronoi')?false:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':
       s.engine==='hodgepodge'?'moore':s.neighborShape,neighborMask:s.neighborMask,
     customStencilMask:s.customStencilMask,customStencilSize:s.customStencilSize,width:w,height:h,generation:prev.generation+1,stepChanged,stepStructural,waveStimulusCount,margolusEpochs,
     cells:next,grains:nextGrains,hppWalls:prev.hppWalls?.slice(),turmiteAgents:nextAgents?.map(a=>({...a})),

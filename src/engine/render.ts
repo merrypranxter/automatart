@@ -7,6 +7,7 @@ import { applyPrintShop } from './printshop';
 import {computeColorSignal,isNewColorSignal,signalIndex} from './color-signals';
 import {createDualSampler,hasEventColor} from './dual-color';
 import {renderPenroseVector} from './penrose-vector';
+import {renderVoronoiVector} from './voronoi-vector';
 
 const bg:[number,number,number]=[9,6,23];
 const backBuffers=new WeakMap<HTMLCanvasElement,HTMLCanvasElement>();
@@ -27,7 +28,7 @@ const wrap=(value:number,n:number)=>((value%n)+n)%n;
 function renderSquareWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,outputWidth=900,outputHeight?:number):void{
   const w=world.width,h=world.height;
   const [gx,gy]=geometryExtent(world.lattice??'square',w,h);
-  const outW=outputWidth,outH=outputHeight??Math.round(outputWidth*((world.lattice==='rhombille'||world.lattice==='kagome'||world.lattice==='squareoct'||world.lattice==='penrose')?gy/gx:h/w));
+  const outW=outputWidth,outH=outputHeight??Math.round(outputWidth*((world.lattice==='rhombille'||world.lattice==='kagome'||world.lattice==='squareoct'||world.lattice==='penrose'||world.lattice==='voronoi')?gy/gx:h/w));
   if(canvas.width!==outW)canvas.width=outW;
   if(canvas.height!==outH)canvas.height=outH;
   const ctx=canvas.getContext('2d',{alpha:false});
@@ -182,7 +183,7 @@ export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,ou
   }
   const w=world.width,h=world.height;
   const [gx,gy]=geometryExtent(world.lattice,w,h);
-  const outW=outputWidth,outH=outputHeight??Math.round(outputWidth*((world.lattice==='rhombille'||world.lattice==='kagome'||world.lattice==='squareoct'||world.lattice==='penrose')?gy/gx:h/w));
+  const outW=outputWidth,outH=outputHeight??Math.round(outputWidth*((world.lattice==='rhombille'||world.lattice==='kagome'||world.lattice==='squareoct'||world.lattice==='penrose'||world.lattice==='voronoi')?gy/gx:h/w));
   if(canvas.width!==outW)canvas.width=outW;
   if(canvas.height!==outH)canvas.height=outH;
   const ctx=canvas.getContext('2d',{alpha:false});
@@ -194,12 +195,17 @@ export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,ou
   const sc=source.getContext('2d');
   if(!sc)return;
   const sourcePixels=sc.getImageData(0,0,sw,sh).data;
+  if(world.lattice==='voronoi'&&quality==='export'){
+    renderVoronoiVector(ctx,source,sourcePixels,world,a,outW,outH);
+    applyPrintShop(canvas,a,world);
+    return;
+  }
   if(world.lattice==='penrose'&&quality==='export'){
     renderPenroseVector(ctx,source,sourcePixels,world,a,outW,outH);
     applyPrintShop(canvas,a,world);
     return;
   }
-  const map=projectionMap(world.lattice,w,h);
+  const map=projectionMap(world.lattice,w,h,world.voronoiSeed,world.voronoiJitter);
   const projected=bufferFor(canvas,map.width,map.height);
   const pc=projected.getContext('2d',{alpha:false});
   if(!pc)return;
