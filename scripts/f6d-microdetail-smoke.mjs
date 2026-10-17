@@ -102,13 +102,13 @@ try{
    const advanced=stepWorld(world,s);
    assert.notEqual(fine,draw(appearance,advanced).hash,
     'True cellular generation affects the microscopic material');
-   const probe=sampleMicroEquation(skin,.46,.52,.14,.33,.6,.2,-.1,
-    appearance,world.generation);
-   const moved=sampleMicroEquation(skin,.46,.52,.86,.79,.6,.2,-.1,
-    appearance,world.generation);
-   assert(Number.isFinite(probe)&&Number.isFinite(moved));
-   assert.notEqual(probe,moved,
-    'The SAME source cell has different actual equation samples at two subcell positions');
+   const subcellPoints=[[.11,.17],[.37,.28],[.68,.74],[.91,.83]];
+   const microSamples=subcellPoints.map(([x,y])=>
+    sampleMicroEquation(skin,.46,.52,x,y,.6,.2,-.1,
+      appearance,world.generation));
+   assert(microSamples.every(Number.isFinite));
+   assert(new Set(microSamples).size>=2,
+    'The SAME physical cell must have multiple genuinely different equation samples');
    assert.deepEqual(snapshotWorld(world),saved,
     'Subcell material changes no physics, history or source geometry');
    tests++;

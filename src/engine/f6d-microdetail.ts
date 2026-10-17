@@ -130,7 +130,9 @@ export function sampleMicroEquation(
  const U=(xx*co+yy*si)*1.14-.37+height*warp*.24;
  const V=(-xx*si+yy*co)*.72;
  const d=cuspDiscriminant(U,V);
- return Math.tanh(d*1.5);
+ // Monotonic arctangent compression retains true small differences even
+ // in large signed-cusp regimes; tanh can numerically saturate to ±1.
+ return Math.atan(d*.45)/(PI/2);
 }
 /** Draw high-frequency RGBA as a *single reusable small tile* per physical
  * polygon. An actual polygon clips it; there are no stale colors across
