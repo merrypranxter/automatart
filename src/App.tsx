@@ -3,6 +3,7 @@ import { paletteFromColors, automatartColorsFromPortable } from './palettes/port
 import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, PointerEvent } from 'react';
 import { createWorld, stepWorld, rewindWorld } from './engine/sim';
 import { lookupCell,polygonForCell,geometryExtent } from './engine/topology';
+import {inspectCell} from './engine/cell-inspector';
 import {voronoiStrokeCells} from './engine/voronoi-stroke';
 import {applyAlienStamp,alienFootprint,INITIAL_ALIEN_BRUSH,STAMPS,isGliderCompatible,validateAlienBrush} from './engine/alien-paint';
 import type {AlienBrush,BrushSymmetry,StampId} from './engine/alien-paint';
@@ -527,6 +528,12 @@ export default function App(){
   useEffect(()=>{
     worldRef.current=pendingWorldRestoreRef.current??createWorld(settings);
     pendingWorldRestoreRef.current=null;
+    // An inspected tile ID belongs to the OLD geometry. Never carry it into
+    // a new seed, engine, tiling, resolution or loaded saved world.
+    setInspectedCell(null);
+    hoveredCellRef.current=null;
+    strokeLastCellRef.current=null;
+    strokeLastVoronoiPointerRef.current=null;
     // Every true world replacement (new engine, seed, lattice, grid, etc.)
     // invalidates any older destructive shape confirmation.
     setPendingWorldAspect(null);
@@ -1236,6 +1243,7 @@ export default function App(){
   const largeGif=(captureFormat==='gif'&&(predictedFrames>250||resolution>=720&&predictedFrames>80));
   const densityLabel=Math.round(settings.density*100)+'%';
   const neighborMax=maxNeighborCount(settings);
+  const selectedCell=inspectedCell?inspectCell(worldRef.current,...inspectedCell):null;
   return (
     <div className="app">
       <header className="topbar">
@@ -1342,6 +1350,15 @@ export default function App(){
               onClick={()=>void savePng()}>{snapshotBusy?'◌':'📷'}<span> PNG</span></button>
           </div>
         </div>
+        {!viewerFullscreen&&selectedCell&&
+          <div className="math-cell-inspector" role="status" aria-label="Real mathematical cell inspector">
+            <span><b>INSPECT</b> {selectedCell.lattice.toUpperCase()} #{selectedCell.id}</span>
+            <span><b>{selectedCell.degree}</b> REAL NEIGHBORS</span>
+            <span><b>{selectedCell.nonzeroNeighbors}</b> NONZERO NEIGHBORS</span>
+            <span><b>{selectedCell.area.toFixed(3)}</b> PHYSICAL AREA</span>
+            <span>{selectedCell.boundary?'FINITE EDGE':'INTERIOR'} · STATE {selectedCell.value}</span>
+            <button type="button" aria-label="Clear inspected cell" onClick={()=>setInspectedCell(null)}>✕</button>
+          </div>}
         {capturing&&<div className="stage-capture-state" role="status" aria-live="polite">
           <div className="stage-capture-head">
             <b>● RECORDING {captureFormat.toUpperCase()}</b>

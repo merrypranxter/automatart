@@ -81,6 +81,8 @@ jobs:
         run: node scripts/dynamics-t13-genetic-niches-smoke.mjs
       - name: Verify C4 HPP conservation, boundaries, wall painting, recipes and recording
         run: node scripts/c4-hpp-smoke.mjs
+      - name: Verify D4A all eight lattice families, true cell inspector, six compatible CA engines and PNG/recipe fidelity
+        run: node scripts/d4a-suite-integration-smoke.mjs
       - name: Verify D3C exact continuous physical Voronoi strokes, bounded pixel geometry cache and honest 2160p frames
         run: node scripts/d3c-voronoi-production-smoke.mjs
       - name: Verify D3B actual living Voronoi neighbors, jitter, paints, colors and native-resolution exports
@@ -142,6 +144,8 @@ jobs:
         run: |
           npm install --no-save --no-audit --no-fund playwright gifuct-js
           npx playwright install --with-deps chromium
+      - name: Verify D4A phone-width real cell inspector and cleanup on regenerated Voronoi/Penrose worlds
+        run: node scripts/d4a-inspector-browser-smoke.mjs
       - name: Verify D3C phone-width jitter controls and one-event continuous physical Voronoi painting
         run: node scripts/d3c-voronoi-browser-smoke.mjs
       - name: Record GIF through actual browser Worker and verify UI

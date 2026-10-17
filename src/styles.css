@@ -849,3 +849,18 @@ body.art-viewer-open{overflow:hidden}
   .panel{touch-action:pan-y;scrollbar-gutter:stable}
   .stage{scrollbar-gutter:stable}
 }
+
+/* D4A: the inspector never overlays or shrinks the artwork; across mobile
+   widths it wraps underneath the fixed stage, with no horizontal overflow. */
+.math-cell-inspector{
+  display:flex;flex-wrap:wrap;align-items:center;gap:7px 13px;
+  padding:7px 12px;border-top:1px solid rgba(150,210,244,.2);
+  background:rgba(8,10,25,.86);font-size:.68rem;letter-spacing:.03em;
+  min-width:0;overflow-wrap:anywhere;
+}
+.math-cell-inspector span{white-space:normal}
+.math-cell-inspector b{color:#7aebf8}
+.math-cell-inspector button{
+  margin-left:auto;background:transparent;border:1px solid rgba(192,222,255,.32);
+  border-radius:6px;color:inherit;cursor:pointer;
+}
