@@ -6,6 +6,7 @@ import {sandStateColorIndex} from './circuits';
 import { applyPrintShop } from './printshop';
 import {computeColorSignal,isNewColorSignal,signalIndex} from './color-signals';
 import {createDualSampler,hasEventColor} from './dual-color';
+import {renderPenroseVector} from './penrose-vector';
 
 const bg:[number,number,number]=[9,6,23];
 const backBuffers=new WeakMap<HTMLCanvasElement,HTMLCanvasElement>();
@@ -173,7 +174,7 @@ const latticeSources=new WeakMap<HTMLCanvasElement,HTMLCanvasElement>();
  * renderer used for squares. Both PDF/PNG and frame exporters call here.
  * Geometry changes neighborhood edges in sim.ts; this step renders them.
  */
-export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,outputWidth=900,outputHeight?:number):void{
+export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,outputWidth=900,outputHeight?:number,quality:'preview'|'export'='preview'):void{
   if(!world.lattice||world.lattice==='square'){
     renderSquareWorld(canvas,world,a,outputWidth,outputHeight);
     applyPrintShop(canvas,a,world);
@@ -193,6 +194,11 @@ export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,ou
   const sc=source.getContext('2d');
   if(!sc)return;
   const sourcePixels=sc.getImageData(0,0,sw,sh).data;
+  if(world.lattice==='penrose'&&quality==='export'){
+    renderPenroseVector(ctx,source,sourcePixels,world,a,outW,outH);
+    applyPrintShop(canvas,a,world);
+    return;
+  }
   const map=projectionMap(world.lattice,w,h);
   const projected=bufferFor(canvas,map.width,map.height);
   const pc=projected.getContext('2d',{alpha:false});

@@ -90,7 +90,7 @@ export function renderExportFrame(
 ):void{
  if(target.width!==l.width)target.width=l.width;
  if(target.height!==l.height)target.height=l.height;
- renderWorld(scratch,world,a,l.image.width,l.image.height);
+ renderWorld(scratch,world,a,l.image.width,l.image.height,'export');
  const ctx=target.getContext('2d');
  if(!ctx)throw new Error('Export canvas unavailable');
  ctx.fillStyle='#090617';
