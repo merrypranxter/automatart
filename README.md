@@ -209,3 +209,8 @@ A real seeded finite Voronoi diagram generates physically irregular convex polyg
 ## D3B — LIVING VORONOI (PR pending)
 
 Play genuine seeded Voronoi convex polygon worlds in the six compatible local CA engines. Real variable shared-edge neighbors and centroid-based seed/paint/color behavior; a new WORLD jitter slider physically changes the cell shapes and graph, with strict finite-only boundaries. Live preview remains mobile-friendly; native-resolution PNG/GIF/video renders real polygon paths at final output pixels, in all nine aspect ratios. See [D3B detail](docs/D3B_LIVING_VORONOI.md). D3C iPhone Safari device acceptance and performance still to come.
+
+
+## D3C — Voronoi production brush + export optimization (PR pending)
+
+Voronoi drags now intersect every physically crossed polygon, including thin cells missed by fast pointer events. Native-resolution PNG/GIF/video frames reuse cached actual polygon paths while retaining LIVE, independent palette/skin material on every frame. Phone jitter slider commits geometry only on release, not each intermediate motion. Dedicated exhaustive stroke mathematics, 2160p fresh-color tests, and 390px production-browser interaction checks gate merging. See [D3C production notes](docs/D3C_VORONOI_PRODUCTION.md). Actual iPhone Safari long-recording acceptance remains an on-device release task.

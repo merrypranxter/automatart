@@ -1,3 +1,4 @@
+import {useEffect,useState} from 'react';
 import type {Dispatch,SetStateAction} from 'react';
 import type {LatticeId,OrientedMatch,OrientedSymmetry,SimSettings} from '../engine/types';
 import {normalizeActiveVotes} from '../engine/neighborhood';
@@ -23,6 +24,14 @@ const DIRS=[
 export const SQUARE_ONLY_ENGINES=['wolfram','larger','oriented','margolus','wireworld','sandpile','hodgepodge','forestfire','ising','turmites','hpp'];
 export default function StrangeControls({settings:s,setSettings,onRewind,onPlayDirection,world,direction,generation,part='all'}:Props){
   const squareOnly=SQUARE_ONLY_ENGINES.includes(s.engine);
+  // Geometry rebuilds are expensive on phones. Drag the slider thumb freely;
+  // only regenerate the 7k-site physical diagram on release/keyboard commit.
+  const [jitterDraft,setJitterDraft]=useState(s.voronoiJitter??.34);
+  useEffect(()=>setJitterDraft(s.voronoiJitter??.34),[s.voronoiJitter]);
+  const commitJitter=(next:number)=>{
+    const bounded=Math.max(0,Math.min(.42,Math.round(next*100)/100));
+    setSettings(prev=>prev.voronoiJitter===bounded?prev:{...prev,voronoiJitter:bounded});
+  };
   const set=(key:keyof SimSettings,value:unknown)=>
     setSettings(prev=>({...prev,[key]:value}));
   const showLattice=part!=='rules',showRules=part!=='lattice';
@@ -58,12 +67,15 @@ export default function StrangeControls({settings:s,setSettings,onRewind,onPlayD
     {showLattice&&s.lattice==='voronoi'&&!squareOnly&&
       <div className="strange-rule" aria-label="Voronoi physical shape controls">
         <label className="input-label" htmlFor="voronoi-jitter">
-          Seeded site jitter — real polygon geometry <em>{(s.voronoiJitter??.34).toFixed(2)}</em>
+          Seeded site jitter — real polygon geometry <em>{jitterDraft.toFixed(2)}</em>
         </label>
         <input id="voronoi-jitter" type="range" min="0" max="0.42" step="0.02"
-          value={s.voronoiJitter??.34}
-          onChange={e=>setSettings(prev=>({...prev,voronoiJitter:Number(e.target.value)}))}/>
-        <p className="module-note">0 makes equal square Voronoi cells. More jitter reshapes every boundary and changes the actual neighbor graph. This restarts the world from its seed; it never just distorts the image.</p>
+          value={jitterDraft}
+          onChange={e=>setJitterDraft(Number(e.target.value))}
+          onPointerUp={e=>commitJitter(Number(e.currentTarget.value))}
+          onKeyUp={e=>commitJitter(Number(e.currentTarget.value))}
+          onBlur={e=>commitJitter(Number(e.currentTarget.value))}/>
+        <p className="module-note">Release the slider to regenerate real seeded polygon geometry (rather than rebuilding thousands of cells on every finger movement). 0 makes a square Voronoi limit; larger values change actual boundaries and neighbor relationships, restarting the world.</p>
       </div>}
     {showRules&&s.engine==='oriented'&&<div className="strange-rule">
       <h3>DIRECTIONAL BIRTH STENCIL</h3>

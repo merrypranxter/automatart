@@ -188,3 +188,8 @@ Deterministically jittered physical generators, globally exact bounded Voronoi b
 ### D3B live Voronoi (separate PR pending complete CI)
 
 The variable-degree D3A physical graph drives six synchronous true CA engines, seeded cell-centroid starting patterns, finite-only 32/48/64 source tile columns, real geometry jitter and recipe reproducibility, exact tap/brush physical polygons, graph entropy/flow/gradient, and native-resolution true polygon PNG/GIF/video in nine sizes. D3C device acceptance then D4 consolidation/F6 skins. The artist owns all merges. See [D3B](D3B_LIVING_VORONOI.md).
+
+
+### D3C Voronoi production polish (isolated PR pending CI)
+
+Use mathematically exact continuous stroke-vs-polygon intersection for truly uninterrupted fast painting (finite 9:16/1:1 worlds), cached output-size-dependent polygon paths/bounds for each GIF/video frame, fresh dynamic colors, and drag-release jitter rebuild instead of expensive 7k-cell regeneration at every thumb event. Includes exhaustive whole-graph path QA and a real 390px mobile browser drag/recipe test. All existing exports unchanged except lower geometry processing overhead. Device Safari/thermal acceptance remains open. [D3C](D3C_VORONOI_PRODUCTION.md).
