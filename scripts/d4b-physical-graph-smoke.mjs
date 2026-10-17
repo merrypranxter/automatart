@@ -72,7 +72,7 @@ function oldGraphSignal(world,signal,patch){
   }else if(signal==='flow'){
    let vx=0,vy=0,energy=0;
    for(const q of tile.neighbors){
-    const change=(old[q]!==previous[q]?1:0)+(previous[q]!==older[q]?.5:0);
+    const change=(old[q]!==previous[q]?1:0)+(previous[q]!==older[q]?0.5:0);
     vx+=(faces[q].centroid[0]-tile.centroid[0])*change;
     vy+=(faces[q].centroid[1]-tile.centroid[1])*change;
     energy+=change;

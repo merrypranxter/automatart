@@ -148,8 +148,8 @@ export function computeColorSignal(world:World,a:Appearance,id:ColorBy=a.colorBy
             const change=(cells[p]!==flowPrevious[p]?1:0)+
               (flowPrevious[p]!==flowOlder[p]?0.5*opts.history:0);
             if(['rhombille','kagome','squareoct'].includes(world.lattice??'')){
-              const [ox,oy]=cellCentroid(world.lattice,x,y,w,h);
-              const [nx,ny]=cellCentroid(world.lattice,x+dx,y+dy,w,h);
+              const [ox,oy]=cellCentroid(world.lattice??'square',x,y,w,h);
+              const [nx,ny]=cellCentroid(world.lattice??'square',x+dx,y+dy,w,h);
               vx+=(nx-ox)*change;vy+=(ny-oy)*change;
             }else{vx+=dx*change;vy+=dy*change;}
             energy+=change;
