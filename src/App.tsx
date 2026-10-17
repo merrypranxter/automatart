@@ -3,6 +3,7 @@ import { paletteFromColors, automatartColorsFromPortable } from './palettes/port
 import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, PointerEvent } from 'react';
 import { createWorld, stepWorld, rewindWorld } from './engine/sim';
 import { lookupCell,polygonForCell,geometryExtent } from './engine/topology';
+import {voronoiStrokeCells} from './engine/voronoi-stroke';
 import {applyAlienStamp,alienFootprint,INITIAL_ALIEN_BRUSH,STAMPS,isGliderCompatible,validateAlienBrush} from './engine/alien-paint';
 import type {AlienBrush,BrushSymmetry,StampId} from './engine/alien-paint';
 import {snapshotWorld,restoreWorldSnapshot} from './engine/world-snapshot';
@@ -183,6 +184,8 @@ export default function App(){
   const previewRef=useRef<HTMLCanvasElement>(null);
   const hoveredCellRef=useRef<[number,number]|null>(null);
   const strokeLastCellRef=useRef<string|null>(null);
+  /** Last physical pointer position, NOT a packed Voronoi array address. */
+  const strokeLastVoronoiPointerRef=useRef<[number,number]|null>(null);
   const [paintSpecies,setPaintSpecies]=useState(1);
   const [wireStamp,setWireStamp]=useState<WireStampOptions>({template:'loop',radius:9,rotation:0,excite:true,clear:true});
   const [wireStampArmed,setWireStampArmed]=useState(false);
@@ -648,19 +651,44 @@ export default function App(){
   function plantAt(e:PointerEvent<HTMLCanvasElement>){
     if(recordingRef.current)return;
     const point=locatePointer(e);
-    if(!point)return;
+    if(!point){strokeLastVoronoiPointerRef.current=null;return;}
     const [x,y]=point;
-    if(strokeLastCellRef.current===x+','+y)return;
-    setInspectedCell([x,y]);
-    strokeLastCellRef.current=x+','+y;
-    cancelBatch();
-    const seed=createStrokeSeed(x,y);
+    const canvas=canvasRef.current,rect=canvas?.getBoundingClientRect();
+    const u=rect?(e.clientX-rect.left)/rect.width:0;
+    const v=rect?(e.clientY-rect.top)/rect.height:0;
+    const world=worldRef.current;
+    const isVoronoiStroke=world.lattice==='voronoi'&&alienBrush.stamp==='brush';
+    const old=strokeLastVoronoiPointerRef.current;
+    // A dragged line intersects true convex regions, including arbitrarily
+    // thin cells that point-sampled mousemove events could skip. Geometry
+    // changes only when seed/jitter/world dimensions change.
+    const ids=isVoronoiStroke&&old?
+      voronoiStrokeCells(world.width,world.height,
+        world.voronoiSeed??settings.seed,world.voronoiJitter??settings.voronoiJitter,
+        old[0],old[1],u,v):
+      [y*world.width+x];
+    strokeLastVoronoiPointerRef.current=isVoronoiStroke?[u,v]:null;
+    if(ids.length===0)return;
+    setInspectedCell(point);
     const brush={...alienBrush,species:paintSpecies};
-    try{applyAlienStamp(worldRef.current,settings,[x,y],brush,seed);}
-    catch(error){setMessage('Paint rejected: '+(error instanceof Error?error.message:String(error)));return;}
-    strokeLogRef.current.push({x,y,seed,brush:{...brush}});
-    if(strokeLogRef.current.length>1500)strokeLogRef.current.shift();
-    setPopulation(stat(worldRef.current));
+    let stamped=0;
+    for(const id of ids){
+      const tileX=id%world.width,tileY=Math.floor(id/world.width);
+      if(strokeLastCellRef.current===tileX+','+tileY)continue;
+      strokeLastCellRef.current=tileX+','+tileY;
+      // A unique deterministic seed per physically crossed tile keeps the
+      // existing replay format and all individual paint modes intact.
+      const seed=createStrokeSeed(tileX,tileY);
+      try{applyAlienStamp(world,settings,[tileX,tileY],brush,seed);}
+      catch(error){setMessage('Paint rejected: '+(error instanceof Error?error.message:String(error)));return;}
+      strokeLogRef.current.push({x:tileX,y:tileY,seed,brush:{...brush}});
+      if(strokeLogRef.current.length>1500)strokeLogRef.current.shift();
+      stamped++;
+    }
+    if(stamped===0)return;
+    cancelBatch();
+    setPopulation(stat(world));
+    // Redraw ONCE per pointer event, not once per crossed polygon.
     draw();
     drawStampPreview(point);
   }
@@ -795,18 +823,20 @@ export default function App(){
     }
     e.currentTarget.setPointerCapture(e.pointerId);
     strokeLastCellRef.current=null;
+    strokeLastVoronoiPointerRef.current=null;
     plantAt(e);
   }
   function onPointerMove(e:PointerEvent<HTMLCanvasElement>){
     if(turmitePlacement){drawStampPreview(null);return;}
     const point=locatePointer(e);
-    if(!point){drawStampPreview(null);return;}
+    if(!point){strokeLastVoronoiPointerRef.current=null;drawStampPreview(null);return;}
     if(!wireStampArmed&&(e.buttons!==0||e.pointerType==='touch')&&alienBrush.stamp==='brush'){
       plantAt(e);
     }else drawStampPreview(point);
   }
   function onPointerUp(){
     strokeLastCellRef.current=null;
+    strokeLastVoronoiPointerRef.current=null;
     drawStampPreview(null);
   }
   function randomAlienStamp(){
