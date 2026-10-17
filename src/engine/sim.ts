@@ -14,6 +14,7 @@ import type {MargolusEpoch} from './margolus-rules';
 import {brainNaturalBirth,brainStimulusAt} from './brain-dynamics';
 import {penrosePatch} from './penrose';
 import {voronoiPatch} from './voronoi';
+import {physicalGraph} from './physical-graph';
 
 function seededRandom(seed:number):()=>number{
   let a=seed>>>0;
@@ -107,9 +108,8 @@ function valueAt(cells:Uint8Array|Uint32Array,w:number,h:number,x:number,y:numbe
 
 export function stepWorld(prev:World,s:SimSettings):World{
   const {width:w,height:h,cells,ages,traces}=prev,n=w*h;
-  const penrose=s.lattice==='penrose'?penrosePatch(w,h):null;
-  const voronoi=s.lattice==='voronoi'?voronoiPatch(w,h,s.seed,s.voronoiJitter):null;
-  if((penrose||voronoi)&&s.wrap)throw new Error('Finite Penrose/Voronoi worlds cannot wrap');
+  const graph=physicalGraph(s.lattice,w,h,s.seed,s.voronoiJitter);
+  if(graph&&s.wrap)throw new Error('Finite Penrose/Voronoi worlds cannot wrap');
   const next=new Uint8Array(n),nextAges=new Uint16Array(n);
   let nextGrains:Uint32Array|undefined;
   const neighbors=new Uint8Array(n),events=new Uint8Array(n),nextTraces=new Float32Array(n);
@@ -240,10 +240,19 @@ export function stepWorld(prev:World,s:SimSettings):World{
           if(value>0){orientedBits|=1<<d;count++;}
         }
       }else{
-        const offsets=penrose||voronoi?(penrose?penrose.tiles[p].neighbors:voronoi!.cells[p].neighbors).map(id=>
-          [id%w-x,Math.floor(id/w)-y] as [number,number]):
-          s.engine==='larger'?null:neighborOffsets(s.lattice,x,y,s.neighborShape,s.neighborMask,s.customStencilMask,s.customStencilSize);
-        if(offsets){
+        const offsets=graph||s.engine==='larger'?null:
+          neighborOffsets(s.lattice,x,y,s.neighborShape,s.neighborMask,s.customStencilMask,s.customStencilSize);
+        if(graph){
+          // Real shared-edge IDs come directly from one immutable compressed
+          // physical graph; no [dx,dy] arrays allocated on every step/cell.
+          for(let k=graph.starts[p];k<graph.starts[p+1];k++){
+            const value=cells[graph.edgeIds[k]];
+            if(s.engine==='species'){
+              if(value>0&&value<=s.speciesCount){speciesCounts[value]++;count++;}
+            }else if(s.engine==='cyclic'?
+              chaseNeighbor(value,old,s.cyclicStates,s.cyclicReach??1):value===1)count++;
+          }
+        }else if(offsets){
           for(const [ox,oy] of offsets){
             if(s.engine==='cyclic'&&!s.wrap&&
                (x+ox<0||x+ox>=w||y+oy<0||y+oy>=h))continue;
@@ -356,15 +365,15 @@ export function stepWorld(prev:World,s:SimSettings):World{
       :(old!==0&&now===0?1:old!==now?0.12:0);
     nextFossils[i]=Math.max(deposit,(prev.fossils?.[i]??0)*0.986);
   }
-  const graph=penrose?.tiles??voronoi?.cells;
   const stepStructural=s.engine==='cyclic'?(graph?(()=>{
-    let total=0,changed=0;
-    for(let p=0;p<n;p++)for(const q of graph[p].neighbors){
+    let changed=0;
+    for(let p=0;p<n;p++)for(let k=graph.starts[p];k<graph.starts[p+1];k++){
+      const q=graph.edgeIds[k];
       const before=(cells[q]-cells[p]+s.cyclicStates)%s.cyclicStates;
       const after=(next[q]-next[p]+s.cyclicStates)%s.cyclicStates;
-      if(before!==after)changed++;total++;
+      if(before!==after)changed++;
     }
-    return total?changed/total:0;
+    return graph.edgeIds.length?changed/graph.edgeIds.length:0;
   })():cyclicStructuralChange(cells,next,w,h,s.cyclicStates,s.wrap,s)):undefined;
   return {engine:s.engine,lattice:s.lattice,voronoiSeed:s.lattice==='voronoi'?s.seed:undefined,
     voronoiJitter:s.lattice==='voronoi'?s.voronoiJitter:undefined,wrap:(s.lattice==='penrose'||s.lattice==='voronoi')?false:s.wrap,neighborShape:s.engine==='sandpile'||s.engine==='forestfire'||s.engine==='ising'||s.engine==='turmites'||s.engine==='hpp'?'vonNeumann':

@@ -219,3 +219,8 @@ Voronoi drags now intersect every physically crossed polygon, including thin cel
 ## D4A · Eight-world suite integration and real cell math inspector (PR pending)
 
 Click/tap any cell to see its *true* number of physical/rule neighbors, occupied neighbors, polygon area, state and finite boundary—all derived from each actual tiling graph, not squares hidden underneath. Stale selections and dragging are cleared on geometry/seed/world replacement. A dedicated 96-world cross-lattice CI regression plus a 390px real-browser inspector smoke are required before this phase merges. See [D4A integration acceptance](docs/D4A_SUITE_INTEGRATION.md). F6 skins come after integration stabilizes.
+
+
+## D4B — Real polygon graph optimization (PR pending)
+
+Penrose and Voronoi cellular engines now use cached compressed true shared-edge graph arrays instead of allocating thousands of [dx,dy] offset pairs every evolution tick. Physical centroid-based Flow and Gradient color signals share the same exact graph for each frame. Six-engine independent reference comparisons, true topology, deterministic save/replay, output frames and browser recording gate the merge. See [D4B optimization](docs/D4B_GRAPH_PERFORMANCE.md). F6 new skins next.

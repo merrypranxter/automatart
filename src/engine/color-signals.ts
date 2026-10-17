@@ -2,6 +2,7 @@ import type {Appearance,ColorBy,World} from './types';
 import {neighborOffsets,cellCentroid} from './topology';
 import {penrosePatch,penroseNeighbors} from './penrose';
 import {voronoiPatch,voronoiNeighbors} from './voronoi';
+import {physicalGraph} from './physical-graph';
 
 export const NEW_COLOR_SIGNALS:ReadonlyArray<{id:ColorBy;label:string;explanation:string}>= [
   {id:'entropy',label:'Local entropy → mixed-state disorder',explanation:'Normalized Shannon entropy of nearby cell-state frequencies. High where surrounding states are diverse and balanced.'},
@@ -72,6 +73,7 @@ export function computeColorSignal(world:World,a:Appearance,id:ColorBy=a.colorBy
   const {width:w,height:h,cells,events,ages}=world;
   const penrose=world.lattice==='penrose'?penrosePatch(w,h):null;
   const voronoi=world.lattice==='voronoi'?voronoiPatch(w,h,world.voronoiSeed??1,world.voronoiJitter??.34):null;
+  const realGraph=physicalGraph(world.lattice??'square',w,h,world.voronoiSeed,world.voronoiJitter);
   const out=new Float32Array(cells.length);
   const opts=signalOptions(a);
   const gridDependent=id==='entropy'||id==='boundaries'||id==='diversity'||id==='flow'||id==='gradient';
@@ -123,21 +125,35 @@ export function computeColorSignal(world:World,a:Appearance,id:ColorBy=a.colorBy
       }
       case 'flow':{
         let vx=0,vy=0,energy=0;
-        const offsets=penrose||voronoi?(penrose?penrose.tiles[i].neighbors:voronoi!.cells[i].neighbors).map(p=>
-          [p%w-x,Math.floor(p/w)-y] as [number,number]):neighborOffsets(world.lattice??'square',x,y,
-    (['sandpile','forestfire','ising','turmites','hpp'].includes(world.engine)?'vonNeumann':
-     world.engine==='hodgepodge'?'moore':world.neighborShape??'moore'),world.neighborMask??255,
-    world.customStencilMask,world.customStencilSize);
-        for(const [dx,dy] of offsets){
-          const p=at(world,x+dx,y+dy);
-          if(p<0)continue;
-          const change=(cells[p]!==flowPrevious[p]?1:0)+((flowPrevious[p]!==flowOlder[p] ? 0.5*opts.history : 0));
-          if((world.lattice==='rhombille'||world.lattice==='kagome'||world.lattice==='squareoct'||world.lattice==='penrose'||world.lattice==='voronoi')){
-            const [ox,oy]=cellCentroid(world.lattice,x,y,w,h,world.voronoiSeed,world.voronoiJitter);
-            const [nx,ny]=cellCentroid(world.lattice,x+dx,y+dy,w,h,world.voronoiSeed,world.voronoiJitter);
-            vx+=(nx-ox)*change;vy+=(ny-oy)*change;
-          }else{vx+=dx*change;vy+=dy*change;}
-          energy+=change;
+        if(realGraph){
+          // The true physical directions and cells are immutable between
+          // frames: read edge IDs/centroids directly, no offset arrays,
+          // repeated geometry lookups or modulo conversions per edge.
+          for(let k=realGraph.starts[i];k<realGraph.starts[i+1];k++){
+            const p=realGraph.edgeIds[k];
+            const change=(cells[p]!==flowPrevious[p]?1:0)+
+              (flowPrevious[p]!==flowOlder[p]?0.5*opts.history:0);
+            vx+=(realGraph.centerX[p]-realGraph.centerX[i])*change;
+            vy+=(realGraph.centerY[p]-realGraph.centerY[i])*change;
+            energy+=change;
+          }
+        }else{
+          const offsets=neighborOffsets(world.lattice??'square',x,y,
+            (['sandpile','forestfire','ising','turmites','hpp'].includes(world.engine)?'vonNeumann':
+              world.engine==='hodgepodge'?'moore':world.neighborShape??'moore'),
+            world.neighborMask??255,world.customStencilMask,world.customStencilSize);
+          for(const [dx,dy] of offsets){
+            const p=at(world,x+dx,y+dy);
+            if(p<0)continue;
+            const change=(cells[p]!==flowPrevious[p]?1:0)+
+              (flowPrevious[p]!==flowOlder[p]?0.5*opts.history:0);
+            if(['rhombille','kagome','squareoct'].includes(world.lattice??'')){
+              const [ox,oy]=cellCentroid(world.lattice??'square',x,y,w,h);
+              const [nx,ny]=cellCentroid(world.lattice??'square',x+dx,y+dy,w,h);
+              vx+=(nx-ox)*change;vy+=(ny-oy)*change;
+            }else{vx+=dx*change;vy+=dy*change;}
+            energy+=change;
+          }
         }
         if(energy>0&&Math.hypot(vx,vy)>.001){
           const angle=(Math.atan2(vy,vx)+Math.PI)/tau;
@@ -174,15 +190,22 @@ export function computeColorSignal(world:World,a:Appearance,id:ColorBy=a.colorBy
       }
       case 'gradient':{
         let dx=0,dy=0;
-        if((world.lattice==='rhombille'||world.lattice==='kagome'||world.lattice==='squareoct'||world.lattice==='penrose'||world.lattice==='voronoi')){
-          const edges=penrose||voronoi?(penrose?penrose.tiles[i].neighbors:voronoi!.cells[i].neighbors).map(p=>
-             [p%w-x,Math.floor(p/w)-y] as [number,number]):
-             neighborOffsets(world.lattice,x,y,'moore');
-          const [cx,cy]=cellCentroid(world.lattice,x,y,w,h,world.voronoiSeed,world.voronoiJitter);
+        if(realGraph){
+          for(let k=realGraph.starts[i];k<realGraph.starts[i+1];k++){
+            const p=realGraph.edgeIds[k];
+            const nx=realGraph.centerX[p]-realGraph.centerX[i];
+            const ny=realGraph.centerY[p]-realGraph.centerY[i];
+            const delta=densities![p]-densities![i];
+            const length=Math.hypot(nx,ny)||1;
+            dx+=nx/length*delta;dy+=ny/length*delta;
+          }
+        }else if((world.lattice==='rhombille'||world.lattice==='kagome'||world.lattice==='squareoct')){
+          const edges=neighborOffsets(world.lattice,x,y,'moore');
+          const [cx,cy]=cellCentroid(world.lattice,x,y,w,h);
           for(const [ex,ey] of edges){
             const p=at(world,x+ex,y+ey);
             if(p<0)continue;
-            const [nx,ny]=cellCentroid(world.lattice,x+ex,y+ey,w,h,world.voronoiSeed,world.voronoiJitter);
+            const [nx,ny]=cellCentroid(world.lattice,x+ex,y+ey,w,h);
             const delta=densities![p]-densities![i];
             const length=Math.hypot(nx-cx,ny-cy)||1;
             dx+=(nx-cx)/length*delta;dy+=(ny-cy)/length*delta;

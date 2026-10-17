@@ -81,6 +81,8 @@ jobs:
         run: node scripts/dynamics-t13-genetic-niches-smoke.mjs
       - name: Verify C4 HPP conservation, boundaries, wall painting, recipes and recording
         run: node scripts/c4-hpp-smoke.mjs
+      - name: Verify D4B cached physical graphs against independent Penrose/Voronoi CA, colors and export math
+        run: node scripts/d4b-physical-graph-smoke.mjs
       - name: Verify D4A all eight lattice families, true cell inspector, six compatible CA engines and PNG/recipe fidelity
         run: node scripts/d4a-suite-integration-smoke.mjs
       - name: Verify D3C exact continuous physical Voronoi strokes, bounded pixel geometry cache and honest 2160p frames
