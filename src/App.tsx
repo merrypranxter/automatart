@@ -1097,7 +1097,7 @@ export default function App(){
       const a:Appearance={...INITIAL_APPEARANCE,...data.appearance};
       if(!Array.isArray(a.palette)||a.palette.length<2||a.palette.length>32||a.palette.some(v=>typeof v!=='string'||!/^#[0-9a-f]{6}$/i.test(v)))throw new Error('Invalid palette');
       if(!['state','age','neighbors','events','radius','x','activity',...NEW_COLOR_SIGNALS.map(v=>v.id)].includes(a.colorBy))throw new Error('Invalid color mapping');
-      if(!['pixels','soft','glow','contours','mercury','relief','glass','prism','facets','spinodal','quasicrystal','hyperbolic','lissajous'].includes(a.skin))throw new Error('Invalid skin');
+      if(!['pixels','soft','glow','contours','mercury','relief','glass','prism','facets','spinodal','quasicrystal','hyperbolic','lissajous','gyroid','inversion','cusp'].includes(a.skin))throw new Error('Invalid skin');
       a.paletteOffset=Math.min(31,Math.max(-31,Number(a.paletteOffset)||0));
       a.paletteCycle=Math.min(1,Math.max(-1,Number(a.paletteCycle)||0));
       const controls=signalOptions(a);
@@ -1121,6 +1121,9 @@ export default function App(){
       a.mathInk=numeric(a.mathInk,0,1,0.65);
       a.mathFold=Math.round(numeric(a.mathFold,3,12,5));
       a.mathTwist=numeric(a.mathTwist,0,2,0.85);
+      a.mathSlice=numeric(a.mathSlice,-2,2,0);
+      a.mathPoleX=numeric(a.mathPoleX,0.05,0.95,0.5);
+      a.mathPoleY=numeric(a.mathPoleY,0.05,0.95,0.5);
       a.temporalRGB=numeric(a.temporalRGB,0,1,0);
       a.fossilOpacity=numeric(a.fossilOpacity,0,1,0);
       if(!['forward','pingpong'].includes(a.paletteMotion))a.paletteMotion='forward';
@@ -1680,6 +1683,11 @@ export default function App(){
                 <option value="quasicrystal">QUASICRYSTAL STAR · FIVEFOLD WAVES</option>
                 <option value="hyperbolic">POINCARÉ PORTAL · MÖBIUS DISK</option>
                 <option value="lissajous">LISSAJOUS BRAID · OVER–UNDER INK</option>
+              </optgroup>
+              <optgroup label="F6C · GEOMETRIC SINGULARITIES">
+                <option value="gyroid">GYROID GUTS · IMPLICIT 3D SLICE</option>
+                <option value="inversion">INVERSION BLOOM · CIRCLE POLE</option>
+                <option value="cusp">CUSP CATASTROPHE · FOLD DISCRIMINANT</option>
               </optgroup>
             </select>
             {appearance.skin==='glow'&&<>
