@@ -197,6 +197,10 @@ export interface Appearance {
   mathSlice:number;
   mathPoleX:number;
   mathPoleY:number;
+  /** F6D opt-in true within-polygon sampling; 0 preserves old pixels. */
+  mathMicroDetail:number;
+  mathMicroFrequency:number;
+  mathMicroMix:number;
   temporalRGB: number;
   fossilOpacity: number;
 }
@@ -311,7 +315,8 @@ export const INITIAL_APPEARANCE: Appearance = {
   saturation:1,contrast:1,brightness:1,glowStrength:0.8,
   skinThreshold:0.42,contourLines:5,contourWidth:1.5,
   chromeStrength:0.8,glassLines:0.7,
-  mathFrequency:4.5,mathWarp:0.8,mathInk:0.65,mathFold:5,mathTwist:0.85,mathSlice:0,mathPoleX:.5,mathPoleY:.5,temporalRGB:0,fossilOpacity:0
+  mathFrequency:4.5,mathWarp:0.8,mathInk:0.65,mathFold:5,mathTwist:0.85,mathSlice:0,mathPoleX:.5,mathPoleY:.5,
+  mathMicroDetail:0,mathMicroFrequency:5,mathMicroMix:.65,temporalRGB:0,fossilOpacity:0
 };
 export const LIFE_RULES: Record<LifeRule,{birth:number[];survive:number[];label:string}> = {
   conway:{birth:[3],survive:[2,3],label:'Conway · B3/S23'},

@@ -37,6 +37,8 @@ jobs:
         run: node scripts/recording-smoke.mjs
       - name: Regression test GIF color cycling versus live render
         run: node scripts/gif-color-cycle-smoke.mjs
+      - name: Verify F6D actual within-cell mathematical texture, live physics, full polygon boundaries and native PNG
+        run: node scripts/f6d-microdetail-smoke.mjs
       - name: Verify F6C gyroid, exact circle inversion and cusp discriminant mathematics across all eight lattices
         run: node scripts/f6c-math-skins-smoke.mjs
       - name: Verify F6B three new quasiperiodic, true hyperbolic and Lissajous pigment equations, all lattices/recipes/PNG
@@ -152,6 +154,8 @@ jobs:
         run: |
           npm install --no-save --no-audit --no-fund playwright gifuct-js
           npx playwright install --with-deps chromium
+      - name: Verify F6D optional microscopic material quality controls on 390px real browser
+        run: node scripts/f6d-microdetail-browser-smoke.mjs
       - name: Verify F6C three mathematical singularity materials and eight artist controls in 390px Chromium
         run: node scripts/f6c-skins-browser-smoke.mjs
       - name: Verify F6B new symmetry and twist controls, non-glow and all three skins in 390px Chromium

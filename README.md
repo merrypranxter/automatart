@@ -239,3 +239,8 @@ Three additional distinct mathematics-derived rendering skins bring the studio t
 ## F6C · Mathematical singularity skins (PR pending)
 
 Three new non-glow mathematical materials: **Gyroid Guts** (true 3D implicit surface slice), **Inversion Bloom** (exact circle inversion around a movable singularity), and **Cusp Catastrophe** (canonical fold discriminant). The visual-only Skin Lab now has 16 unique looks, with independent surface slice and mathematical center X/Y controls added to the existing math parameters. All eight lattice families, real cell-neighbor gradients, recipe replay, PNG/GIF/video and 390px browser checks are covered. [F6C notes](docs/F6C_SINGULARITY_SKINS.md).
+
+
+## F6D — True high-detail mathematical pigments inside the cells
+
+Gyroid Guts, Inversion Bloom, and Cusp Catastrophe now have an opt-in **Subcell quality 0–3**, **Microscopic equation frequency** and **Microscopic flat-ink intensity**. Unlike enlarging a single cell pigment, F6D evaluates the genuine mathematical equations repeatedly *inside each true physical cell*, clipping to exact polygon paths across all eight lattices. Live preview and full-resolution exports have separately bounded sample budgets, so a 9:16 world can't accidentally allocate a framebuffer-per-cell. Off by default, perfectly backwards-compatible with old recipes; zero mix restores exact original rendering. See [F6D details](docs/F6D_SUBCELL_MATERIALS.md). Sustained physical iPhone recording endurance remains an on-device requirement.

@@ -218,3 +218,8 @@ Quasiperiodic fivefold standing-wave fields, exact Poincaré disk Möbius automo
 ### F6C — Mathematical singularity materials (PR pending)
 
 Three genuinely distinct source-field skins: sampled 3D gyroid implicit zero-level membranes, involutive Euclidean circle inversion, and analytically verified cusp catastrophe discriminants, all with physical cellular field deformation. Eight artist math controls include new surface slice and XY center/pole positions, zero mandatory glow. Requires 27-case source-state and export QA, mathematically independent identity checks, mobile Chrome UI smoke, and full recorder/Netlify CI. [F6C](F6C_SINGULARITY_SKINS.md). Later F6D can target finer-than-cell material evaluation.
+
+
+### F6D — Actual mathematical sampling within each cell (PR pending)
+
+First higher-resolution intra-polygon detail for the three F6C gyroid, circle inversion and cusp skins. Each real physical polygon gets a reused microsampled shader texture clipped by its genuine border, honoring saved seed, live CA gradient and color evolution. Adjustable sample budget, micro frequency and pigment mix with 0 = exact original look. Real nine-world math, PNG sizes, recipe and 390px controls test with all existing GIF/video gates. [F6D acceptance](F6D_SUBCELL_MATERIALS.md).

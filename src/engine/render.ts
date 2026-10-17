@@ -8,6 +8,7 @@ import {computeColorSignal,isNewColorSignal,signalIndex} from './color-signals';
 import {createDualSampler,hasEventColor} from './dual-color';
 import {renderPenroseVector} from './penrose-vector';
 import {renderVoronoiVector} from './voronoi-vector';
+import {applyF6DMicrodetail} from './f6d-microdetail';
 
 const bg:[number,number,number]=[9,6,23];
 const backBuffers=new WeakMap<HTMLCanvasElement,HTMLCanvasElement>();
@@ -178,6 +179,8 @@ const latticeSources=new WeakMap<HTMLCanvasElement,HTMLCanvasElement>();
 export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,outputWidth=900,outputHeight?:number,quality:'preview'|'export'='preview'):void{
   if(!world.lattice||world.lattice==='square'){
     renderSquareWorld(canvas,world,a,outputWidth,outputHeight);
+    const squareCtx=canvas.getContext('2d');
+    if(squareCtx)applyF6DMicrodetail(squareCtx,world,a,canvas.width,canvas.height,quality);
     applyPrintShop(canvas,a,world);
     return;
   }
@@ -197,11 +200,13 @@ export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,ou
   const sourcePixels=sc.getImageData(0,0,sw,sh).data;
   if(world.lattice==='voronoi'&&quality==='export'){
     renderVoronoiVector(ctx,source,sourcePixels,world,a,outW,outH);
+    applyF6DMicrodetail(ctx,world,a,outW,outH,quality);
     applyPrintShop(canvas,a,world);
     return;
   }
   if(world.lattice==='penrose'&&quality==='export'){
     renderPenroseVector(ctx,source,sourcePixels,world,a,outW,outH);
+    applyF6DMicrodetail(ctx,world,a,outW,outH,quality);
     applyPrintShop(canvas,a,world);
     return;
   }
@@ -233,5 +238,6 @@ export function renderWorld(canvas:HTMLCanvasElement,world:World,a:Appearance,ou
   ctx.imageSmoothingEnabled=a.skin!=='pixels'&&a.skin!=='glass';
   ctx.imageSmoothingQuality='high';
   ctx.drawImage(projected,0,0,outW,outH);
+  applyF6DMicrodetail(ctx,world,a,outW,outH,quality);
   applyPrintShop(canvas,a,world);
 }
