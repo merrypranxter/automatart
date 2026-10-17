@@ -81,6 +81,8 @@ jobs:
         run: node scripts/dynamics-t13-genetic-niches-smoke.mjs
       - name: Verify C4 HPP conservation, boundaries, wall painting, recipes and recording
         run: node scripts/c4-hpp-smoke.mjs
+      - name: Verify D2A actual Penrose pentagrid and nonperiodic shared-edge graph
+        run: node scripts/d2a-penrose-smoke.mjs
       - name: Verify D1c true 4.8.8 square-octagon adjacency, 4/8-degree transitions and capture
         run: node scripts/d1c-squareoct-smoke.mjs
       - name: Verify D1b Kagome trihexagonal edge graph and export parity

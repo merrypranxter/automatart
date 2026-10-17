@@ -163,3 +163,8 @@ There are **15 feature PRs** in this plan: A1–A2 (2), B1–B2 (2), C1–C4 (4)
 
 Real 4.8.8 truncated-square face-cell graph with two-sector packed indexing (octagon with 8 real shared-edge neighbors, rotated square with 4), analytic regular polygon projection, touch painting, physical brush metric, unchanged common color/recipe/export pipelines. This fulfills F5.5D1C only; D2 Penrose, D3 Voronoi, D4 integration and F6 new skins remain future **separate PRs**. Actual iPhone Safari QA remains pending before any app-store release. Details: [D1C mathematical specification](D1C_SQUARE_OCTAGON.md).
 
+
+
+### D2A Penrose foundation (separate PR; pending CI/user merge)
+
+Exact de Bruijn pentagrid Penrose P3 **thin/fat rhomb tiling** and explicit nonperiodic full-edge graph, reproducible cropped aspect-aware patches and robust mathematical regression suite. This is core math only: D2B will integrate living state, physical rendering, touch, brush and recipes; D2C will handle full export/performance acceptance. The real 4.8.8 D1C was merged first. F6 skins remain after D4. See [D2A](D2A_PENROSE_FOUNDATION.md).

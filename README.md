@@ -184,3 +184,8 @@ Kagome uses **real 3.6.3.6 tile geometry**, not a visual disguise on a square gr
 
 An actual 4.8.8 truncated-square lattice joins rhombille and Kagome. Octagon cells have **eight shared-edge neighbors** (four octagons plus four rotated squares); small square cells have **four octagon neighbors**. Their real local rules use that degree—not square-grid Moore counts with decorative polygons. Six local-rule engines, real touch/brush geometry, coordinate-correct flow/gradient inspectors, saved recipes and high-res image/GIF/video rendering share existing pipelines. Natural polygon proportions are preserved in all nine artwork framing options. See [D1C geometry, math and gate](docs/D1C_SQUARE_OCTAGON.md), and `scripts/d1c-squareoct-smoke.mjs`.
 
+
+
+## D2A · Penrose quasicrystals — core math phase (not yet selectable)
+
+The actual de Bruijn five-grid Penrose P3 engine now generates non-repeating **thin and thick unit-edge rhombs**, with true reciprocal full-edge adjacency and aspect-aware finite patches. It refuses invented wrap seams; storage row/column addresses are not treated as physical geometry. [D2A geometric specification and tests](docs/D2A_PENROSE_FOUNDATION.md). **D2B is required before this can appear in WORLD and animate; no UI or Penrose exports are claimed yet.**
