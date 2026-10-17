@@ -178,3 +178,8 @@ Six CA engines now use exact Penrose P3 full-edge neighbors and real physical ar
 ### D2C exact Penrose export and picking (separate PR awaiting CI/merge)
 
 Preserve interactive preview speed while drawing true rhomb polygons at native PNG/GIF/video output resolution, eliminating 640px-upscaled boundaries. Use exact spatial hash + polygon-hit detection for brushes/taps across skinny 9:16 patches. Test genuine 1:1 and 9:16 images, 2160p framing, material and exact save/replay with full existing actual-browser recorder suite. Safari hardware acceptance remains mandatory. D3 Voronoi and D4 consolidation then F6 skins stay subsequent PRs.
+
+
+### D3A — seeded true Voronoi foundation (isolated PR, pending full CI)
+
+Deterministically jittered physical generators, globally exact bounded Voronoi bisector clipping optimized via proof-backed 7×7 local search, real polygon area/centroids, seed-dependent geometry, variable shared-edge coordination and fail-closed adjacency validation. No UI claimed; D3B adds living CA graph, paint, color, saved seeds, then D3C output/device acceptance, D4 consolidation, F6 skins. The artist controls merging. [Voronoi D3A](D3A_VORONOI.md).

@@ -81,6 +81,8 @@ jobs:
         run: node scripts/dynamics-t13-genetic-niches-smoke.mjs
       - name: Verify C4 HPP conservation, boundaries, wall painting, recipes and recording
         run: node scripts/c4-hpp-smoke.mjs
+      - name: Verify D3A real seeded Voronoi polygons, exact global geometry and reciprocal shared-edge graph
+        run: node scripts/d3a-voronoi-smoke.mjs
       - name: Verify D2C exact Penrose picking, native-resolution polygon PNG and artboard framing
         run: node scripts/d2c-penrose-production-smoke.mjs
       - name: Verify D2B living Penrose local laws, painting, physical signals and recipe
