@@ -75,9 +75,14 @@ try{
    assert.equal(stepWorld(a,q).cells[target],1,'Birth reads ALL real polygon neighbors');
    const first=p.cells[target].neighbors[0];a.cells[first]=0;
    assert.equal(stepWorld(a,q).cells[target],0,'Removing one real edge blocks exact birth');
-   const fake=[target-1,target+1,target-w,target+w].find(id=>
-    id>=0&&id<w*h&&!p.cells[target].neighbors.includes(id));
-   assert(fake!==undefined);
+   // On irregular Voronoi a cell may genuinely connect to ALL four
+   // packed cardinal slots. Search nearby diagonal or distance-two slots
+   // for a storage neighbor that does NOT share a physical polygon edge.
+   const fake=[-w-1,-w,-w+1,-1,1,w-1,w,w+1,-2,2,-2*w,2*w]
+    .map(d=>target+d).find(id=>id>=0&&id<w*h&&
+      Math.abs(id%w-target%w)<=2&&
+      !p.cells[target].neighbors.includes(id));
+   assert(fake!==undefined,'At least one packed-near slot has no true shared Voronoi edge');
    const ghost=createWorld({...s,customBirth:[1]});ghost.cells.fill(0);
    ghost.cells[fake]=1;
    assert.equal(stepWorld(ghost,{...s,customBirth:[1]}).cells[target],0,
