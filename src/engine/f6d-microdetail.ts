@@ -7,14 +7,12 @@
  * bit-for-bit unchanged.
  */
 import type {World,Appearance} from './types';
-import {geometryExtent,polygonForCell,cellCentroid} from './topology';
+import {geometryExtent,polygonForCell,neighborOffsets} from './topology';
 import {physicalGraph} from './physical-graph';
 import {penrosePatch} from './penrose';
 import {voronoiPatch} from './voronoi';
 import {gyroidLevel,circleInversion,cuspDiscriminant,isF6CSkin} from './f6c-math-skins';
-type Vec=readonly [number,number];
 const TAU=2*Math.PI,PI=Math.PI,clamp=(n:number)=>Math.max(0,Math.min(1,n));
-const f=(x:number)=>x-Math.floor(x);
 const wrap=(n:number,max:number)=>((n%max)+max)%max;
 const scratch=new WeakMap<CanvasRenderingContext2D,HTMLCanvasElement>();
 export interface MicroBudget {
@@ -72,10 +70,12 @@ function fieldGradients(world:World):{
     accept(q,graph.centerX[q]-graph.centerX[i],graph.centerY[q]-graph.centerY[i]);
    }
   }else{
-   // Use only the four nearest cardinal or approved physically offset
-   // neighbors, never a false neighbor index from an irregular tiling.
+   // Use the real engine-selected legal stencil on all six other tilings.
    const x=i%w,y=Math.floor(i/w);
-   for(const [ox,oy] of [[0,-1],[1,0],[0,1],[-1,0]] as Vec[]){
+   const offsets=neighborOffsets(world.lattice??'square',x,y,
+    world.neighborShape??'moore',world.neighborMask??255,
+    world.customStencilMask,world.customStencilSize);
+   for(const [ox,oy] of offsets){
     let xx=x+ox,yy=y+oy;
     if(world.wrap){xx=wrap(xx,w);yy=wrap(yy,h);}
     else if(xx<0||yy<0||xx>=w||yy>=h)continue;
@@ -183,8 +183,6 @@ export function applyF6DMicrodetail(
   if(!Number.isFinite(left)||right-left<=1e-9||bottom-top<=1e-9)continue;
   const destX=left*sx,destY=top*sy,destW=(right-left)*sx,destH=(bottom-top)*sy;
   if(destW<2||destH<2)continue;
-  const center=patch?patch.tiles[id].centroid:vor?vor.cells[id].centroid:
-   cellCentroid(shape,id%w,Math.floor(id/w),w,h);
   for(let j=0;j<dim;j++)for(let i=0;i<dim;i++){
    const localX=(i+.5)/dim,localY=(j+.5)/dim;
    const px=left+localX*(right-left),py=top+localY*(bottom-top);
@@ -209,8 +207,7 @@ export function applyF6DMicrodetail(
   ctx.save();ctx.clip();
   ctx.drawImage(tile,destX,destY,destW,destH);
   ctx.restore();
-  // Ensure no lingering target clip, paint style, or smoothing state.
-  void center;
+  // No lingering clip or canvas state across cell draws.
  }
  ctx.restore();
 }
