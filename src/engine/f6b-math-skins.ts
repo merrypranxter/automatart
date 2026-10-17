@@ -125,9 +125,9 @@ export function drawF6BSkin(
    const ar=Math.tanh(warp*dx+Math.sin(phaseTime)*twist*.3)*.3;
    const ai=Math.tanh(warp*dy+Math.cos(phaseTime)*twist*.3)*.3;
    const nr=zx-ar,ni=zy-ai;
-   const dr=1-ar*zx-ai*zy,di=ar*zy-ai*zx;
+   const dr=1-ar*zx-ai*zy,di=ai*zx-ar*zy;
    const norm=Math.max(1e-8,dr*dr+di*di);
-   const wr=(nr*dr-ni*di)/norm,wi=(ni*dr+nr*di)/norm;
+   const wr=(nr*dr+ni*di)/norm,wi=(ni*dr-nr*di)/norm;
    const rad=Math.min(.995,Math.hypot(wr,wi));
    const rho=Math.atanh(rad),theta=Math.atan2(wi,wr);
    const angular=theta*fold/TAU+twist*lap*.75;

@@ -229,3 +229,8 @@ Penrose and Voronoi cellular engines now use cached compressed true shared-edge 
 ## F6A · ACID MATHEMATICS — three new skins (PR pending)
 
 The SKIN panel now offers PRISMATIC SHEAR, CRYSTAL FRACTURE, and SPINODAL INK. Unlike extra palettes, these are three genuinely different deterministic visual equations using the living cellular density field and true lattice neighbors (including D4B physical graphs for Penrose/Voronoi). They feature three artist sliders, saturated flat non-glow output, current palettes, recipe replay and PNG/GIF/video integration. See [F6A](docs/F6A_ACID_MATH_SKINS.md). More art skins can follow in F6B.
+
+
+## F6B — QUASICRYSTAL / HYPERBOLIC / LISSAJOUS (PR pending)
+
+Three additional distinct mathematics-derived rendering skins bring the studio to 13: fivefold quasicrystal superposition fields, genuinely Möbius-transformed Poincaré disk patterns, and parity-controlled Lissajous over/under braids. Live gradient deformation respects actual physical polygon neighbors; five controls include fold symmetry and phase twist. Saturated ink doesn't need bloom. Old recipes and native-resolution PNG/GIF/video remain on the same pipeline, with extensive math and mobile browser CI. See [F6B notes](docs/F6B_MATHEMATICAL_PIGMENTS.md).

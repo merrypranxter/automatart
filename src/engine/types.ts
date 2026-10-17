@@ -21,7 +21,7 @@ export type LifeRule = 'conway' | 'highlife' | 'seeds' | 'daynight' | 'maze' | '
 export type PatternId = 'noise' | 'center' | 'rings' | 'stripes' | 'checker' | 'spiral' | 'web';
 export type AspectId = 'square' | 'portrait' | 'landscape' | 'portrait34' | 'landscape43' | 'portrait45' | 'landscape54' | 'portrait23' | 'landscape32';
 export type ColorBy = 'state' | 'age' | 'neighbors' | 'events' | 'radius' | 'x' | 'activity' | 'entropy' | 'boundaries' | 'diversity' | 'flow' | 'birthFlash' | 'deathHeat' | 'generationWave' | 'angular' | 'diagonal' | 'gradient';
-export type SkinId = 'pixels' | 'soft' | 'glow' | 'contours' | 'mercury' | 'relief' | 'glass' | 'prism' | 'facets' | 'spinodal';
+export type SkinId = 'pixels' | 'soft' | 'glow' | 'contours' | 'mercury' | 'relief' | 'glass' | 'prism' | 'facets' | 'spinodal' | 'quasicrystal' | 'hyperbolic' | 'lissajous';
 export type NeighborShape = 'moore' | 'vonNeumann' | 'square2' | 'diamond2' | 'directional' | 'custom';
 export type LatticeId = 'square' | 'hex' | 'triangle' | 'rhombille' | 'kagome' | 'squareoct' | 'penrose' | 'voronoi';
 export type OrientedSymmetry = 'fixed' | 'rotations' | 'dihedral';
@@ -190,6 +190,9 @@ export interface Appearance {
   mathFrequency:number;
   mathWarp:number;
   mathInk:number;
+  /** F6B fold symmetry (3..12) and independent nonlinear phase twist (0..2). */
+  mathFold:number;
+  mathTwist:number;
   temporalRGB: number;
   fossilOpacity: number;
 }
@@ -304,7 +307,7 @@ export const INITIAL_APPEARANCE: Appearance = {
   saturation:1,contrast:1,brightness:1,glowStrength:0.8,
   skinThreshold:0.42,contourLines:5,contourWidth:1.5,
   chromeStrength:0.8,glassLines:0.7,
-  mathFrequency:4.5,mathWarp:0.8,mathInk:0.65,temporalRGB:0,fossilOpacity:0
+  mathFrequency:4.5,mathWarp:0.8,mathInk:0.65,mathFold:5,mathTwist:0.85,temporalRGB:0,fossilOpacity:0
 };
 export const LIFE_RULES: Record<LifeRule,{birth:number[];survive:number[];label:string}> = {
   conway:{birth:[3],survive:[2,3],label:'Conway · B3/S23'},

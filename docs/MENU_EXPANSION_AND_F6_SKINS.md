@@ -208,3 +208,8 @@ Cached CSR graphs remove per-cell Penrose/Voronoi neighborhood allocations from 
 ### F6A — Acid Mathematics new material skins (isolated PR pending CI)
 
 Three real mathematical pigment treatments: intersecting prismatic phase waves sheared by cell-state gradients, quantized hard crystalline facet orientation/curvature, and discrete-Laplacian spinodal-ink bands. Controls for phase frequency, cell-field warp, ink edge; flat saturated colors with zero mandatory glow. Honors eight physical lattices, existing palettes/dual source and integer-generation recording. Full independent eight-lattice snapshots / final-resolution export tests, 10-skin distinctness and 390px browser control test added. See [F6A](F6A_ACID_MATH_SKINS.md); F6B later.
+
+
+### F6B — Three stranger mathematical pigments (PR pending)
+
+Quasiperiodic fivefold standing-wave fields, exact Poincaré disk Möbius automorphism into colored hyperbolic rings, Lissajous parity woven ribbons. Five material knobs (frequency, living gradient warp, hard ink, fold and twist). Every visual is deterministic from the actual cell state and integer generation; native Penrose/Voronoi neighbor geometry preserved. Adds independent 27-world bitmap/recipe/PNG QA, legacy 13-skin distinctness and real 390px Skin Lab test. All recording and deployment regressions gate merge. [Full F6B](F6B_MATHEMATICAL_PIGMENTS.md).
