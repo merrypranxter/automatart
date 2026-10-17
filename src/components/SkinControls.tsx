@@ -57,6 +57,23 @@ export default function SkinControls({appearance:a,setAppearance}:Props){
         'Hard crystalline color sectors quantized from the actual field-gradient direction and curvature; physical polygons determine the facets.':
         'Sharp chemical-looking bands generated from the discrete Laplacian of the LIVE cellular field. A visual treatment, not simulated reaction-diffusion.'}</p>
     </>}
+    {(a.skin==='quasicrystal'||a.skin==='hyperbolic'||a.skin==='lissajous')&&<>
+      <Control id="math-frequency" label="Spatial frequency" value={a.mathFrequency??4.5}
+        min={0.5} max={12} step={0.5} onChange={v=>update('mathFrequency',v)}/>
+      <Control id="math-warp" label="Living field deformation" value={a.mathWarp??.8}
+        min={0} max={2} step={.05} onChange={v=>update('mathWarp',v)}/>
+      <Control id="math-ink" label="Flat ink separation" value={a.mathInk??.65}
+        min={0} max={1} step={.05} onChange={v=>update('mathInk',v)}/>
+      <Control id="math-fold" label="Symmetry order" value={a.mathFold??5}
+        min={3} max={12} step={1} onChange={v=>update('mathFold',v)}/>
+      <Control id="math-twist" label="Phase twist" value={a.mathTwist??.85}
+        min={0} max={2} step={.05} onChange={v=>update('mathTwist',v)}/>
+      <p className="skin-description">{a.skin==='quasicrystal'?
+        'Superposed standing-wave beams at equal angular intervals; default fivefold quasiperiodic star fields are bent by real cell-neighbor gradients.':
+        a.skin==='hyperbolic'?
+        'A genuine Möbius disk transformation in hyperbolic coordinates, with living cell gradients pushing the disk and angular/radial rings.':
+        'Two nonlinear Lissajous stripe families cross; mathematical parity determines which flat-color strand passes over or under.'}</p>
+    </>}
     <div className="skin-effects">
       <strong>TIME BENDING</strong>
       <Control id="temporal-rgb" label="Temporal RGB ghosting" value={a.temporalRGB} min={0} max={1}
@@ -68,6 +85,7 @@ export default function SkinControls({appearance:a,setAppearance}:Props){
     <button type="button" className="reset-color" onClick={()=>setAppearance(prev=>({...prev,
       skinThreshold:0.42,contourLines:5,contourWidth:1.5,chromeStrength:0.8,
       glassLines:0.7,mathFrequency:4.5,mathWarp:0.8,mathInk:0.65,
+      mathFold:5,mathTwist:0.85,
       temporalRGB:0,fossilOpacity:0}))}>↺ RESET SKIN LAB</button>
   </section>;
 }

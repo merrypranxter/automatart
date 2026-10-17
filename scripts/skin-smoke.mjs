@@ -51,7 +51,7 @@ try{
     return hash>>>0;
   };
   const originals=world.cells.slice();
-  const modes=['pixels','soft','glow','contours','mercury','relief','glass','prism','facets','spinodal'];
+  const modes=['pixels','soft','glow','contours','mercury','relief','glass','prism','facets','spinodal','quasicrystal','hyperbolic','lissajous'];
   const out=modes.map(skin=>[skin,render(skin)]);
   assert.equal(new Set(out.map(x=>x[1])).size,out.length,
     'Each skin should render a visibly different pixel field '+JSON.stringify(out));
@@ -68,7 +68,7 @@ try{
   const next=stepWorld(world,settings);
   assert.deepEqual(next.previousCells,originals,'One frame of history exactly matches the past state');
   assert.deepEqual(next.olderCells,world.previousCells,'Two-frame history shifts correctly');
-  console.log('PASS: 10 visually distinct skins, temporal RGB, fossils, history, immutable CA state');
+  console.log('PASS: 13 visually distinct skins, temporal RGB, fossils, history, immutable CA state');
 }finally{
   await Promise.all([unlink(simPath).catch(()=>{}),unlink(renderPath).catch(()=>{})]);
 }
