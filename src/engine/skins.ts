@@ -1,6 +1,7 @@
 import type {Appearance,World} from './types';
 import {drawF6Skin,isF6Skin} from './f6-math-skins';
 import {drawF6BSkin,isF6BSkin} from './f6b-math-skins';
+import {drawF6CSkin,isF6CSkin} from './f6c-math-skins';
 import { palettePhase } from './funhouse';
 import {computeColorSignal,signalIndex} from './color-signals';
 import {createDualSampler} from './dual-color';
@@ -184,6 +185,10 @@ export function renderSpecialSkin(
   ctx:CanvasRenderingContext2D,low:HTMLCanvasElement,world:World,
   appearance:Appearance,palette:RGB[],outW:number,outH:number
 ):boolean{
+  if(isF6CSkin(appearance.skin)){
+    drawF6CSkin(ctx,low,world,appearance,palette,outW,outH,appearance.skin);
+    return true;
+  }
   if(isF6BSkin(appearance.skin)){
     drawF6BSkin(ctx,low,world,appearance,palette,outW,outH,appearance.skin);
     return true;

@@ -213,3 +213,8 @@ Three real mathematical pigment treatments: intersecting prismatic phase waves s
 ### F6B — Three stranger mathematical pigments (PR pending)
 
 Quasiperiodic fivefold standing-wave fields, exact Poincaré disk Möbius automorphism into colored hyperbolic rings, Lissajous parity woven ribbons. Five material knobs (frequency, living gradient warp, hard ink, fold and twist). Every visual is deterministic from the actual cell state and integer generation; native Penrose/Voronoi neighbor geometry preserved. Adds independent 27-world bitmap/recipe/PNG QA, legacy 13-skin distinctness and real 390px Skin Lab test. All recording and deployment regressions gate merge. [Full F6B](F6B_MATHEMATICAL_PIGMENTS.md).
+
+
+### F6C — Mathematical singularity materials (PR pending)
+
+Three genuinely distinct source-field skins: sampled 3D gyroid implicit zero-level membranes, involutive Euclidean circle inversion, and analytically verified cusp catastrophe discriminants, all with physical cellular field deformation. Eight artist math controls include new surface slice and XY center/pole positions, zero mandatory glow. Requires 27-case source-state and export QA, mathematically independent identity checks, mobile Chrome UI smoke, and full recorder/Netlify CI. [F6C](F6C_SINGULARITY_SKINS.md). Later F6D can target finer-than-cell material evaluation.

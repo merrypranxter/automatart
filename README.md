@@ -234,3 +234,8 @@ The SKIN panel now offers PRISMATIC SHEAR, CRYSTAL FRACTURE, and SPINODAL INK. U
 ## F6B — QUASICRYSTAL / HYPERBOLIC / LISSAJOUS (PR pending)
 
 Three additional distinct mathematics-derived rendering skins bring the studio to 13: fivefold quasicrystal superposition fields, genuinely Möbius-transformed Poincaré disk patterns, and parity-controlled Lissajous over/under braids. Live gradient deformation respects actual physical polygon neighbors; five controls include fold symmetry and phase twist. Saturated ink doesn't need bloom. Old recipes and native-resolution PNG/GIF/video remain on the same pipeline, with extensive math and mobile browser CI. See [F6B notes](docs/F6B_MATHEMATICAL_PIGMENTS.md).
+
+
+## F6C · Mathematical singularity skins (PR pending)
+
+Three new non-glow mathematical materials: **Gyroid Guts** (true 3D implicit surface slice), **Inversion Bloom** (exact circle inversion around a movable singularity), and **Cusp Catastrophe** (canonical fold discriminant). The visual-only Skin Lab now has 16 unique looks, with independent surface slice and mathematical center X/Y controls added to the existing math parameters. All eight lattice families, real cell-neighbor gradients, recipe replay, PNG/GIF/video and 390px browser checks are covered. [F6C notes](docs/F6C_SINGULARITY_SKINS.md).

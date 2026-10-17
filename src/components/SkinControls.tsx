@@ -74,6 +74,29 @@ export default function SkinControls({appearance:a,setAppearance}:Props){
         'A genuine Möbius disk transformation in hyperbolic coordinates, with living cell gradients pushing the disk and angular/radial rings.':
         'Two nonlinear Lissajous stripe families cross; mathematical parity determines which flat-color strand passes over or under.'}</p>
     </>}
+    {(a.skin==='gyroid'||a.skin==='inversion'||a.skin==='cusp')&&<>
+      <Control id="math-frequency" label="Mathematical frequency" value={a.mathFrequency??4.5}
+        min={.5} max={12} step={.5} onChange={v=>update('mathFrequency',v)}/>
+      <Control id="math-warp" label="Physical field deformation" value={a.mathWarp??.8}
+        min={0} max={2} step={.05} onChange={v=>update('mathWarp',v)}/>
+      <Control id="math-ink" label="Flat-ink ridge strength" value={a.mathInk??.65}
+        min={0} max={1} step={.05} onChange={v=>update('mathInk',v)}/>
+      <Control id="math-fold" label="Symmetry order" value={a.mathFold??5}
+        min={3} max={12} step={1} onChange={v=>update('mathFold',v)}/>
+      <Control id="math-twist" label="Phase twist" value={a.mathTwist??.85}
+        min={0} max={2} step={.05} onChange={v=>update('mathTwist',v)}/>
+      <Control id="math-slice" label="Surface slice / catastrophe offset" value={a.mathSlice??0}
+        min={-2} max={2} step={.1} onChange={v=>update('mathSlice',v)}/>
+      <Control id="math-pole-x" label="Mathematical center X" value={a.mathPoleX??.5}
+        min={.05} max={.95} step={.05} onChange={v=>update('mathPoleX',v)}/>
+      <Control id="math-pole-y" label="Mathematical center Y" value={a.mathPoleY??.5}
+        min={.05} max={.95} step={.05} onChange={v=>update('mathPoleY',v)}/>
+      <p className="skin-description">{a.skin==='gyroid'?
+        'True 3D gyroid implicit-surface slice; each living cell deforms the moving cut through the zero-level membrane.':
+        a.skin==='inversion'?
+        'Exact circle inversion about a movable pole: distances turn inside-out around a real geometric singularity.':
+        'Canonical cusp catastrophe discriminant 4u³ + 27v², rotated in fold sectors and distorted by real cell gradients.'}</p>
+    </>}
     <div className="skin-effects">
       <strong>TIME BENDING</strong>
       <Control id="temporal-rgb" label="Temporal RGB ghosting" value={a.temporalRGB} min={0} max={1}
@@ -85,7 +108,7 @@ export default function SkinControls({appearance:a,setAppearance}:Props){
     <button type="button" className="reset-color" onClick={()=>setAppearance(prev=>({...prev,
       skinThreshold:0.42,contourLines:5,contourWidth:1.5,chromeStrength:0.8,
       glassLines:0.7,mathFrequency:4.5,mathWarp:0.8,mathInk:0.65,
-      mathFold:5,mathTwist:0.85,
+      mathFold:5,mathTwist:0.85,mathSlice:0,mathPoleX:.5,mathPoleY:.5,
       temporalRGB:0,fossilOpacity:0}))}>↺ RESET SKIN LAB</button>
   </section>;
 }
