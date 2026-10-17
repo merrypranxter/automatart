@@ -103,7 +103,8 @@ try{
     assert(field.every(v=>Number.isFinite(v)&&v>=0&&v<=1.00001));
    }
   }
-  const origin=p.cells.findIndex(c=>c.neighbors.length>=5);
+  const origin=p.cells.findIndex(c=>c.neighbors.length>=(entry.jitter===0?4:5));
+  assert(origin>=0,'A valid physical brush anchor exists at every jitter, including exact square limit');
   const brush={...INITIAL_ALIEN_BRUSH,mode:'paint',stamp:'brush',size:0,
     symmetry:'single',scatter:1,density:1};
   const anchor=[origin%w,Math.floor(origin/w)];
