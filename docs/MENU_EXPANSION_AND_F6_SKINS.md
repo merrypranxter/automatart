@@ -198,3 +198,8 @@ Use mathematically exact continuous stroke-vs-polygon intersection for truly uni
 ### D4A suite integration and real-cell inspector (PR pending)
 
 Cross-lattice inspector presents genuine neighbor count, nonzero neighbors, actual polygon area, finite boundary and state for all eight real world geometries. Clear stale inspector and hover/drag on true-world replacement. CI now includes 96 deterministic six-engine world checks across 16 topologies/aspect variations, actual PNG and history replay, plus 390px Chromium UI transitions; existing GIF/video acceptance remains. Physical iPhone sustained capture and F6 skins still follow. [D4A](D4A_SUITE_INTEGRATION.md).
+
+
+### D4B — precise performance polish (isolated PR pending CI)
+
+Cached CSR graphs remove per-cell Penrose/Voronoi neighborhood allocations from every tick; direct real physical centroid vectors accelerate Flow/Gradient signals without altering their math or palettes. Independent 6-engine × 8-step × 6 geometry seed/ratio oracle protects state, vote arrays, Cyclic structural metrics, true colors, save/replay, PNG and recorder parity. Full legacy CI, browser GIF/video, Netlify required before artist merges. [D4B spec](D4B_GRAPH_PERFORMANCE.md). F6 skins follows.
