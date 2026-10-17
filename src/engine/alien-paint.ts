@@ -46,7 +46,7 @@ export function validateAlienBrush(v:Partial<AlienBrush>|null|undefined,s:SimSet
   return b;
 }
 function centerNormalized(shape:LatticeId,x:number,y:number,w:number,h:number):[number,number]{
-  const polygon=polygonForCell(shape,x,y),[ew,eh]=geometryExtent(shape,w,h);
+  const polygon=polygonForCell(shape,x,y,w,h),[ew,eh]=geometryExtent(shape,w,h);
   let a=0,b=0;
   for(const [px,py] of polygon){a+=px;b+=py;}
   return [a/polygon.length/ew,b/polygon.length/eh];
@@ -119,10 +119,10 @@ function footprint(
   const activeOffsets=stampOffsets(b.stamp,b.size,b.rotation,seed);
   // Kagome, Rhombille and Square–Octagon have packed motif addresses, not Cartesian columns.
   // Plant brush offsets using actual polygon centroids and geometry lookup.
-  const packed=shape==='rhombille'||shape==='kagome'||shape==='squareoct';
+  const packed=shape==='rhombille'||shape==='kagome'||shape==='squareoct'||shape==='penrose';
   const [ew,eh]=packed?geometryExtent(shape,w,h):[1,1];
-  const [anchorX,anchorY]=packed?cellCentroid(shape,origin[0],origin[1]):[0,0];
-  const step=shape==='squareoct'?(1+Math.sqrt(2))/Math.sqrt(2):shape==='kagome'?1:Math.sqrt(3)/2;
+  const [anchorX,anchorY]=packed?cellCentroid(shape,origin[0],origin[1],w,h):[0,0];
+  const step=shape==='penrose'?1:shape==='squareoct'?(1+Math.sqrt(2))/Math.sqrt(2):shape==='kagome'?1:Math.sqrt(3)/2;
   for(let cluster=0;cluster<b.scatter;cluster++){
     const jitter=cluster===0?[0,0]:
       [rng.int(-b.size*3,b.size*3),rng.int(-b.size*3,b.size*3)];

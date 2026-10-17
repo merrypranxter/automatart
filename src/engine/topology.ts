@@ -3,6 +3,7 @@ import {DEFAULT_STENCIL_MASK,stencilOffsets} from './stencil';
 import {rhombilleOffsets,rhombilleExtent,rhombillePolygon} from './rhombille';
 import {kagomeOffsets,kagomeExtent,kagomePolygon} from './kagome';
 import {squareOctOffsets,squareOctExtent,squareOctPolygon} from './squareoct';
+import {penrosePatch} from './penrose';
 
 export const ORIENTED_DIRECTIONS = [
   [-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]
@@ -80,10 +81,15 @@ export function geometryExtent(shape:LatticeId,w:number,h:number):[number,number
   if(shape==='rhombille')return rhombilleExtent(w,h);
   if(shape==='kagome')return kagomeExtent(w,h);
   if(shape==='squareoct')return squareOctExtent(w,h);
+  if(shape==='penrose')return [...penrosePatch(w,h).extent];
   if(shape==='triangle')return [w/2+0.5,h*H];
   return [w,h];
 }
-export function polygonForCell(shape:LatticeId,x:number,y:number):Point[]{
+export function polygonForCell(shape:LatticeId,x:number,y:number,w?:number,h?:number):Point[]{
+  if(shape==='penrose'){
+    if(w===undefined||h===undefined)throw new Error('Penrose polygon needs patch dimensions');
+    return penrosePatch(w,h).tiles[y*w+x].vertices.map(v=>[v[0],v[1]]);
+  }
   if(shape==='rhombille')return rhombillePolygon(x,y);
   if(shape==='kagome')return kagomePolygon(x,y);
   if(shape==='squareoct')return squareOctPolygon(x,y);
@@ -104,7 +110,11 @@ export function polygonForCell(shape:LatticeId,x:number,y:number):Point[]{
   return [[x,y],[x+1,y],[x+1,y+1],[x,y+1]];
 }
 /** Actual face centroid, valid for irregular packed motifs. */
-export function cellCentroid(shape:LatticeId,x:number,y:number):Point{
+export function cellCentroid(shape:LatticeId,x:number,y:number,w?:number,h?:number):Point{
+ if(shape==='penrose'){
+  if(w===undefined||h===undefined)throw new Error('Penrose centroid needs patch dimensions');
+  return [...penrosePatch(w,h).tiles[y*w+x].centroid];
+ }
  const p=polygonForCell(shape,x,y);
  return p.reduce(([sx,sy],[px,py])=>[sx+px/p.length,sy+py/p.length],[0,0] as Point);
 }
@@ -128,14 +138,14 @@ export function projectedSize(w:number,h:number):[number,number]{
 export function projectionMap(lattice:LatticeId,w:number,h:number){
   const [pw,normalHeight]=projectedSize(w,h);
   const [extentWidth,extentHeight]=geometryExtent(lattice,w,h);
-  const ph=(lattice==='rhombille'||lattice==='kagome'||lattice==='squareoct')?Math.max(1,Math.round(pw*extentHeight/extentWidth)):normalHeight;
+  const ph=(lattice==='rhombille'||lattice==='kagome'||lattice==='squareoct'||lattice==='penrose')?Math.max(1,Math.round(pw*extentHeight/extentWidth)):normalHeight;
   const key=lattice+':'+w+':'+h+':'+pw+':'+ph;
   const cached=maps.get(key);if(cached)return cached;
   const indices=new Uint32Array(pw*ph),samples=new Uint32Array(pw*ph);
   indices.fill(0xffffffff);
   const [extentX,extentY]=geometryExtent(lattice,w,h);
   for(let y=0;y<h;y++)for(let x=0;x<w;x++){
-    const polygon=polygonForCell(lattice,x,y).map(([a,b])=>[a/extentX*pw,b/extentY*ph] as Point);
+    const polygon=polygonForCell(lattice,x,y,w,h).map(([a,b])=>[a/extentX*pw,b/extentY*ph] as Point);
     const left=Math.max(0,Math.floor(Math.min(...polygon.map(p=>p[0]))));
     const right=Math.min(pw-1,Math.ceil(Math.max(...polygon.map(p=>p[0]))));
     const top=Math.max(0,Math.floor(Math.min(...polygon.map(p=>p[1]))));

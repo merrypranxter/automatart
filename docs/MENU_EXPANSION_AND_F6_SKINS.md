@@ -168,3 +168,8 @@ Real 4.8.8 truncated-square face-cell graph with two-sector packed indexing (oct
 ### D2A Penrose foundation (separate PR; pending CI/user merge)
 
 Exact de Bruijn pentagrid Penrose P3 **thin/fat rhomb tiling** and explicit nonperiodic full-edge graph, reproducible cropped aspect-aware patches and robust mathematical regression suite. This is core math only: D2B will integrate living state, physical rendering, touch, brush and recipes; D2C will handle full export/performance acceptance. The real 4.8.8 D1C was merged first. F6 skins remain after D4. See [D2A](D2A_PENROSE_FOUNDATION.md).
+
+
+### D2B live Penrose integration (isolated PR; CI and merge pending)
+
+Six CA engines now use exact Penrose P3 full-edge neighbors and real physical art geometry instead of packed storage proximity; finite boundary is enforced. D2C Safari/production export validation, D3 Voronoi, D4 consolidation, F6 new skins remain future phases.
