@@ -157,3 +157,9 @@ There are **15 feature PRs** in this plan: A1–A2 (2), B1–B2 (2), C1–C4 (4)
 3. Fix failures before asking the user to merge.
 4. Tell user **"PR #N is ready: merge now"** with a real GitHub URL. Never expect user to guess what to merge.
 5. The user merges; Netlify rebuilds; collect Safari feedback. Then start the next phase on `main`.
+
+
+### D1C implemented on isolated feature PR (awaiting CI/merge)
+
+Real 4.8.8 truncated-square face-cell graph with two-sector packed indexing (octagon with 8 real shared-edge neighbors, rotated square with 4), analytic regular polygon projection, touch painting, physical brush metric, unchanged common color/recipe/export pipelines. This fulfills F5.5D1C only; D2 Penrose, D3 Voronoi, D4 integration and F6 new skins remain future **separate PRs**. Actual iPhone Safari QA remains pending before any app-store release. Details: [D1C mathematical specification](D1C_SQUARE_OCTAGON.md).
+

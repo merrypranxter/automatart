@@ -121,7 +121,7 @@ export function computeColorSignal(world:World,a:Appearance,id:ColorBy=a.colorBy
           const p=at(world,x+dx,y+dy);
           if(p<0)continue;
           const change=(cells[p]!==flowPrevious[p]?1:0)+((flowPrevious[p]!==flowOlder[p] ? 0.5*opts.history : 0));
-          if((world.lattice==='rhombille'||world.lattice==='kagome')){
+          if((world.lattice==='rhombille'||world.lattice==='kagome'||world.lattice==='squareoct')){
             const [ox,oy]=cellCentroid(world.lattice,x,y);
             const [nx,ny]=cellCentroid(world.lattice,x+dx,y+dy);
             vx+=(nx-ox)*change;vy+=(ny-oy)*change;
@@ -163,7 +163,7 @@ export function computeColorSignal(world:World,a:Appearance,id:ColorBy=a.colorBy
       }
       case 'gradient':{
         let dx=0,dy=0;
-        if((world.lattice==='rhombille'||world.lattice==='kagome')){
+        if((world.lattice==='rhombille'||world.lattice==='kagome'||world.lattice==='squareoct')){
           const edges=neighborOffsets(world.lattice,x,y,'moore');
           const [cx,cy]=cellCentroid(world.lattice,x,y);
           for(const [ex,ey] of edges){

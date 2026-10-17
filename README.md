@@ -178,3 +178,9 @@ This phase changes **genuine square-grid cell adjacency**, not a skin: Moore-8, 
 ## D1B Kagome · trihexagonal cellular automata (new PR, not merged)
 
 Kagome uses **real 3.6.3.6 tile geometry**, not a visual disguise on a square grid. Each hexagon face has 6 triangle edge-neighbors; each triangular face has 3 hexagon edge-neighbors. The six compatible local-rule species, Color Lab, paint, snapshot recipes and PNG/GIF/video all share the same authentic graph and tile projection. Even rows and 3-tile motifs preserve exact wrapped adjacency. The user controls merging; physical Safari acceptance remains required. See [D1B specification](docs/D1B_KAGOME.md).
+
+
+## D1C · SQUARE–OCTAGON MADNESS (PR pending)
+
+An actual 4.8.8 truncated-square lattice joins rhombille and Kagome. Octagon cells have **eight shared-edge neighbors** (four octagons plus four rotated squares); small square cells have **four octagon neighbors**. Their real local rules use that degree—not square-grid Moore counts with decorative polygons. Six local-rule engines, real touch/brush geometry, coordinate-correct flow/gradient inspectors, saved recipes and high-res image/GIF/video rendering share existing pipelines. Natural polygon proportions are preserved in all nine artwork framing options. See [D1C geometry, math and gate](docs/D1C_SQUARE_OCTAGON.md), and `scripts/d1c-squareoct-smoke.mjs`.
+
