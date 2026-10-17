@@ -91,6 +91,18 @@ export default function SkinControls({appearance:a,setAppearance}:Props){
         min={.05} max={.95} step={.05} onChange={v=>update('mathPoleX',v)}/>
       <Control id="math-pole-y" label="Mathematical center Y" value={a.mathPoleY??.5}
         min={.05} max={.95} step={.05} onChange={v=>update('mathPoleY',v)}/>
+      <div className="skin-effects">
+        <strong>F6D · ACTUAL DETAIL WITHIN EVERY CELL</strong>
+        <Control id="math-micro-detail" label="Subcell quality (0 = original)" value={a.mathMicroDetail??0}
+          min={0} max={3} step={1} onChange={v=>update('mathMicroDetail',v)}/>
+        {(a.mathMicroDetail??0)>0&&<>
+          <Control id="math-micro-frequency" label="Microscopic equation frequency" value={a.mathMicroFrequency??5}
+            min={.5} max={12} step={.5} onChange={v=>update('mathMicroFrequency',v)}/>
+          <Control id="math-micro-mix" label="Microscopic flat-ink intensity" value={a.mathMicroMix??.65}
+            min={0} max={1} step={.05} onChange={v=>update('mathMicroMix',v)}/>
+          <p className="skin-description">New mathematically evaluated detail within true cell polygons. Preview uses a lighter sampling budget; export uses more. High levels may slow GIF/video exports. Original cellular rules and output dimensions are unchanged.</p>
+        </>}
+      </div>
       <p className="skin-description">{a.skin==='gyroid'?
         'True 3D gyroid implicit-surface slice; each living cell deforms the moving cut through the zero-level membrane.':
         a.skin==='inversion'?
@@ -109,6 +121,7 @@ export default function SkinControls({appearance:a,setAppearance}:Props){
       skinThreshold:0.42,contourLines:5,contourWidth:1.5,chromeStrength:0.8,
       glassLines:0.7,mathFrequency:4.5,mathWarp:0.8,mathInk:0.65,
       mathFold:5,mathTwist:0.85,mathSlice:0,mathPoleX:.5,mathPoleY:.5,
+      mathMicroDetail:0,mathMicroFrequency:5,mathMicroMix:.65,
       temporalRGB:0,fossilOpacity:0}))}>↺ RESET SKIN LAB</button>
   </section>;
 }
