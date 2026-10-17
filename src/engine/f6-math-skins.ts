@@ -121,7 +121,9 @@ export function drawF6Skin(
    const sides=Math.max(3,Math.min(16,Math.round(frequency+3)));
    const sector=Math.floor(frac(angle/(2*Math.PI)+.5)*sides);
    const band=Math.floor(clamp(height+curv*warp*.42)*5);
-   index=sector+band*2+Math.floor(cycle);
+   // Integer phase changes every eight REAL generations: the crystal
+   // remains hard/flat but never needs fake per-frame blinking.
+   index=sector+band*2+Math.floor(cycle+world.generation/8);
    brightness=.70+.30*clamp((dx-dy)*2+curv*warp+1);
    mask=.14+.86*clamp(height*.82+gradient*1.7);
   }else{

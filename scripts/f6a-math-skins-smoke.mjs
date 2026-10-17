@@ -77,6 +77,7 @@ try{
    const later=createCanvas(1,1);
    renderWorld(later,next,app,320);
    const laterHash=sha(later.getContext('2d').getImageData(0,0,later.width,later.height).data);
+   console.log('CHECK F6A '+lattice+'/'+skin+' current '+base+' after 24 '+laterHash);
    assert.notEqual(base,laterHash,'Skin responds to live evolution and integer generation');
    const replay=restoreWorldSnapshot(snapshot,s);
    const canvas=createCanvas(1,1);
