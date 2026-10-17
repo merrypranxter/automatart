@@ -1,6 +1,7 @@
 import type {LatticeId,OrientedSymmetry,OrientedMatch,NeighborShape} from './types';
 import {DEFAULT_STENCIL_MASK,stencilOffsets} from './stencil';
 import {rhombilleOffsets,rhombilleExtent,rhombillePolygon} from './rhombille';
+import {kagomeOffsets,kagomeExtent,kagomePolygon} from './kagome';
 
 export const ORIENTED_DIRECTIONS = [
   [-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]
@@ -15,6 +16,7 @@ for(let y=-2;y<=2;y++)for(let x=-2;x<=2;x++){
 }
 export function neighborOffsets(lattice:LatticeId,x:number,y:number,shape:NeighborShape,mask=255,customMask=DEFAULT_STENCIL_MASK,customSize:3|5=5):readonly [number,number][]{
   if(lattice==='rhombille')return rhombilleOffsets(x,y);
+  if(lattice==='kagome')return kagomeOffsets(x,y);
   if(lattice==='hex'){
     const shift=y&1;
     return [[-1,0],[1,0],[-1+shift,-1],[shift,-1],[-1+shift,1],[shift,1]];
@@ -74,11 +76,13 @@ const R3=Math.sqrt(3);
 export function geometryExtent(shape:LatticeId,w:number,h:number):[number,number]{
   if(shape==='hex')return [(w+0.5)*R3,(h-1)*1.5+2];
   if(shape==='rhombille')return rhombilleExtent(w,h);
+  if(shape==='kagome')return kagomeExtent(w,h);
   if(shape==='triangle')return [w/2+0.5,h*H];
   return [w,h];
 }
 export function polygonForCell(shape:LatticeId,x:number,y:number):Point[]{
   if(shape==='rhombille')return rhombillePolygon(x,y);
+  if(shape==='kagome')return kagomePolygon(x,y);
   if(shape==='hex'){
     const cx=R3*(x+0.5*(y&1)+0.5),cy=y*1.5+1;
     const angles=[-90,-30,30,90,150,210];
@@ -94,6 +98,11 @@ export function polygonForCell(shape:LatticeId,x:number,y:number):Point[]{
     return [[k+0.5,y0],[k+1.5,y0],[k+1,y1]];
   }
   return [[x,y],[x+1,y],[x+1,y+1],[x,y+1]];
+}
+/** Actual face centroid, valid for irregular packed motifs. */
+export function cellCentroid(shape:LatticeId,x:number,y:number):Point{
+ const p=polygonForCell(shape,x,y);
+ return p.reduce(([sx,sy],[px,py])=>[sx+px/p.length,sy+py/p.length],[0,0] as Point);
 }
 function inside(px:number,py:number,polygon:Point[]):boolean{
   let sign=0;
@@ -115,7 +124,7 @@ export function projectedSize(w:number,h:number):[number,number]{
 export function projectionMap(lattice:LatticeId,w:number,h:number){
   const [pw,normalHeight]=projectedSize(w,h);
   const [extentWidth,extentHeight]=geometryExtent(lattice,w,h);
-  const ph=lattice==='rhombille'?Math.max(1,Math.round(pw*extentHeight/extentWidth)):normalHeight;
+  const ph=(lattice==='rhombille'||lattice==='kagome')?Math.max(1,Math.round(pw*extentHeight/extentWidth)):normalHeight;
   const key=lattice+':'+w+':'+h+':'+pw+':'+ph;
   const cached=maps.get(key);if(cached)return cached;
   const indices=new Uint32Array(pw*ph),samples=new Uint32Array(pw*ph);

@@ -1,7 +1,6 @@
 import {paintHpp} from './lattice-gas';
 import type {SimSettings,World,LatticeId} from './types';
-import {geometryExtent,lookupCell,polygonForCell} from './topology';
-import {rhombilleCentroid} from './rhombille';
+import {geometryExtent,lookupCell,polygonForCell,cellCentroid} from './topology';
 import {createMutationRng} from './mutation-core';
 import {sandVisualState} from './circuits';
 
@@ -118,20 +117,19 @@ function footprint(
   const rng=createMutationRng(seed^0x85ebca6b);
   const result=new Set<number>();
   const activeOffsets=stampOffsets(b.stamp,b.size,b.rotation,seed);
-  // Rhombille x is a packed sector INDEX, not a uniform Cartesian axis.
-  // In physical space the centroid separation across each edge is √3/2.
-  // Place every brush offset in that metric and hit-test actual polygons.
-  const rhombille=shape==='rhombille';
-  const [ew,eh]=rhombille?geometryExtent(shape,w,h):[1,1];
-  const [anchorX,anchorY]=rhombille?rhombilleCentroid(origin[0],origin[1]):[0,0];
-  const step=Math.sqrt(3)/2;
+  // Kagome and Rhombille have packed motif addresses, not Cartesian columns.
+  // Plant brush offsets using actual polygon centroids and geometry lookup.
+  const packed=shape==='rhombille'||shape==='kagome';
+  const [ew,eh]=packed?geometryExtent(shape,w,h):[1,1];
+  const [anchorX,anchorY]=packed?cellCentroid(shape,origin[0],origin[1]):[0,0];
+  const step=shape==='kagome'?1:Math.sqrt(3)/2;
   for(let cluster=0;cluster<b.scatter;cluster++){
     const jitter=cluster===0?[0,0]:
       [rng.int(-b.size*3,b.size*3),rng.int(-b.size*3,b.size*3)];
     for(const [dx,dy] of activeOffsets){
       if(b.density<1&&rng.float()>b.density)continue;
       let u:number,v:number;
-      if(rhombille){
+      if(packed){
         u=(anchorX+(dx+jitter[0])*step)/ew;
         v=(anchorY+(dy+jitter[1])*step)/eh;
       }else{

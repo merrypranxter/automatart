@@ -81,6 +81,8 @@ jobs:
         run: node scripts/dynamics-t13-genetic-niches-smoke.mjs
       - name: Verify C4 HPP conservation, boundaries, wall painting, recipes and recording
         run: node scripts/c4-hpp-smoke.mjs
+      - name: Verify D1b Kagome trihexagonal edge graph and export parity
+        run: node scripts/d1b-kagome-smoke.mjs
       - name: Verify D1a true rhombille tile edge graph, tap projection and CA compatibility
         run: node scripts/d1a-rhombille-smoke.mjs
       - name: Test Cyclic A1 calibrated starter worlds, physical structure and exact replay
