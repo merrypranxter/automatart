@@ -203,3 +203,8 @@ Cross-lattice inspector presents genuine neighbor count, nonzero neighbors, actu
 ### D4B — precise performance polish (isolated PR pending CI)
 
 Cached CSR graphs remove per-cell Penrose/Voronoi neighborhood allocations from every tick; direct real physical centroid vectors accelerate Flow/Gradient signals without altering their math or palettes. Independent 6-engine × 8-step × 6 geometry seed/ratio oracle protects state, vote arrays, Cyclic structural metrics, true colors, save/replay, PNG and recorder parity. Full legacy CI, browser GIF/video, Netlify required before artist merges. [D4B spec](D4B_GRAPH_PERFORMANCE.md). F6 skins follows.
+
+
+### F6A — Acid Mathematics new material skins (isolated PR pending CI)
+
+Three real mathematical pigment treatments: intersecting prismatic phase waves sheared by cell-state gradients, quantized hard crystalline facet orientation/curvature, and discrete-Laplacian spinodal-ink bands. Controls for phase frequency, cell-field warp, ink edge; flat saturated colors with zero mandatory glow. Honors eight physical lattices, existing palettes/dual source and integer-generation recording. Full independent eight-lattice snapshots / final-resolution export tests, 10-skin distinctness and 390px browser control test added. See [F6A](F6A_ACID_MATH_SKINS.md); F6B later.

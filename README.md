@@ -224,3 +224,8 @@ Click/tap any cell to see its *true* number of physical/rule neighbors, occupied
 ## D4B — Real polygon graph optimization (PR pending)
 
 Penrose and Voronoi cellular engines now use cached compressed true shared-edge graph arrays instead of allocating thousands of [dx,dy] offset pairs every evolution tick. Physical centroid-based Flow and Gradient color signals share the same exact graph for each frame. Six-engine independent reference comparisons, true topology, deterministic save/replay, output frames and browser recording gate the merge. See [D4B optimization](docs/D4B_GRAPH_PERFORMANCE.md). F6 new skins next.
+
+
+## F6A · ACID MATHEMATICS — three new skins (PR pending)
+
+The SKIN panel now offers PRISMATIC SHEAR, CRYSTAL FRACTURE, and SPINODAL INK. Unlike extra palettes, these are three genuinely different deterministic visual equations using the living cellular density field and true lattice neighbors (including D4B physical graphs for Penrose/Voronoi). They feature three artist sliders, saturated flat non-glow output, current palettes, recipe replay and PNG/GIF/video integration. See [F6A](docs/F6A_ACID_MATH_SKINS.md). More art skins can follow in F6B.
