@@ -119,10 +119,11 @@ function footprint(
   const activeOffsets=stampOffsets(b.stamp,b.size,b.rotation,seed);
   // Kagome, Rhombille and Square–Octagon have packed motif addresses, not Cartesian columns.
   // Plant brush offsets using actual polygon centroids and geometry lookup.
-  const packed=shape==='rhombille'||shape==='kagome'||shape==='squareoct'||shape==='penrose';
+  const packed=shape==='rhombille'||shape==='kagome'||shape==='squareoct'||shape==='penrose'||shape==='voronoi';
   const [ew,eh]=packed?geometryExtent(shape,w,h):[1,1];
-  const [anchorX,anchorY]=packed?cellCentroid(shape,origin[0],origin[1],w,h):[0,0];
-  const step=shape==='penrose'?1:shape==='squareoct'?(1+Math.sqrt(2))/Math.sqrt(2):shape==='kagome'?1:Math.sqrt(3)/2;
+  const [anchorX,anchorY]=packed?cellCentroid(shape,origin[0],origin[1],w,h,
+     world.voronoiSeed,world.voronoiJitter):[0,0];
+  const step=shape==='voronoi'?1:shape==='penrose'?1:shape==='squareoct'?(1+Math.sqrt(2))/Math.sqrt(2):shape==='kagome'?1:Math.sqrt(3)/2;
   for(let cluster=0;cluster<b.scatter;cluster++){
     const jitter=cluster===0?[0,0]:
       [rng.int(-b.size*3,b.size*3),rng.int(-b.size*3,b.size*3)];
@@ -140,7 +141,7 @@ function footprint(
       // Transform every geometric sample, not merely the stamp center.
       // Symmetry is an artwork transform, distinct from a graph automorphism.
       for(const [tu,tv] of transforms(b.symmetry,u,v)){
-        const target=lookupCell(shape,w,h,tu,tv);
+        const target=lookupCell(shape,w,h,tu,tv,world.voronoiSeed,world.voronoiJitter);
         if(target)result.add(target[1]*w+target[0]);
       }
     }

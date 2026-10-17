@@ -476,7 +476,8 @@ export default function App(){
     ctx.strokeStyle='#ffff7a';ctx.lineWidth=1.8;ctx.fillStyle='rgba(255,20,192,.23)';
     for(const index of affected.slice(0,2200)){
       const x=index%world.width,y=Math.floor(index/world.width);
-      const polygon=polygonForCell(shape,x,y,world.width,world.height);
+      const polygon=polygonForCell(shape,x,y,world.width,world.height,
+         world.voronoiSeed,world.voronoiJitter);
       ctx.beginPath();
       for(let i=0;i<polygon.length;i++){
         const [px,py]=polygon[i];
@@ -486,7 +487,7 @@ export default function App(){
     }
   }
   useEffect(()=>{drawStampPreview(hoveredCellRef.current);},
-    [alienBrush,settings.lattice,settings.cellCount,settings.aspect,settings.engine,viewerFullscreen,wireStampArmed,wireStamp]);
+    [alienBrush,settings.lattice,settings.voronoiJitter,settings.cellCount,settings.aspect,settings.engine,viewerFullscreen,wireStampArmed,wireStamp]);
   useEffect(()=>{
     setAlienBrush(prev=>validateAlienBrush(prev,settings));
   },[settings.engine,settings.lattice,settings.lifeRule,settings.neighborShape,settings.speciesCount]);
@@ -532,7 +533,7 @@ export default function App(){
       settings.pattern,settings.density,settings.cyclicStates,
       settings.genStates,settings.exciteStates,settings.speciesCount,settings.hodgeStates,
       settings.turmiteRule,settings.turmiteCount,settings.turmiteFormation,
-      settings.lattice,resetNumber]);
+      settings.lattice,settings.voronoiJitter,resetNumber]);
   useEffect(()=>{
     // Rule-only neighborhood changes preserve living cells and generation,
     // but visual entropy/flow inspectors must use the CURRENT rule graph.
@@ -541,7 +542,7 @@ export default function App(){
     worldRef.current.neighborMask=settings.neighborMask;
     worldRef.current.customStencilMask=settings.customStencilMask;
     worldRef.current.customStencilSize=settings.customStencilSize;
-    worldRef.current.wrap=settings.lattice==='penrose'?false:settings.wrap;
+    worldRef.current.wrap=settings.lattice==='penrose'||settings.lattice==='voronoi'?false:settings.wrap;
   },[settings.neighborShape,settings.neighborMask,settings.customStencilMask,
     settings.customStencilSize,settings.wrap,settings.engine]);
   useEffect(()=>{draw();},[draw,settings,resetNumber]);
@@ -641,7 +642,8 @@ export default function App(){
     const canvas=canvasRef.current;if(!canvas)return null;
     const rect=canvas.getBoundingClientRect();
     return lookupCell(worldRef.current.lattice??'square',worldRef.current.width,
-      worldRef.current.height,(e.clientX-rect.left)/rect.width,(e.clientY-rect.top)/rect.height);
+      worldRef.current.height,(e.clientX-rect.left)/rect.width,(e.clientY-rect.top)/rect.height,
+      worldRef.current.voronoiSeed,worldRef.current.voronoiJitter);
   }
   function plantAt(e:PointerEvent<HTMLCanvasElement>){
     if(recordingRef.current)return;
@@ -912,10 +914,12 @@ export default function App(){
       if(!Number.isInteger(s.cellCount)||s.cellCount<32||s.cellCount>256)throw new Error('Invalid grid size');
       // The geometry/partition requires even horizontal dimensions.
       if(s.cellCount%2!==0)s.cellCount=Math.min(256,s.cellCount+1);
-      if(!['square','hex','triangle','rhombille','kagome','squareoct','penrose'].includes(s.lattice))s.lattice='square';
+      if(!['square','hex','triangle','rhombille','kagome','squareoct','penrose','voronoi'].includes(s.lattice))s.lattice='square';
       if(SQUARE_ONLY_ENGINES.includes(s.engine))s.lattice='square';
-       if(s.lattice==='penrose'&&(s.wrap||s.cellCount>64))
-         throw new Error('Penrose must be finite and at most 64 packed columns');
+       if(['penrose','voronoi'].includes(s.lattice)&&(s.wrap||s.cellCount>64))
+         throw new Error('Nonperiodic or finite polygon worlds must have wrap off and at most 64 source columns');
+       if(!Number.isFinite(s.voronoiJitter)||s.voronoiJitter<0||s.voronoiJitter>.42)
+         throw new Error('Invalid Voronoi generator jitter');
       if(s.engine==='margolus')s.wrap=true;
       if(!['moore','vonNeumann','square2','diamond2','directional','custom'].includes(s.neighborShape))
         throw new Error('Invalid neighborhood rule');
@@ -1217,7 +1221,7 @@ export default function App(){
               const lattice=SQUARE_ONLY_ENGINES.includes(engine)?'square':s.lattice;
               return normalizeActiveVotes({...s,engine,lattice,
                 neighborShape:supportsNeighborhood(engine,lattice)?s.neighborShape:'moore',
-                wrap:engine==='margolus'?true:lattice==='penrose'?false:s.wrap});
+                wrap:engine==='margolus'?true:lattice==='penrose'||lattice==='voronoi'?false:s.wrap});
             });
           }}>
             {ENGINES.map(x=><option key={x.id} value={x.id}>{x.name} — {x.hint}</option>)}
@@ -1356,10 +1360,10 @@ export default function App(){
               onChange={e=>armWorldAspect(e.target.value as AspectId)}>
               {ASPECTS.map(a=><option value={a.value} key={a.value}>{a.name}</option>)}
             </select>
-            <label className="input-label" htmlFor="resolution">Simulation grid <em>{(settings.lattice==='rhombille'||settings.lattice==='kagome'||settings.lattice==='squareoct'||settings.lattice==='penrose')?worldRef.current.width+' tile slots / '+worldRef.current.height+' rows':settings.cellCount+' cells across'}</em></label>
-            <input id="resolution" type="range" min="32" max={settings.lattice==='penrose'?64:256} step="16" value={settings.cellCount} onChange={e=>updateSetting('cellCount',Number(e.target.value))}/>
-            <label className="toggle"><input type="checkbox" disabled={settings.engine==='margolus'||settings.lattice==='penrose'}
-              checked={settings.lattice==='penrose'?false:settings.engine==='margolus'?true:settings.wrap}
+            <label className="input-label" htmlFor="resolution">Simulation grid <em>{(settings.lattice==='rhombille'||settings.lattice==='kagome'||settings.lattice==='squareoct'||settings.lattice==='penrose'||settings.lattice==='voronoi')?worldRef.current.width+' tile slots / '+worldRef.current.height+' rows':settings.cellCount+' cells across'}</em></label>
+            <input id="resolution" type="range" min="32" max={settings.lattice==='penrose'||settings.lattice==='voronoi'?64:256} step="16" value={settings.cellCount} onChange={e=>updateSetting('cellCount',Number(e.target.value))}/>
+            <label className="toggle"><input type="checkbox" disabled={settings.engine==='margolus'||settings.lattice==='penrose'||settings.lattice==='voronoi'}
+              checked={settings.lattice==='penrose'||settings.lattice==='voronoi'?false:settings.engine==='margolus'?true:settings.wrap}
               onChange={e=>updateSetting('wrap',e.target.checked)}/><span>Wrap world edges</span></label>
             <StrangeControls part="lattice" settings={settings} setSettings={setSettings} onRewind={rewindStep} generation={generation}/>
           </div>

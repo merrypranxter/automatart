@@ -4,6 +4,7 @@ import {rhombilleOffsets,rhombilleExtent,rhombillePolygon} from './rhombille';
 import {kagomeOffsets,kagomeExtent,kagomePolygon} from './kagome';
 import {squareOctOffsets,squareOctExtent,squareOctPolygon} from './squareoct';
 import {penrosePatch,penroseHitTest} from './penrose';
+import {voronoiPatch,voronoiHitTest} from './voronoi';
 
 export const ORIENTED_DIRECTIONS = [
   [-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]
@@ -85,7 +86,11 @@ export function geometryExtent(shape:LatticeId,w:number,h:number):[number,number
   if(shape==='triangle')return [w/2+0.5,h*H];
   return [w,h];
 }
-export function polygonForCell(shape:LatticeId,x:number,y:number,w?:number,h?:number):Point[]{
+export function polygonForCell(shape:LatticeId,x:number,y:number,w?:number,h?:number,seed=1,jitter=.34):Point[]{
+  if(shape==='voronoi'){
+    if(w===undefined||h===undefined)throw new Error('Voronoi polygon requires dimensions');
+    return voronoiPatch(w,h,seed,jitter).cells[y*w+x].polygon.map(p=>[p[0],p[1]] as Point);
+  }
   if(shape==='penrose'){
     if(w===undefined||h===undefined)throw new Error('Penrose polygon needs patch dimensions');
     return penrosePatch(w,h).tiles[y*w+x].vertices.map(v=>[v[0],v[1]]);
@@ -110,7 +115,12 @@ export function polygonForCell(shape:LatticeId,x:number,y:number,w?:number,h?:nu
   return [[x,y],[x+1,y],[x+1,y+1],[x,y+1]];
 }
 /** Actual face centroid, valid for irregular packed motifs. */
-export function cellCentroid(shape:LatticeId,x:number,y:number,w?:number,h?:number):Point{
+export function cellCentroid(shape:LatticeId,x:number,y:number,w?:number,h?:number,seed=1,jitter=.34):Point{
+ if(shape==='voronoi'){
+  if(w===undefined||h===undefined)throw new Error('Voronoi centroid needs dimensions');
+  const p=voronoiPatch(w,h,seed,jitter).cells[y*w+x].centroid;
+  return [p[0],p[1]];
+ }
  if(shape==='penrose'){
   if(w===undefined||h===undefined)throw new Error('Penrose centroid needs patch dimensions');
   return [...penrosePatch(w,h).tiles[y*w+x].centroid];
@@ -135,17 +145,18 @@ export function projectedSize(w:number,h:number):[number,number]{
   const pw=Math.min(640,Math.max(200,Math.round(w*2.45)));
   return [pw,Math.max(1,Math.round(pw*h/w))];
 }
-export function projectionMap(lattice:LatticeId,w:number,h:number){
+export function projectionMap(lattice:LatticeId,w:number,h:number,seed=1,jitter=.34){
   const [pw,normalHeight]=projectedSize(w,h);
   const [extentWidth,extentHeight]=geometryExtent(lattice,w,h);
   const ph=(lattice==='rhombille'||lattice==='kagome'||lattice==='squareoct'||lattice==='penrose')?Math.max(1,Math.round(pw*extentHeight/extentWidth)):normalHeight;
-  const key=lattice+':'+w+':'+h+':'+pw+':'+ph;
+  const key=lattice+':'+w+':'+h+':'+pw+':'+ph+
+    (lattice==='voronoi'?':'+seed+':'+jitter:'');
   const cached=maps.get(key);if(cached)return cached;
   const indices=new Uint32Array(pw*ph),samples=new Uint32Array(pw*ph);
   indices.fill(0xffffffff);
   const [extentX,extentY]=geometryExtent(lattice,w,h);
   for(let y=0;y<h;y++)for(let x=0;x<w;x++){
-    const polygon=polygonForCell(lattice,x,y,w,h).map(([a,b])=>[a/extentX*pw,b/extentY*ph] as Point);
+    const polygon=polygonForCell(lattice,x,y,w,h,seed,jitter).map(([a,b])=>[a/extentX*pw,b/extentY*ph] as Point);
     const left=Math.max(0,Math.floor(Math.min(...polygon.map(p=>p[0]))));
     const right=Math.min(pw-1,Math.ceil(Math.max(...polygon.map(p=>p[0]))));
     const top=Math.max(0,Math.floor(Math.min(...polygon.map(p=>p[1]))));
@@ -165,14 +176,18 @@ export function projectionMap(lattice:LatticeId,w:number,h:number){
   if(maps.size>=10)maps.clear();
   maps.set(key,result);return result;
 }
-export function lookupCell(lattice:LatticeId,w:number,h:number,u:number,v:number):[number,number]|null{
+export function lookupCell(lattice:LatticeId,w:number,h:number,u:number,v:number,seed=1,jitter=.34):[number,number]|null{
   if(u<0||u>=1||v<0||v>=1)return null;
   if(lattice==='square')return [Math.floor(u*w),Math.floor(v*h)];
   if(lattice==='penrose'){
     const id=penroseHitTest(w,h,u,v);
     return id===null?null:[id%w,Math.floor(id/w)];
   }
-  const map=projectionMap(lattice,w,h);
+  if(lattice==='voronoi'){
+    const id=voronoiHitTest(w,h,seed,jitter,u,v);
+    return id===null?null:[id%w,Math.floor(id/w)];
+  }
+  const map=projectionMap(lattice,w,h,seed,jitter);
   const x=Math.min(map.width-1,Math.floor(u*map.width)),y=Math.min(map.height-1,Math.floor(v*map.height));
   const id=map.indices[y*map.width+x];
   return id===0xffffffff?null:[id%w,Math.floor(id/w)];

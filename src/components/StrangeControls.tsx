@@ -32,8 +32,8 @@ export default function StrangeControls({settings:s,setSettings,onRewind,onPlayD
       <select id="lattice" value={squareOnly?'square':s.lattice}
         disabled={squareOnly}
         onChange={e=>setSettings(prev=>normalizeActiveVotes({...prev,lattice:e.target.value as LatticeId,
-           cellCount:e.target.value==='penrose'?Math.min(64,prev.cellCount):prev.cellCount,
-           wrap:e.target.value==='penrose'?false:prev.wrap,
+           cellCount:['penrose','voronoi'].includes(e.target.value)?Math.min(64,prev.cellCount):prev.cellCount,
+           wrap:['penrose','voronoi'].includes(e.target.value)?false:prev.wrap,
            neighborShape:e.target.value==='square'?prev.neighborShape:'moore'}))}>
         <option value="square">SQUARE · 4 / 8 / 12 / 24 OR DIRECTIONAL</option>
         <option value="hex">HEXAGON · 6 GENUINE NEIGHBORS</option>
@@ -42,6 +42,7 @@ export default function StrangeControls({settings:s,setSettings,onRewind,onPlayD
         <option value="kagome">KAGOME · 6 HEX / 3 TRIANGLE EDGES (D1B)</option>
         <option value="squareoct">SQUARE–OCTAGON · 4 / 8 REAL EDGES (D1C)</option>
         <option value="penrose">PENROSE · APERIODIC P3 RHOMBS / 4 EDGES (D2B)</option>
+        <option value="voronoi">VORONOI · IRREGULAR SEEDED CELLS / VARIABLE EDGES (D3B)</option>
       </select>
       <p className="module-note">{squareOnly?
         'This engine requires the square lattice to preserve its specified neighborhood or reversible block partition.':
@@ -51,8 +52,19 @@ export default function StrangeControls({settings:s,setSettings,onRewind,onPlayD
         s.lattice==='kagome'?'True 3.6.3.6 rectified honeycomb. Real hexagon faces have 6 full edge-neighbors; triangle faces have 3. Synchronous rules use this heterogeneous graph, not square pixels.':
         s.lattice==='squareoct'?'Real 4.8.8 truncated-square geometry. Every octagon reads 8 shared-edge neighbors (4 octagons + 4 squares). Every little rotated square reads 4 octagons. True local physics, not a graphic overlay.':
         s.lattice==='penrose'?'Genuine nonperiodic P3 pentagrid rhombs. Four full-edge neighbors in the interior; fewer on the finite crop. No periodic wrap. Mobile-first 32/48/64 packed tile columns, independent of high-resolution output pixels.':
+        s.lattice==='voronoi'?'REAL seeded Voronoi polygons: sites generate actual convex nearest-point regions, each with variable shared-edge neighbors. Jitter changes the real geometry. Finite crop, no wrap; up to 64 source columns with independent high-resolution export.':
         'Square lattice with Moore, Von Neumann, radius-2 square/diamond or directional neighborhoods.'}</p>
     </div>}
+    {showLattice&&s.lattice==='voronoi'&&!squareOnly&&
+      <div className="strange-rule" aria-label="Voronoi physical shape controls">
+        <label className="input-label" htmlFor="voronoi-jitter">
+          Seeded site jitter — real polygon geometry <em>{(s.voronoiJitter??.34).toFixed(2)}</em>
+        </label>
+        <input id="voronoi-jitter" type="range" min="0" max="0.42" step="0.02"
+          value={s.voronoiJitter??.34}
+          onChange={e=>setSettings(prev=>({...prev,voronoiJitter:Number(e.target.value)}))}/>
+        <p className="module-note">0 makes equal square Voronoi cells. More jitter reshapes every boundary and changes the actual neighbor graph. This restarts the world from its seed; it never just distorts the image.</p>
+      </div>}
     {showRules&&s.engine==='oriented'&&<div className="strange-rule">
       <h3>DIRECTIONAL BIRTH STENCIL</h3>
       <p className="skin-description">PURE CA · 8-neighbor non-totalistic rule. Birth responds to the actual arrangement of occupied neighbors, not merely how many are alive. Click the directions to create a birth template.</p>

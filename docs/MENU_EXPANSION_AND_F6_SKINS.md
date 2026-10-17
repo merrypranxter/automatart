@@ -183,3 +183,8 @@ Preserve interactive preview speed while drawing true rhomb polygons at native P
 ### D3A — seeded true Voronoi foundation (isolated PR, pending full CI)
 
 Deterministically jittered physical generators, globally exact bounded Voronoi bisector clipping optimized via proof-backed 7×7 local search, real polygon area/centroids, seed-dependent geometry, variable shared-edge coordination and fail-closed adjacency validation. No UI claimed; D3B adds living CA graph, paint, color, saved seeds, then D3C output/device acceptance, D4 consolidation, F6 skins. The artist controls merging. [Voronoi D3A](D3A_VORONOI.md).
+
+
+### D3B live Voronoi (separate PR pending complete CI)
+
+The variable-degree D3A physical graph drives six synchronous true CA engines, seeded cell-centroid starting patterns, finite-only 32/48/64 source tile columns, real geometry jitter and recipe reproducibility, exact tap/brush physical polygons, graph entropy/flow/gradient, and native-resolution true polygon PNG/GIF/video in nine sizes. D3C device acceptance then D4 consolidation/F6 skins. The artist owns all merges. See [D3B](D3B_LIVING_VORONOI.md).

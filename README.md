@@ -204,3 +204,8 @@ Penrose PNG/GIF/video now draw **actual thin/fat rhomb paths at the final image 
 ## D3A · VORONOI MADNESS (foundation PR)
 
 A real seeded finite Voronoi diagram generates physically irregular convex polygon cells with varying shared-edge neighbor counts (including 7+). No decorative square-grid masquerade: geometry is constructed from exact site bisector half-planes; graph adjacency is read from physical polygon edges. Optimized 7×7 site clipping is proven equivalent to exhaustive global clipping for bounded-jitter seeds. **The live WORLD selector comes in D3B, not D3A.** See [D3A mathematical specification](docs/D3A_VORONOI.md).
+
+
+## D3B — LIVING VORONOI (PR pending)
+
+Play genuine seeded Voronoi convex polygon worlds in the six compatible local CA engines. Real variable shared-edge neighbors and centroid-based seed/paint/color behavior; a new WORLD jitter slider physically changes the cell shapes and graph, with strict finite-only boundaries. Live preview remains mobile-friendly; native-resolution PNG/GIF/video renders real polygon paths at final output pixels, in all nine aspect ratios. See [D3B detail](docs/D3B_LIVING_VORONOI.md). D3C iPhone Safari device acceptance and performance still to come.
