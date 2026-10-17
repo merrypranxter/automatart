@@ -1297,7 +1297,7 @@ export default function App(){
           <div className="art-canvas-layer">
             <canvas ref={canvasRef} aria-label={turmitePlacement?'Interactive cellular automata canvas. Tap once to place selected Turmite agent.':'Interactive cellular automata canvas. Drag to paint cells.'} onPointerDown={onPointerDown} onPointerMove={onPointerMove}
             onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
-            onPointerLeave={()=>drawStampPreview(null)} />
+            onPointerLeave={()=>{strokeLastVoronoiPointerRef.current=null;drawStampPreview(null);}} />
             <canvas ref={previewRef} className="alien-brush-preview" aria-hidden="true"/>
           </div>
           <span className="canvas-corner tl">A / {String(generation).padStart(6,'0')}</span>

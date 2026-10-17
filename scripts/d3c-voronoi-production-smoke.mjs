@@ -117,7 +117,7 @@ try{
   console.log('PASS D3C PNG geometry cache + dynamic pigment '+layout.width+'×'+layout.height);
  }
  assert.deepEqual(snapshotWorld(world),initial,'Rendering/geometry never mutates live state');
- const cursor=createCaptureCursor(world,s,20,18);
+ const cursor=createCaptureCursor(world,s,10,10);
  cursor.advance();
  assert.deepEqual(cursor.current.cells,stepWorld(world,s).cells,
   'Frame-index capture still reproduces actual polygon physics');
