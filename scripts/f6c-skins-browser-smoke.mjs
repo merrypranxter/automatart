@@ -42,9 +42,22 @@ try{
   const old=await hash();
   observed.push(old);
   const slice=page.locator('#math-slice');
+  // Gyroid z = PI*slice is truly 2PI-periodic: 0 and End=2 are
+  // equivalent cuts. Test a NON-equivalent half-period section instead,
+  // preserving the useful exact loop rather than falsifying the material.
   await slice.focus();await page.keyboard.press('End');
   assert.equal(Number(await slice.inputValue()),2);
-  assert.notEqual(await hash(),old,'Actual '+skin+' cross-section slider changes rendered pixels');
+  for(let n=0;n<10;n++)await page.keyboard.press('ArrowLeft');
+  assert(Math.abs(Number(await slice.inputValue())-1)<1e-8);
+  await page.waitForFunction(oldHash=>{
+   const el=document.querySelector('canvas[aria-label^="Interactive cellular"]');
+   if(!el)return false;
+   const d=el.getContext('2d').getImageData(0,0,el.width,el.height).data;
+   let h=2166136261;
+   for(let i=0;i<d.length;i+=13)h=Math.imul(h^d[i],16777619);
+   return (h>>>0)!==oldHash;
+  },old,{timeout:3000});
+  assert.notEqual(await hash(),old,'A nonperiodically equivalent '+skin+' slice changes rendered pixels');
   const poleX=page.locator('#math-pole-x');
   await poleX.focus();await page.keyboard.press('Home');
   assert.equal(Number(await poleX.inputValue()),.05);
