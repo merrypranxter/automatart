@@ -189,3 +189,8 @@ An actual 4.8.8 truncated-square lattice joins rhombille and Kagome. Octagon cel
 ## D2A · Penrose quasicrystals — core math phase (not yet selectable)
 
 The actual de Bruijn five-grid Penrose P3 engine now generates non-repeating **thin and thick unit-edge rhombs**, with true reciprocal full-edge adjacency and aspect-aware finite patches. It refuses invented wrap seams; storage row/column addresses are not treated as physical geometry. [D2A geometric specification and tests](docs/D2A_PENROSE_FOUNDATION.md). **D2B is required before this can appear in WORLD and animate; no UI or Penrose exports are claimed yet.**
+
+
+## D2B — LIVE PENROSE CA (PR pending)
+
+D2A pentagrid P3 rhombs now drive six authentic four-edge local automata. True physical seeding and painting, pointer selection, graph entropy/flow/gradient, exact recipes and nine existing export aspects; genuine finite-only boundary. The first phone-friendly cap of 64 packed tile columns does not limit high-resolution output pixels. [D2B explanation](docs/D2B_LIVING_PENROSE.md).

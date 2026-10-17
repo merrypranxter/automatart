@@ -476,7 +476,7 @@ export default function App(){
     ctx.strokeStyle='#ffff7a';ctx.lineWidth=1.8;ctx.fillStyle='rgba(255,20,192,.23)';
     for(const index of affected.slice(0,2200)){
       const x=index%world.width,y=Math.floor(index/world.width);
-      const polygon=polygonForCell(shape,x,y);
+      const polygon=polygonForCell(shape,x,y,world.width,world.height);
       ctx.beginPath();
       for(let i=0;i<polygon.length;i++){
         const [px,py]=polygon[i];
@@ -541,7 +541,7 @@ export default function App(){
     worldRef.current.neighborMask=settings.neighborMask;
     worldRef.current.customStencilMask=settings.customStencilMask;
     worldRef.current.customStencilSize=settings.customStencilSize;
-    worldRef.current.wrap=settings.wrap;
+    worldRef.current.wrap=settings.lattice==='penrose'?false:settings.wrap;
   },[settings.neighborShape,settings.neighborMask,settings.customStencilMask,
     settings.customStencilSize,settings.wrap,settings.engine]);
   useEffect(()=>{draw();},[draw,settings,resetNumber]);
@@ -912,8 +912,10 @@ export default function App(){
       if(!Number.isInteger(s.cellCount)||s.cellCount<32||s.cellCount>256)throw new Error('Invalid grid size');
       // The geometry/partition requires even horizontal dimensions.
       if(s.cellCount%2!==0)s.cellCount=Math.min(256,s.cellCount+1);
-      if(!['square','hex','triangle','rhombille','kagome','squareoct'].includes(s.lattice))s.lattice='square';
+      if(!['square','hex','triangle','rhombille','kagome','squareoct','penrose'].includes(s.lattice))s.lattice='square';
       if(SQUARE_ONLY_ENGINES.includes(s.engine))s.lattice='square';
+       if(s.lattice==='penrose'&&(s.wrap||s.cellCount>64))
+         throw new Error('Penrose must be finite and at most 64 packed columns');
       if(s.engine==='margolus')s.wrap=true;
       if(!['moore','vonNeumann','square2','diamond2','directional','custom'].includes(s.neighborShape))
         throw new Error('Invalid neighborhood rule');
@@ -1215,7 +1217,7 @@ export default function App(){
               const lattice=SQUARE_ONLY_ENGINES.includes(engine)?'square':s.lattice;
               return normalizeActiveVotes({...s,engine,lattice,
                 neighborShape:supportsNeighborhood(engine,lattice)?s.neighborShape:'moore',
-                wrap:engine==='margolus'?true:s.wrap});
+                wrap:engine==='margolus'?true:lattice==='penrose'?false:s.wrap});
             });
           }}>
             {ENGINES.map(x=><option key={x.id} value={x.id}>{x.name} — {x.hint}</option>)}
@@ -1354,10 +1356,10 @@ export default function App(){
               onChange={e=>armWorldAspect(e.target.value as AspectId)}>
               {ASPECTS.map(a=><option value={a.value} key={a.value}>{a.name}</option>)}
             </select>
-            <label className="input-label" htmlFor="resolution">Simulation grid <em>{(settings.lattice==='rhombille'||settings.lattice==='kagome'||settings.lattice==='squareoct')?worldRef.current.width+' tile slots / '+worldRef.current.height+' rows':settings.cellCount+' cells across'}</em></label>
-            <input id="resolution" type="range" min="32" max="256" step="16" value={settings.cellCount} onChange={e=>updateSetting('cellCount',Number(e.target.value))}/>
-            <label className="toggle"><input type="checkbox" disabled={settings.engine==='margolus'}
-              checked={settings.engine==='margolus'?true:settings.wrap}
+            <label className="input-label" htmlFor="resolution">Simulation grid <em>{(settings.lattice==='rhombille'||settings.lattice==='kagome'||settings.lattice==='squareoct'||settings.lattice==='penrose')?worldRef.current.width+' tile slots / '+worldRef.current.height+' rows':settings.cellCount+' cells across'}</em></label>
+            <input id="resolution" type="range" min="32" max={settings.lattice==='penrose'?64:256} step="16" value={settings.cellCount} onChange={e=>updateSetting('cellCount',Number(e.target.value))}/>
+            <label className="toggle"><input type="checkbox" disabled={settings.engine==='margolus'||settings.lattice==='penrose'}
+              checked={settings.lattice==='penrose'?false:settings.engine==='margolus'?true:settings.wrap}
               onChange={e=>updateSetting('wrap',e.target.checked)}/><span>Wrap world edges</span></label>
             <StrangeControls part="lattice" settings={settings} setSettings={setSettings} onRewind={rewindStep} generation={generation}/>
           </div>
