@@ -194,3 +194,8 @@ The actual de Bruijn five-grid Penrose P3 engine now generates non-repeating **t
 ## D2B — LIVE PENROSE CA (PR pending)
 
 D2A pentagrid P3 rhombs now drive six authentic four-edge local automata. True physical seeding and painting, pointer selection, graph entropy/flow/gradient, exact recipes and nine existing export aspects; genuine finite-only boundary. The first phone-friendly cap of 64 packed tile columns does not limit high-resolution output pixels. [D2B explanation](docs/D2B_LIVING_PENROSE.md).
+
+
+## D2C · Penrose production-resolution art (PR pending)
+
+Penrose PNG/GIF/video now draw **actual thin/fat rhomb paths at the final image pixel resolution**, not a stretched 200–640px preview raster. Each physical rhomb clips the same palette, skin and time-based material; existing Print Shop and export framing remain intact. Pointer and brush hits use exact polygon geometry via small spatial bins rather than blurry preview picking. [Production specification and QA](docs/D2C_PENROSE_PRODUCTION.md). Actual iPhone Safari and long 4K export acceptance still require physical testing.

@@ -173,3 +173,8 @@ Exact de Bruijn pentagrid Penrose P3 **thin/fat rhomb tiling** and explicit nonp
 ### D2B live Penrose integration (isolated PR; CI and merge pending)
 
 Six CA engines now use exact Penrose P3 full-edge neighbors and real physical art geometry instead of packed storage proximity; finite boundary is enforced. D2C Safari/production export validation, D3 Voronoi, D4 consolidation, F6 new skins remain future phases.
+
+
+### D2C exact Penrose export and picking (separate PR awaiting CI/merge)
+
+Preserve interactive preview speed while drawing true rhomb polygons at native PNG/GIF/video output resolution, eliminating 640px-upscaled boundaries. Use exact spatial hash + polygon-hit detection for brushes/taps across skinny 9:16 patches. Test genuine 1:1 and 9:16 images, 2160p framing, material and exact save/replay with full existing actual-browser recorder suite. Safari hardware acceptance remains mandatory. D3 Voronoi and D4 consolidation then F6 skins stay subsequent PRs.

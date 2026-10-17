@@ -159,3 +159,52 @@ export function penroseNeighbors(w:number,h:number,index:number):readonly number
 }
 /** Nonperiodic geometry does not admit a faithful repeat seam. */
 export function penroseCanWrap():false{return false;}
+
+/** Physical geometric hit test. A 200–640px live preview is too coarse
+ * to identify many of the small, thin rhombs in 9:16 patches.
+ * Cache lightweight spatial bins keyed by each actual immutable patch. */
+const penroseHitBins=new WeakMap<PenrosePatch,{
+ cols:number;binSize:number;buckets:Map<number,number[]>
+}>();
+const HIT_BIN_SIZE=1.5;
+function containsRhomb(vertices:readonly PenrosePoint[],x:number,y:number):boolean{
+ let sign=0;
+ for(let j=0;j<4;j++){
+  const a=vertices[j],b=vertices[(j+1)%4];
+  const cross=(b[0]-a[0])*(y-a[1])-(b[1]-a[1])*(x-a[0]);
+  if(Math.abs(cross)<1e-10)continue;
+  const current=cross>0?1:-1;
+  if(sign&&sign!==current)return false;
+  sign=current;
+ }
+ return true;
+}
+function getHitBins(patch:PenrosePatch){
+ const old=penroseHitBins.get(patch);
+ if(old)return old;
+ const binSize=HIT_BIN_SIZE,cols=Math.max(1,Math.ceil(patch.extent[0]/binSize));
+ const buckets=new Map<number,number[]>();
+ for(let id=0;id<patch.tiles.length;id++){
+  const p=patch.tiles[id].vertices;
+  const minX=Math.min(...p.map(v=>v[0])),maxX=Math.max(...p.map(v=>v[0]));
+  const minY=Math.min(...p.map(v=>v[1])),maxY=Math.max(...p.map(v=>v[1]));
+  for(let by=Math.max(0,Math.floor(minY/binSize));by<=Math.floor(maxY/binSize);by++)
+   for(let bx=Math.max(0,Math.floor(minX/binSize));bx<=Math.floor(maxX/binSize);bx++){
+    const k=by*cols+bx,found=buckets.get(k);
+    if(found)found.push(id);else buckets.set(k,[id]);
+   }
+ }
+ const next={cols,binSize,buckets};
+ penroseHitBins.set(patch,next);return next;
+}
+/** Exact finite-patch point -> tile index, never preview-pixel approximation. */
+export function penroseHitTest(w:number,h:number,u:number,v:number):number|null{
+ if(!Number.isFinite(u)||!Number.isFinite(v)||u<0||u>=1||v<0||v>=1)return null;
+ const patch=penrosePatch(w,h),bins=getHitBins(patch);
+ const x=u*patch.extent[0],y=v*patch.extent[1];
+ const k=Math.floor(y/bins.binSize)*bins.cols+Math.floor(x/bins.binSize);
+ for(const id of bins.buckets.get(k)??[]){
+  if(containsRhomb(patch.tiles[id].vertices,x,y))return id;
+ }
+ return null;
+}

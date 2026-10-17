@@ -3,7 +3,7 @@ import {DEFAULT_STENCIL_MASK,stencilOffsets} from './stencil';
 import {rhombilleOffsets,rhombilleExtent,rhombillePolygon} from './rhombille';
 import {kagomeOffsets,kagomeExtent,kagomePolygon} from './kagome';
 import {squareOctOffsets,squareOctExtent,squareOctPolygon} from './squareoct';
-import {penrosePatch} from './penrose';
+import {penrosePatch,penroseHitTest} from './penrose';
 
 export const ORIENTED_DIRECTIONS = [
   [-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]
@@ -168,6 +168,10 @@ export function projectionMap(lattice:LatticeId,w:number,h:number){
 export function lookupCell(lattice:LatticeId,w:number,h:number,u:number,v:number):[number,number]|null{
   if(u<0||u>=1||v<0||v>=1)return null;
   if(lattice==='square')return [Math.floor(u*w),Math.floor(v*h)];
+  if(lattice==='penrose'){
+    const id=penroseHitTest(w,h,u,v);
+    return id===null?null:[id%w,Math.floor(id/w)];
+  }
   const map=projectionMap(lattice,w,h);
   const x=Math.min(map.width-1,Math.floor(u*map.width)),y=Math.min(map.height-1,Math.floor(v*map.height));
   const id=map.indices[y*map.width+x];
