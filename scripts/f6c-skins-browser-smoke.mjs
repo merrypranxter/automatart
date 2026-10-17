@@ -39,9 +39,13 @@ try{
    'math-twist','math-slice','math-pole-x','math-pole-y']){
    assert(await page.locator('#'+id).isVisible(),skin+' exposes '+id);
   }
+  // All skins share Appearance math parameters: reset this slider before
+  // each check so the previous skin cannot leave us already at the target.
+  const slice=page.locator('#math-slice');
+  await slice.focus();await page.keyboard.press('Home');
+  assert.equal(Number(await slice.inputValue()),-2);
   const old=await hash();
   observed.push(old);
-  const slice=page.locator('#math-slice');
   // Gyroid z = PI*slice is truly 2PI-periodic: 0 and End=2 are
   // equivalent cuts. Test a NON-equivalent half-period section instead,
   // preserving the useful exact loop rather than falsifying the material.
