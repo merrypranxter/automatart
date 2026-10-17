@@ -124,7 +124,9 @@ try{
  }
  const portrait=exportFrameLayout(s,1080,'portrait','contain');
  assert.deepEqual([portrait.width,portrait.height],[1080,1920]);
- assert.deepEqual([portrait.image.width,portrait.image.height],[1080,1080]);
+ assert.equal(portrait.image.width,1080);
+ assert(Math.abs(portrait.image.height-1080)<=12,
+  'A true finite Penrose patch is nearly square but must not be geometrically stretched');
  const cursor=createCaptureCursor(world,s,10,10);
  cursor.advance();
  assert.deepEqual(cursor.current.cells,stepWorld(world,s).cells);
