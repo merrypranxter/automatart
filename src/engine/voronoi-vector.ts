@@ -55,6 +55,7 @@ export function renderVoronoiVector(
  outputWidth:number,outputHeight:number
 ):void{
  const w=world.width,patch=voronoiPatch(w,world.height,world.voronoiSeed??1,world.voronoiJitter??.34);
+ const sx=outputWidth/patch.extent[0];
  const geometry=voronoiPixelGeometry(patch,outputWidth,outputHeight);
  const sw=source.width;
  ctx.save();
