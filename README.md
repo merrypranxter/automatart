@@ -199,3 +199,8 @@ D2A pentagrid P3 rhombs now drive six authentic four-edge local automata. True p
 ## D2C · Penrose production-resolution art (PR pending)
 
 Penrose PNG/GIF/video now draw **actual thin/fat rhomb paths at the final image pixel resolution**, not a stretched 200–640px preview raster. Each physical rhomb clips the same palette, skin and time-based material; existing Print Shop and export framing remain intact. Pointer and brush hits use exact polygon geometry via small spatial bins rather than blurry preview picking. [Production specification and QA](docs/D2C_PENROSE_PRODUCTION.md). Actual iPhone Safari and long 4K export acceptance still require physical testing.
+
+
+## D3A · VORONOI MADNESS (foundation PR)
+
+A real seeded finite Voronoi diagram generates physically irregular convex polygon cells with varying shared-edge neighbor counts (including 7+). No decorative square-grid masquerade: geometry is constructed from exact site bisector half-planes; graph adjacency is read from physical polygon edges. Optimized 7×7 site clipping is proven equivalent to exhaustive global clipping for bounded-jitter seeds. **The live WORLD selector comes in D3B, not D3A.** See [D3A mathematical specification](docs/D3A_VORONOI.md).
