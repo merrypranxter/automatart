@@ -44,6 +44,19 @@ export default function SkinControls({appearance:a,setAppearance}:Props){
     {(a.skin==='mercury'||a.skin==='relief'||a.skin==='contours'||a.skin==='glass')&&
       <Control id="skin-bloom" label="Material glow" value={a.glowStrength} min={0} max={1}
         onChange={v=>update('glowStrength',v)}/>}
+    {(a.skin==='prism'||a.skin==='facets'||a.skin==='spinodal')&&<>
+      <Control id="math-frequency" label="Mathematical frequency" value={a.mathFrequency??4.5}
+        min={0.5} max={12} step={0.5} onChange={v=>update('mathFrequency',v)}/>
+      <Control id="math-warp" label="Cell field deformation" value={a.mathWarp??0.8}
+        min={0} max={2} step={0.05} onChange={v=>update('mathWarp',v)}/>
+      <Control id="math-ink" label="Hard-edge ink / separation" value={a.mathInk??0.65}
+        min={0} max={1} step={0.05} onChange={v=>update('mathInk',v)}/>
+      <p className="skin-description">{a.skin==='prism'?
+        'Two oblique moving wave phases interfere; living density gradients shear their color fringes. Saturated flat pigments, no required glow.':
+        a.skin==='facets'?
+        'Hard crystalline color sectors quantized from the actual field-gradient direction and curvature; physical polygons determine the facets.':
+        'Sharp chemical-looking bands generated from the discrete Laplacian of the LIVE cellular field. A visual treatment, not simulated reaction-diffusion.'}</p>
+    </>}
     <div className="skin-effects">
       <strong>TIME BENDING</strong>
       <Control id="temporal-rgb" label="Temporal RGB ghosting" value={a.temporalRGB} min={0} max={1}
@@ -54,6 +67,7 @@ export default function SkinControls({appearance:a,setAppearance}:Props){
     </div>
     <button type="button" className="reset-color" onClick={()=>setAppearance(prev=>({...prev,
       skinThreshold:0.42,contourLines:5,contourWidth:1.5,chromeStrength:0.8,
-      glassLines:0.7,temporalRGB:0,fossilOpacity:0}))}>↺ RESET SKIN LAB</button>
+      glassLines:0.7,mathFrequency:4.5,mathWarp:0.8,mathInk:0.65,
+      temporalRGB:0,fossilOpacity:0}))}>↺ RESET SKIN LAB</button>
   </section>;
 }

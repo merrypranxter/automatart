@@ -37,6 +37,8 @@ jobs:
         run: node scripts/recording-smoke.mjs
       - name: Regression test GIF color cycling versus live render
         run: node scripts/gif-color-cycle-smoke.mjs
+      - name: Verify F6A three distinct living mathematical pigments, all eight lattices, exact recipes and PNG
+        run: node scripts/f6a-math-skins-smoke.mjs
       - name: Verify mathematical skins and history overlays
         run: node scripts/skin-smoke.mjs
       - name: Verify ten real color signals and mathematical inspector
@@ -146,6 +148,8 @@ jobs:
         run: |
           npm install --no-save --no-audit --no-fund playwright gifuct-js
           npx playwright install --with-deps chromium
+      - name: Verify F6A three new mathematical skins and artist sliders in real phone-width browser
+        run: node scripts/f6a-skins-browser-smoke.mjs
       - name: Verify D4A phone-width real cell inspector and cleanup on regenerated Voronoi/Penrose worlds
         run: node scripts/d4a-inspector-browser-smoke.mjs
       - name: Verify D3C phone-width jitter controls and one-event continuous physical Voronoi painting

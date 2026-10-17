@@ -1,4 +1,5 @@
 import type {Appearance,World} from './types';
+import {drawF6Skin,isF6Skin} from './f6-math-skins';
 import { palettePhase } from './funhouse';
 import {computeColorSignal,signalIndex} from './color-signals';
 import {createDualSampler} from './dual-color';
@@ -182,6 +183,10 @@ export function renderSpecialSkin(
   ctx:CanvasRenderingContext2D,low:HTMLCanvasElement,world:World,
   appearance:Appearance,palette:RGB[],outW:number,outH:number
 ):boolean{
+  if(isF6Skin(appearance.skin)){
+    drawF6Skin(ctx,low,world,appearance,palette,outW,outH,appearance.skin);
+    return true;
+  }
   switch(appearance.skin){
     case 'contours':drawContours(ctx,low,world,appearance,palette,outW,outH);return true;
     case 'mercury':case 'relief':

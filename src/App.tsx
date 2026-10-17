@@ -1097,7 +1097,7 @@ export default function App(){
       const a:Appearance={...INITIAL_APPEARANCE,...data.appearance};
       if(!Array.isArray(a.palette)||a.palette.length<2||a.palette.length>32||a.palette.some(v=>typeof v!=='string'||!/^#[0-9a-f]{6}$/i.test(v)))throw new Error('Invalid palette');
       if(!['state','age','neighbors','events','radius','x','activity',...NEW_COLOR_SIGNALS.map(v=>v.id)].includes(a.colorBy))throw new Error('Invalid color mapping');
-      if(!['pixels','soft','glow','contours','mercury','relief','glass'].includes(a.skin))throw new Error('Invalid skin');
+      if(!['pixels','soft','glow','contours','mercury','relief','glass','prism','facets','spinodal'].includes(a.skin))throw new Error('Invalid skin');
       a.paletteOffset=Math.min(31,Math.max(-31,Number(a.paletteOffset)||0));
       a.paletteCycle=Math.min(1,Math.max(-1,Number(a.paletteCycle)||0));
       const controls=signalOptions(a);
@@ -1116,6 +1116,9 @@ export default function App(){
       a.contourWidth=numeric(a.contourWidth,0.5,6,1.5);
       a.chromeStrength=numeric(a.chromeStrength,0,1.5,0.8);
       a.glassLines=numeric(a.glassLines,0,1,0.7);
+      a.mathFrequency=numeric(a.mathFrequency,0.5,12,4.5);
+      a.mathWarp=numeric(a.mathWarp,0,2,0.8);
+      a.mathInk=numeric(a.mathInk,0,1,0.65);
       a.temporalRGB=numeric(a.temporalRGB,0,1,0);
       a.fossilOpacity=numeric(a.fossilOpacity,0,1,0);
       if(!['forward','pingpong'].includes(a.paletteMotion))a.paletteMotion='forward';
@@ -1665,6 +1668,11 @@ export default function App(){
                 <option value="mercury">MERCURY FLESH · LIQUID MEMBRANE</option>
                 <option value="relief">METALLIC RELIEF · CHROME</option>
                 <option value="glass">LIVING STAINED GLASS</option>
+              </optgroup>
+              <optgroup label="F6A · ACID MATHEMATICS / FLAT INK">
+                <option value="prism">PRISMATIC SHEAR · INTERFERENCE</option>
+                <option value="facets">CRYSTAL FRACTURE · HARD FACETS</option>
+                <option value="spinodal">SPINODAL INK · LAPLACIAN BANDS</option>
               </optgroup>
             </select>
             {appearance.skin==='glow'&&<>
