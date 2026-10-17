@@ -214,3 +214,8 @@ Play genuine seeded Voronoi convex polygon worlds in the six compatible local CA
 ## D3C — Voronoi production brush + export optimization (PR pending)
 
 Voronoi drags now intersect every physically crossed polygon, including thin cells missed by fast pointer events. Native-resolution PNG/GIF/video frames reuse cached actual polygon paths while retaining LIVE, independent palette/skin material on every frame. Phone jitter slider commits geometry only on release, not each intermediate motion. Dedicated exhaustive stroke mathematics, 2160p fresh-color tests, and 390px production-browser interaction checks gate merging. See [D3C production notes](docs/D3C_VORONOI_PRODUCTION.md). Actual iPhone Safari long-recording acceptance remains an on-device release task.
+
+
+## D4A · Eight-world suite integration and real cell math inspector (PR pending)
+
+Click/tap any cell to see its *true* number of physical/rule neighbors, occupied neighbors, polygon area, state and finite boundary—all derived from each actual tiling graph, not squares hidden underneath. Stale selections and dragging are cleared on geometry/seed/world replacement. A dedicated 96-world cross-lattice CI regression plus a 390px real-browser inspector smoke are required before this phase merges. See [D4A integration acceptance](docs/D4A_SUITE_INTEGRATION.md). F6 skins come after integration stabilizes.

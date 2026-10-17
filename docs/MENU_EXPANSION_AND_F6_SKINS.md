@@ -193,3 +193,8 @@ The variable-degree D3A physical graph drives six synchronous true CA engines, s
 ### D3C Voronoi production polish (isolated PR pending CI)
 
 Use mathematically exact continuous stroke-vs-polygon intersection for truly uninterrupted fast painting (finite 9:16/1:1 worlds), cached output-size-dependent polygon paths/bounds for each GIF/video frame, fresh dynamic colors, and drag-release jitter rebuild instead of expensive 7k-cell regeneration at every thumb event. Includes exhaustive whole-graph path QA and a real 390px mobile browser drag/recipe test. All existing exports unchanged except lower geometry processing overhead. Device Safari/thermal acceptance remains open. [D3C](D3C_VORONOI_PRODUCTION.md).
+
+
+### D4A suite integration and real-cell inspector (PR pending)
+
+Cross-lattice inspector presents genuine neighbor count, nonzero neighbors, actual polygon area, finite boundary and state for all eight real world geometries. Clear stale inspector and hover/drag on true-world replacement. CI now includes 96 deterministic six-engine world checks across 16 topologies/aspect variations, actual PNG and history replay, plus 390px Chromium UI transitions; existing GIF/video acceptance remains. Physical iPhone sustained capture and F6 skins still follow. [D4A](D4A_SUITE_INTEGRATION.md).
