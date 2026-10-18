@@ -24,7 +24,7 @@ try{
  const normal=realtimeCaptureHealth(standard);
  assert.equal(normal.rating,'within-budget');
  assert.equal(normal.requestedSeconds,10);
- assert.equal(normal.overrunSeconds,.1);
+ assert(Math.abs(normal.overrunSeconds-.1)<1e-9);
  assert.equal(normal.renderedFrames,300);
  assert.equal(normal.mode,'media-recorder-realtime');
  const burden=realtimeCaptureHealth({...standard,overBudgetFrames:47,
