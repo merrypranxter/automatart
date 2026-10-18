@@ -40,7 +40,7 @@ try{
  assert.match(report,/5 measured frames/);
  assert.match(report,/Median \d+ ms/);
  assert.equal(await page.locator('.readouts').innerText(),before,
-  'Probe must never advance the live world's generation or cells');
+  "Probe must never advance the live world's generation or cells");
  await page.locator('#export-fps').selectOption('15');
  assert.equal(await page.locator('.capture-preflight-results').count(),0,
   'Changed export controls invalidate measurements instead of lying');
