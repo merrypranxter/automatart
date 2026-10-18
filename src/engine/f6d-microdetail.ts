@@ -18,6 +18,7 @@ import {sampleF6EEquation} from './f6e-micro-equations';
 import type {ExtendedMicroSkin} from './f6e-micro-equations';
 import {adaptiveMicroSamples,inkEdgeCoverage,tileBandVariation} from './f6f-quality';
 import {microLocalRotation,microEquationGeneration,microInkBandShift} from './f6g-micro-motion';
+import {mutateMicroDomain,validateMicroDomainMode} from './f6h-domain-mutation';
 const TAU=2*Math.PI,PI=Math.PI,clamp=(n:number)=>Math.max(0,Math.min(1,n));
 const wrap=(n:number,max:number)=>((n%max)+max)%max;
 const scratch=new WeakMap<CanvasRenderingContext2D,HTMLCanvasElement>();
@@ -191,6 +192,9 @@ export function applyF6DMicrodetail(
  const phase=(world.generation/11)+(a.paletteOffset??0)+microInkBandShift(a.mathMicroBandShift??0);
  const microGen=microEquationGeneration(world.generation,a.mathMicroTimeRate??1);
  const microAngle=a.mathMicroAngle??0;
+ const domain=validateMicroDomainMode(a.mathMicroDomain);
+ const domainOrder=a.mathMicroDomainOrder??3;
+ const domainCoupling=a.mathMicroDomainCoupling??.8;
  ctx.save();
  ctx.imageSmoothingEnabled=antialias;
  if(antialias)ctx.imageSmoothingQuality='high';
@@ -219,7 +223,9 @@ export function applyF6DMicrodetail(
    const px=left+localX*(right-left),py=top+localY*(bottom-top);
    const u=px/extentX,v=py/extentY;
    const [rotX,rotY]=microLocalRotation(localX,localY,microAngle);
-   const value=sampleMicroEquation(a.skin,u,v,rotX,rotY,
+   const [domainX,domainY]=mutateMicroDomain(rotX,rotY,domain,
+    domainOrder,domainCoupling,occupancy[id],gx[id],gy[id],laplace[id]);
+   const value=sampleMicroEquation(a.skin,u,v,domainX,domainY,
     occupancy[id],gx[id],gy[id],a,microGen,laplace[id]);
    const phaseBand=a.skin==='gyroid'?(value+1.5)*2.7:
     a.skin==='cusp'?Math.sign(value)*2.2+Math.log1p(Math.abs(value))*5:

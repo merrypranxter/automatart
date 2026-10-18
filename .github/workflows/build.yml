@@ -37,6 +37,8 @@ jobs:
         run: node scripts/recording-smoke.mjs
       - name: Regression test GIF color cycling versus live render
         run: node scripts/gif-color-cycle-smoke.mjs
+      - name: Verify F6H complex power, kaleidoscope, vortex math and actual CA polygon renders
+        run: node scripts/f6h-domain-smoke.mjs
       - name: Verify F6G live microscopic rotation, time direction and palette band math
         run: node scripts/f6g-micro-motion-smoke.mjs
       - name: Verify F6F adaptive microscopic quality and true bounded palette-edge coverage
@@ -160,6 +162,8 @@ jobs:
         run: |
           npm install --no-save --no-audit --no-fund playwright gifuct-js
           npx playwright install --with-deps chromium
+      - name: Verify F6H nonlinear equation-domain picker and sliders on mobile Chromium
+        run: node scripts/f6h-domain-browser-smoke.mjs
       - name: Verify F6G micro rotation, phase and pigment sliders on mobile Chromium
         run: node scripts/f6g-micro-motion-browser-smoke.mjs
       - name: Verify F6E six added skins, microscopic frequency, off/original parity and phone-width controls
