@@ -82,7 +82,27 @@ try{
     'After drawing detailed ink, opt-out must not show a ghost: '+skin);
    // Refresh shader and ensure reused tiles do not retain earlier skin data.
    renderWorld(shared,world,a,width,undefined,quality);
-   assert(pixels(shared).equals(pixels(fresh)),
+   const reenter=pixels(shared),initial=pixels(fresh);
+   if(!reenter.equals(initial)){
+    let count=0,first=[];
+    for(let k=0;k<reenter.length;k++)if(reenter[k]!==initial[k]){
+     count++;if(first.length<10)first.push([k,initial[k],reenter[k]]);
+    }
+    const state=shared.getContext('2d');
+    const freshCycle=createCanvas(1,1);
+    renderWorld(freshCycle,worldCopy,off,width,undefined,quality);
+    renderWorld(freshCycle,worldCopy,a,width,undefined,quality);
+    console.error('F6J1 DIAGNOSTIC',JSON.stringify({
+     lattice:s.lattice,skin,width,quality,level,
+     changedBytes:count,totalBytes:reenter.length,first,
+     newCanvasOffThenOnMatches:reenter.equals(pixels(freshCycle)),
+     newCanvasOffThenOnMatchesInitial:initial.equals(pixels(freshCycle)),
+     alpha:state.globalAlpha,comp:state.globalCompositeOperation,
+     smoothing:state.imageSmoothingEnabled,smoothingQuality:state.imageSmoothingQuality,
+     filter:state.filter
+    }));
+   }
+   assert(reenter.equals(initial),
     'Re-entering detailed mode must restore same math pixels: '+skin);
    passes++;
   }
