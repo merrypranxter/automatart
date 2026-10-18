@@ -223,3 +223,8 @@ Three genuinely distinct source-field skins: sampled 3D gyroid implicit zero-lev
 ### F6D — Actual mathematical sampling within each cell (PR pending)
 
 First higher-resolution intra-polygon detail for the three F6C gyroid, circle inversion and cusp skins. Each real physical polygon gets a reused microsampled shader texture clipped by its genuine border, honoring saved seed, live CA gradient and color evolution. Adjustable sample budget, micro frequency and pigment mix with 0 = exact original look. Real nine-world math, PNG sizes, recipe and 390px controls test with all existing GIF/video gates. [F6D acceptance](F6D_SUBCELL_MATERIALS.md).
+
+
+### F6E — Six original math skin equations in true subcell detail (PR pending)
+
+Added the previously F6C-only microscopic controls to the three F6A and three F6B pigment families, reusing F6D's bounded work tiles. Genuine prism waves, hard crystal sectors, Laplacian bands, N-fold quasicrystal superpositions, unit-disk Möbius mapping and Lissajous braid parity are reevaluated inside each native polygon. Tests protect 54 seeded material cases, exact legacy/off image parity, saved-state replay, square/9:16 genuine Voronoi PNGs, 390px mobile controls and existing recording regressions. [F6E details](F6E_SIX_MICRO_EQUATIONS.md).
