@@ -31,3 +31,19 @@ export function microEquationGeneration(generation:number,rate:number):number{
 export function microInkBandShift(shift:number):number{
  return clamp(finite(shift,0),-8,8);
 }
+
+/** F6J: prepare one rotation for an ENTIRE frame, instead of evaluating
+ * Math.sin/Math.cos for every microscopic sample. Exact arithmetic matches
+ * microLocalRotation for all allowed finite angles, including identity.
+ * Deliberately not memoized globally: no recipe or rendering state leaks.
+ */
+export function prepareMicroLocalRotation(degrees:number):
+ (x:number,y:number)=>[number,number]{
+ const angle=clamp(finite(degrees,0),-180,180);
+ if(angle===0)return (x,y)=>[x,y];
+ const rad=angle*Math.PI/180,c=Math.cos(rad),s=Math.sin(rad);
+ return (x,y)=>{
+  const dx=x-.5,dy=y-.5;
+  return [.5+dx*c-dy*s,.5+dx*s+dy*c];
+ };
+}
