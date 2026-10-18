@@ -13,6 +13,18 @@ function Control({id,label,value,min,max,step=0.05,suffix='',onChange}:{
       onChange={e=>onChange(Number(e.target.value))}/>
   </div>;
 }
+function MicroMotionControls({a,update}:{a:Appearance;update:(key:keyof Appearance,value:number)=>void}){
+ return <>
+   <strong>F6G · LIVING MICROSCOPIC INK</strong>
+   <Control id="math-micro-angle" label="Micro equation rotation" value={a.mathMicroAngle??0}
+     min={-180} max={180} step={5} suffix="°" onChange={v=>update('mathMicroAngle',v)}/>
+   <Control id="math-micro-time-rate" label="Micro time speed (negative = reverse, 0 = phase freeze)" value={a.mathMicroTimeRate??1}
+     min={-3} max={3} step={.25} onChange={v=>update('mathMicroTimeRate',v)}/>
+   <Control id="math-micro-band-shift" label="Micro ink band shift" value={a.mathMicroBandShift??0}
+     min={-8} max={8} step={.25} onChange={v=>update('mathMicroBandShift',v)}/>
+   <p className="skin-description">Rotate the equations INSIDE real cells, change their mathematical clock, or slide only the micro-ink's flat palette bands. Cellular rules never change. Speed 0 freezes explicit equation phase, not the live world or its outer palette.</p>
+ </>;
+}
 interface Props {appearance:Appearance;setAppearance:Dispatch<SetStateAction<Appearance>>}
 export default function SkinControls({appearance:a,setAppearance}:Props){
   const update=(key:keyof Appearance,value:number)=>
@@ -85,6 +97,7 @@ export default function SkinControls({appearance:a,setAppearance}:Props){
             min={.5} max={12} step={.5} onChange={v=>update('mathMicroFrequency',v)}/>
           <Control id="math-micro-mix" label="Microscopic flat-ink intensity" value={a.mathMicroMix??.65}
             min={0} max={1} step={.05} onChange={v=>update('mathMicroMix',v)}/>
+          <MicroMotionControls a={a} update={update}/>
           <p className="skin-description">True inside-polygon mathematical sampling on all eight lattices. Higher quality uses more work for preview, PNG, GIF and video; quality 0 or intensity 0 preserves the original material exactly. No mandatory glow.</p>
         </>}
       </div>}
@@ -114,6 +127,7 @@ export default function SkinControls({appearance:a,setAppearance}:Props){
             min={.5} max={12} step={.5} onChange={v=>update('mathMicroFrequency',v)}/>
           <Control id="math-micro-mix" label="Microscopic flat-ink intensity" value={a.mathMicroMix??.65}
             min={0} max={1} step={.05} onChange={v=>update('mathMicroMix',v)}/>
+          <MicroMotionControls a={a} update={update}/>
           <p className="skin-description">New mathematically evaluated detail within true cell polygons. Preview uses a lighter sampling budget; export uses more. High levels may slow GIF/video exports. Original cellular rules and output dimensions are unchanged.</p>
         </>}
       </div>
@@ -136,6 +150,7 @@ export default function SkinControls({appearance:a,setAppearance}:Props){
       glassLines:0.7,mathFrequency:4.5,mathWarp:0.8,mathInk:0.65,
       mathFold:5,mathTwist:0.85,mathSlice:0,mathPoleX:.5,mathPoleY:.5,
       mathMicroDetail:0,mathMicroFrequency:5,mathMicroMix:.65,
+      mathMicroAngle:0,mathMicroTimeRate:1,mathMicroBandShift:0,
       temporalRGB:0,fossilOpacity:0}))}>↺ RESET SKIN LAB</button>
   </section>;
 }
