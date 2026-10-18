@@ -28,7 +28,6 @@ interface MicroWorkspace{
  canvas:HTMLCanvasElement;
  bandTile:Float32Array;
  valueTile:Float32Array;
- images:Map<number,ImageData>;
 }
 const scratch=new WeakMap<CanvasRenderingContext2D,MicroWorkspace>();
 export interface MicroBudget {
@@ -190,8 +189,7 @@ export function applyF6DMicrodetail(
  let workspace=scratch.get(ctx);
  if(!workspace){
   workspace={canvas:document.createElement('canvas'),
-   bandTile:new Float32Array(0),valueTile:new Float32Array(0),
-   images:new Map<number,ImageData>()};
+   bandTile:new Float32Array(0),valueTile:new Float32Array(0)};
   scratch.set(ctx,workspace);
  }
  const tile=workspace.canvas;
@@ -202,8 +200,9 @@ export function applyF6DMicrodetail(
  if(tile.height!==maxSide)tile.height=maxSide;
  const tc=tile.getContext('2d',{willReadFrequently:true});
  if(!tc)return;
- // Allocate only if quality requires a larger workspace. Tiles are at most
- // 28×28, and cached ImageData keys are integers 2..28: strictly bounded.
+ // Reuse the two scalar sampling arrays; keep RGBA ImageData scoped to this
+ // frame to avoid stale backing-memory aliases after canvas resizing. The
+ // source tile and its 2D context remain per-output-canvas reused.
  const capacity=maxSide*maxSide;
  if(workspace.bandTile.length<capacity){
   workspace.bandTile=new Float32Array(capacity);
@@ -211,7 +210,7 @@ export function applyF6DMicrodetail(
  }
  const bandTile=workspace.bandTile;
  const valueTile=workspace.valueTile;
- const images=workspace.images;
+ const images=new Map<number,ImageData>();
  const strengthLevel=Math.max(0,Math.min(3,Math.floor(a.mathMicroDetail??0)));
  const antialias=strengthLevel>=2;
  const globalMix=Math.min(.9,strength*.8);
