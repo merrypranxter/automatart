@@ -65,6 +65,8 @@ import type {
   CaptureFormat, CaptureProgress, DurationMode, ExportResolution
 } from './engine/capture';
 import type {CaptureTimingHealth} from './engine/f6j2b-recorder-health';
+import {measureCapturePreflight} from './engine/f6j2c-device-preflight';
+import type {CapturePreflightResult} from './engine/f6j2c-device-preflight';
 import {
   INITIAL_APPEARANCE, INITIAL_SETTINGS, LIFE_RULES, PALETTES, PALETTE_LIBRARY, MOIRE_PALETTE_NAMES, AUTOMATART_PALETTE_NAMES
 } from './engine/types';
@@ -226,6 +228,10 @@ export default function App(){
   const [capturing,setCapturing]=useState(false);
   const [lastExport,setLastExport]=useState<{name:string;blob:Blob;url:string;frames:number;distinctFrames:number;elapsed:number;extension:string;timing:CaptureTimingHealth}|null>(null);
   const [captureProgress,setCaptureProgress]=useState<CaptureProgress|null>(null);
+  const [preflighting,setPreflighting]=useState(false);
+  const [preflightProgress,setPreflightProgress]=useState(0);
+  const [preflightError,setPreflightError]=useState<string|null>(null);
+  const [preflightReport,setPreflightReport]=useState<{key:string;result:CapturePreflightResult}|null>(null);
   const [captureError,setCaptureError]=useState<string|null>(null);
   const [hiddenWarnings,setHiddenWarnings]=useState<string[]>([]);
   const [hideStaticWarning,setHideStaticWarning]=useState(false);
@@ -240,6 +246,8 @@ export default function App(){
     return ()=>window.clearTimeout(timeout);
   },[message]);
   const controllerRef=useRef<AbortController|null>(null);
+  const preflightControllerRef=useRef<AbortController|null>(null);
+  const preflightRunningRef=useRef(false);
   const recordingRef=useRef(false);
   useEffect(()=>()=>{if(lastExport)URL.revokeObjectURL(lastExport.url);},[lastExport]);
   useEffect(()=>()=>{if(lastStill)URL.revokeObjectURL(lastStill.url);},[lastStill]);
@@ -1193,8 +1201,41 @@ export default function App(){
     }
     download(lastExport.name,lastExport.blob);
   }
+  // The report belongs to this exact recipe, canvas and FPS selection.
+  // Any change invalidates it rather than silently reusing stale numbers.
+  const preflightKey=JSON.stringify([settings,appearance,frameAspect,frameFit,
+    resolution,exportFps,restartCapture,captureFormat,speed,
+    restartCapture?null:generation]);
+  const currentPreflight=preflightReport?.key===preflightKey?preflightReport.result:null;
+  async function startPreflight(){
+    if(preflightRunningRef.current||recordingRef.current||snapshotBusy)return;
+    cancelBatch();
+    const priorPlaying=playing;
+    preflightRunningRef.current=true;
+    const controller=new AbortController();
+    preflightControllerRef.current=controller;
+    setPreflighting(true);setPreflightProgress(0);setPreflightError(null);
+    setPreflightReport(null);setPlaying(false);
+    try{
+      // Make controls responsive before doing genuine full-output-size work.
+      await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
+      if(controller.signal.aborted)throw new CaptureCancelled();
+      const report=await measureCapturePreflight(worldRef.current,settings,appearance,{
+        format:captureFormat,mode:durationMode,seconds:5,fps:exportFps,
+        resolution,frameAspect,frameFit,restart:restartCapture,
+        stepsPerSecond:speed
+      },controller.signal,(done,total)=>setPreflightProgress(done/total));
+      setPreflightReport({key:preflightKey,result:report});
+    }catch(error){
+      if(!(error instanceof CaptureCancelled)&&!controller.signal.aborted)
+        setPreflightError(error instanceof Error?error.message:String(error));
+    }finally{
+      preflightRunningRef.current=false;preflightControllerRef.current=null;
+      setPreflighting(false);setPlaying(priorPlaying);
+    }
+  }
   async function startCapture(){
-    if(recordingRef.current)return;
+    if(recordingRef.current||preflightRunningRef.current)return;
     cancelBatch();
     const resumeAfter=playing;
     setLastExport(null);
@@ -1852,8 +1893,45 @@ export default function App(){
               <span>EXPORT FAILED: {captureError}</span>
               <button type="button" className="dismiss-export" aria-label="Close recorder error" onClick={dismissFailure}>×</button>
             </div>}
+            <div className="capture-preflight" role="region" aria-label="Export performance preflight">
+              <div className="capture-preflight-heading"><b>DEVICE EXPORT PREFLIGHT</b><small>OPTIONAL · REAL RESOLUTION</small></div>
+              <p>Try five measured frames of this exact math and canvas size on this device before a long export. The live universe remains untouched.</p>
+              <div className="capture-preflight-buttons">
+                <button type="button" id="capture-preflight-start"
+                  disabled={capturing||preflighting||snapshotBusy}
+                  onClick={()=>void startPreflight()}>
+                  {preflighting?'MEASURING…':'TEST THESE EXPORT SETTINGS'}
+                </button>
+                {preflighting&&<button type="button" id="capture-preflight-cancel"
+                  onClick={()=>preflightControllerRef.current?.abort()}>CANCEL TEST</button>}
+              </div>
+              {preflighting&&<p role="status">Checking frame {Math.round(preflightProgress*6)} of 6 (first frame warms up)…</p>}
+              {preflightError&&!preflighting&&<p role="alert">Preflight could not finish: {preflightError}</p>}
+              {currentPreflight&&!preflighting&&<div className="capture-preflight-results" role="status">
+                <b>{currentPreflight.signal==='over-budget'?'⚠ FRAME BUDGET EXCEEDED':
+                  currentPreflight.signal==='near-budget'?'FRAME BUDGET TIGHT':
+                  currentPreflight.signal==='under-budget'?'RENDER COST WITHIN SAMPLE BUDGET':
+                  currentPreflight.signal==='unavailable'?'VIDEO CODEC UNAVAILABLE':
+                  'FRAME-INDEXED EXPORT PATH'}</b>
+                <p>{currentPreflight.width} × {currentPreflight.height} · {currentPreflight.fps} FPS ·
+                  {currentPreflight.samples} measured frames</p>
+                <p>Median {currentPreflight.medianMs.toFixed(0)} ms ·
+                  P90 {currentPreflight.p90Ms.toFixed(0)} ms ·
+                  Slowest {currentPreflight.maximumMs.toFixed(0)} ms ·
+                  Target {currentPreflight.frameBudgetMs.toFixed(0)} ms/frame</p>
+                <p>CA stepping averages {currentPreflight.stepMeanMs.toFixed(0)} ms within the measured frame cost.</p>
+                <p>{currentPreflight.route==='native-video'?
+                  'REAL-TIME VIDEO: Render speed may affect capture; a near/over-budget reading suggests trying fewer FPS or lighter settings.':
+                  currentPreflight.route==='offline-webm'?
+                  'OFFLINE WEBM: Authored frame times stay exact even if rendering exceeds the budget; slow work only increases export waiting time.':
+                  currentPreflight.route==='gif-worker'?
+                  'GIF: Playback frame times are fixed; this test excludes GIF palette quantization, Worker compression and file size.':
+                  'No supported video recorder reported. Try GIF export.'}</p>
+                <p className="capture-preflight-caution">Short sample only: does not measure encoder speed, background throttling, heat buildup or actual lost native video frames. Always review a finished recording.</p>
+              </div>}
+            </div>
             <div className="capture-buttons">
-              <button className="record-button" disabled={capturing||(captureFormat==='video'&&!videoSupported)}
+              <button className="record-button" disabled={capturing||preflighting||(captureFormat==='video'&&!videoSupported)}
                 onClick={startCapture}>{capturing?'● RECORDING':'● RECORD '+captureFormat.toUpperCase()}</button>
               {capturing&&<button className="cancel-button" onClick={()=>controllerRef.current?.abort()}>✕ CANCEL</button>}
             </div>
