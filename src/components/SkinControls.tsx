@@ -1,5 +1,5 @@
 import type {Dispatch,SetStateAction} from 'react';
-import type {Appearance} from '../engine/types';
+import type {Appearance,MicroDomainMode} from '../engine/types';
 
 function Control({id,label,value,min,max,step=0.05,suffix='',onChange}:{
   id:string;label:string;value:number;min:number;max:number;step?:number;
@@ -13,7 +13,11 @@ function Control({id,label,value,min,max,step=0.05,suffix='',onChange}:{
       onChange={e=>onChange(Number(e.target.value))}/>
   </div>;
 }
-function MicroMotionControls({a,update}:{a:Appearance;update:(key:keyof Appearance,value:number)=>void}){
+function MicroMotionControls({a,update,setAppearance}:{
+ a:Appearance;
+ update:(key:keyof Appearance,value:number)=>void;
+ setAppearance:Dispatch<SetStateAction<Appearance>>;
+}){
  return <>
    <strong>F6G · LIVING MICROSCOPIC INK</strong>
    <Control id="math-micro-angle" label="Micro equation rotation" value={a.mathMicroAngle??0}
@@ -23,6 +27,22 @@ function MicroMotionControls({a,update}:{a:Appearance;update:(key:keyof Appearan
    <Control id="math-micro-band-shift" label="Micro ink band shift" value={a.mathMicroBandShift??0}
      min={-8} max={8} step={.25} onChange={v=>update('mathMicroBandShift',v)}/>
    <p className="skin-description">Rotate the equations INSIDE real cells, change their mathematical clock, or slide only the micro-ink's flat palette bands. Cellular rules never change. Speed 0 freezes explicit equation phase, not the live world or its outer palette.</p>
+   <strong>F6H · MATHEMATICAL DOMAIN MUTATION</strong>
+   <label htmlFor="math-micro-domain" className="input-label">Equation domain transform</label>
+   <select id="math-micro-domain" value={a.mathMicroDomain??'none'}
+     onChange={e=>setAppearance(prev=>({...prev,mathMicroDomain:e.target.value as MicroDomainMode}))}>
+     <option value="none">OFF · Original mathematical domain</option>
+     <option value="power">COMPLEX POWER · Branching lobes</option>
+     <option value="kaleidoscope">KALEIDOSCOPIC · Angular folds</option>
+     <option value="vortex">VORTEX · Radial shear</option>
+   </select>
+   {(a.mathMicroDomain??'none')!=='none'&&<>
+     <Control id="math-micro-domain-order" label="Power / mirror order / vortex turns" value={a.mathMicroDomainOrder??3}
+       min={2} max={8} step={1} onChange={v=>update('mathMicroDomainOrder',v)}/>
+     <Control id="math-micro-domain-coupling" label="Living cell-field bend" value={a.mathMicroDomainCoupling??.8}
+       min={0} max={2} step={.1} onChange={v=>update('mathMicroDomainCoupling',v)}/>
+     <p className="skin-description">True complex powers, reflected polar wedges, or distance-dependent vortex shear. Only the sampling equations inside each real cell mutate. Field bend responds to genuine neighboring cell states.</p>
+   </>}
  </>;
 }
 interface Props {appearance:Appearance;setAppearance:Dispatch<SetStateAction<Appearance>>}
@@ -97,7 +117,7 @@ export default function SkinControls({appearance:a,setAppearance}:Props){
             min={.5} max={12} step={.5} onChange={v=>update('mathMicroFrequency',v)}/>
           <Control id="math-micro-mix" label="Microscopic flat-ink intensity" value={a.mathMicroMix??.65}
             min={0} max={1} step={.05} onChange={v=>update('mathMicroMix',v)}/>
-          <MicroMotionControls a={a} update={update}/>
+          <MicroMotionControls a={a} update={update} setAppearance={setAppearance}/>
           <p className="skin-description">True inside-polygon mathematical sampling on all eight lattices. Higher quality uses more work for preview, PNG, GIF and video; quality 0 or intensity 0 preserves the original material exactly. No mandatory glow.</p>
         </>}
       </div>}
@@ -127,7 +147,7 @@ export default function SkinControls({appearance:a,setAppearance}:Props){
             min={.5} max={12} step={.5} onChange={v=>update('mathMicroFrequency',v)}/>
           <Control id="math-micro-mix" label="Microscopic flat-ink intensity" value={a.mathMicroMix??.65}
             min={0} max={1} step={.05} onChange={v=>update('mathMicroMix',v)}/>
-          <MicroMotionControls a={a} update={update}/>
+          <MicroMotionControls a={a} update={update} setAppearance={setAppearance}/>
           <p className="skin-description">New mathematically evaluated detail within true cell polygons. Preview uses a lighter sampling budget; export uses more. High levels may slow GIF/video exports. Original cellular rules and output dimensions are unchanged.</p>
         </>}
       </div>
@@ -151,6 +171,7 @@ export default function SkinControls({appearance:a,setAppearance}:Props){
       mathFold:5,mathTwist:0.85,mathSlice:0,mathPoleX:.5,mathPoleY:.5,
       mathMicroDetail:0,mathMicroFrequency:5,mathMicroMix:.65,
       mathMicroAngle:0,mathMicroTimeRate:1,mathMicroBandShift:0,
+      mathMicroDomain:'none',mathMicroDomainOrder:3,mathMicroDomainCoupling:.8,
       temporalRGB:0,fossilOpacity:0}))}>↺ RESET SKIN LAB</button>
   </section>;
 }
