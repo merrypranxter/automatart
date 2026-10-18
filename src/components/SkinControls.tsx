@@ -57,7 +57,7 @@ function MicroMotionControls({a,update,setAppearance}:{
      <Control id="math-micro-phase-depth" label="Phase propagation depth" value={a.mathMicroPhaseDepth??2}
        min={1} max={5} step={1} onChange={v=>update('mathMicroPhaseDepth',v)}/>
      <p className="skin-description">Color phases negotiate through real shared-edge cell neighborhoods. Attraction coordinates; repulsion favors disagreements. Synchronous bounded iterations, not simulated Kuramoto time evolution. Doesn't change cellular rules.</p>
-   </>
+   </>}
  </>;
 }
 interface Props {appearance:Appearance;setAppearance:Dispatch<SetStateAction<Appearance>>}
