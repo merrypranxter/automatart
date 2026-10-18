@@ -37,6 +37,8 @@ jobs:
         run: node scripts/recording-smoke.mjs
       - name: Regression test GIF color cycling versus live render
         run: node scripts/gif-color-cycle-smoke.mjs
+      - name: Verify F6J2 fixed offline video timestamps, cooperative yielding and bounded progress
+        run: node scripts/f6j2-cadence-smoke.mjs
       - name: Verify F6J1 exact micro-shader pixels after many reused-frame renders
         run: node scripts/f6j1-micro-render-smoke.mjs
       - name: Verify F6I true physical graph phase cooperation, antagonism and nine pigment skins
