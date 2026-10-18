@@ -74,6 +74,20 @@ export default function SkinControls({appearance:a,setAppearance}:Props){
         'A genuine Möbius disk transformation in hyperbolic coordinates, with living cell gradients pushing the disk and angular/radial rings.':
         'Two nonlinear Lissajous stripe families cross; mathematical parity determines which flat-color strand passes over or under.'}</p>
     </>}
+    {(a.skin==='prism'||a.skin==='facets'||a.skin==='spinodal'||
+      a.skin==='quasicrystal'||a.skin==='hyperbolic'||a.skin==='lissajous')&&
+      <div className="skin-effects">
+        <strong>F6E · MICROSCOPIC MATHEMATICS INSIDE REAL CELLS</strong>
+        <Control id="math-micro-detail" label="Subcell quality (0 = original)" value={a.mathMicroDetail??0}
+          min={0} max={3} step={1} onChange={v=>update('mathMicroDetail',v)}/>
+        {(a.mathMicroDetail??0)>0&&<>
+          <Control id="math-micro-frequency" label="Microscopic equation frequency" value={a.mathMicroFrequency??5}
+            min={.5} max={12} step={.5} onChange={v=>update('mathMicroFrequency',v)}/>
+          <Control id="math-micro-mix" label="Microscopic flat-ink intensity" value={a.mathMicroMix??.65}
+            min={0} max={1} step={.05} onChange={v=>update('mathMicroMix',v)}/>
+          <p className="skin-description">True inside-polygon mathematical sampling on all eight lattices. Higher quality uses more work for preview, PNG, GIF and video; quality 0 or intensity 0 preserves the original material exactly. No mandatory glow.</p>
+        </>}
+      </div>}
     {(a.skin==='gyroid'||a.skin==='inversion'||a.skin==='cusp')&&<>
       <Control id="math-frequency" label="Mathematical frequency" value={a.mathFrequency??4.5}
         min={.5} max={12} step={.5} onChange={v=>update('mathFrequency',v)}/>
