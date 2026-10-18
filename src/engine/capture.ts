@@ -1,6 +1,8 @@
 import { GIFEncoder } from 'gifenc';
 import {FixedWebMMuxer,offlineVideoCodec} from './fixed-webm.js';
 import { indexGifFrame } from './gif-palette';
+import {frameIndexedHealth,realtimeCaptureHealth} from './f6j2b-recorder-health';
+import type {CaptureTimingHealth} from './f6j2b-recorder-health';
 import {captureProgressDue,fixedVideoFrameTime,offlineYieldDue} from './f6j2-capture-cadence';
 import { createWorld, stepWorld } from './sim';
 import {exportFrameLayout,renderExportFrame} from './export-frame';
@@ -30,6 +32,8 @@ export interface CaptureProgress {
 }
 export interface CaptureResult {
   blob: Blob;
+  /** Real-time recorder measurements are risk estimates, never encoded drop counts. */
+  timing:CaptureTimingHealth;
   extension: 'gif' | 'mp4' | 'webm';
   frames: number;
   elapsed: number;
@@ -293,7 +297,8 @@ export async function captureAnimation(
         const copy=new Uint8Array(bytes.length);
         copy.set(bytes);
         return {blob:new Blob([copy.buffer],{type:'image/gif'}),
-          extension:'gif',frames,distinctFrames,elapsed:frames/opt.fps,ended};
+          extension:'gif',frames,distinctFrames,elapsed:frames/opt.fps,ended,
+          timing:frameIndexedHealth('gif-offline',frames,opt.fps)};
       }finally{
         worker?.terminate();
       }
@@ -357,7 +362,8 @@ export async function captureAnimation(
         const blob=mux.finish(frames);
         update('Frame-perfect WebM ready',frames);
         return {blob,extension:'webm',frames,
-          distinctFrames,elapsed:frames/opt.fps,ended};
+          distinctFrames,elapsed:frames/opt.fps,ended,
+          timing:frameIndexedHealth('webm-offline',frames,opt.fps)};
       }finally{
         if(encoder.state!=='closed')encoder.close();
       }
@@ -395,21 +401,29 @@ export async function captureAnimation(
       recorder.onerror=()=>{recordingError=new Error('Video encoder reported an error.');};
       recorder.onstop=()=>resolve();
     });
+    let overBudgetFrames=0,lateStarts=0,slowestFrameMs=0;
+    let recordingStartedAt=0,recordingFinishedAt=0;
     try{
       // On WebKit, MediaRecorder.start(1000) can flush/encode on the main
       // thread every second, freezing the canvas for ~0.7s and then rushing
       // through many late simulation frames. Collect the finished Blob once.
       recorder.start();
+      recordingStartedAt=performance.now();
       const stepMillis=1000/opt.fps;
-      let nextFrameAt=performance.now();
+      let nextFrameAt=recordingStartedAt;
       for(let i=0;i<totalFrames;i++){
         notCancelled(signal);
         await delay(Math.max(0,nextFrameAt-performance.now()));
         notCancelled(signal);
+        const paintStartAt=performance.now();
+        if(paintStartAt-nextFrameAt>stepMillis*.5)lateStarts++;
         renderExportFrame(canvas,scratch,cursor.current,a,layout);
         // Let the compositor publish painted canvas pixels. The MediaStream
         // already captures at opt.fps; don't request duplicate manual frames.
         await nextPaint();
+        const paintMs=performance.now()-paintStartAt;
+        slowestFrameMs=Math.max(slowestFrameMs,paintMs);
+        if(paintMs>stepMillis)overBudgetFrames++;
         frames++;
         const transition=cursor.advance();
         if(transition.changed)distinctFrames++;
@@ -425,6 +439,7 @@ export async function captureAnimation(
     }finally{
       if(recorder.state!=='inactive')recorder.stop();
       await finished;
+      recordingFinishedAt=performance.now();
       stream.getTracks().forEach(t=>t.stop());
     }
     notCancelled(signal);
@@ -433,7 +448,9 @@ export async function captureAnimation(
     if(blob.size<1000)throw new Error('Recorder produced an empty or nearly empty video. Try a smaller resolution.');
     update('Video ready for preview',frames);
     return {blob,extension:mime.includes('mp4')?'mp4':'webm',frames,
-      distinctFrames,elapsed:frames/opt.fps,ended};
+      distinctFrames,elapsed:frames/opt.fps,ended,
+      timing:realtimeCaptureHealth({frames,fps:opt.fps,overBudgetFrames,
+       lateStarts,slowestFrameMs,wallElapsedMs:recordingFinishedAt-recordingStartedAt})};
   }finally{
     canvas.remove();
   }

@@ -64,6 +64,7 @@ import {
 import type {
   CaptureFormat, CaptureProgress, DurationMode, ExportResolution
 } from './engine/capture';
+import type {CaptureTimingHealth} from './engine/f6j2b-recorder-health';
 import {
   INITIAL_APPEARANCE, INITIAL_SETTINGS, LIFE_RULES, PALETTES, PALETTE_LIBRARY, MOIRE_PALETTE_NAMES, AUTOMATART_PALETTE_NAMES
 } from './engine/types';
@@ -223,7 +224,7 @@ export default function App(){
   const [exportFps,setExportFps]=useState(10);
   const [restartCapture,setRestartCapture]=useState(true);
   const [capturing,setCapturing]=useState(false);
-  const [lastExport,setLastExport]=useState<{name:string;blob:Blob;url:string;frames:number;distinctFrames:number;elapsed:number;extension:string}|null>(null);
+  const [lastExport,setLastExport]=useState<{name:string;blob:Blob;url:string;frames:number;distinctFrames:number;elapsed:number;extension:string;timing:CaptureTimingHealth}|null>(null);
   const [captureProgress,setCaptureProgress]=useState<CaptureProgress|null>(null);
   const [captureError,setCaptureError]=useState<string|null>(null);
   const [hiddenWarnings,setHiddenWarnings]=useState<string[]>([]);
@@ -1223,9 +1224,12 @@ export default function App(){
         result.ended==='size-limit'?'stopped at the real compressed GIF size limit (partial animation saved)':
         result.ended==='limit'?'reached the duration safety limit':'complete';
       const name='automatart-'+settings.engine+'-'+(restartCapture?'seed'+settings.seed:'gen'+generation)+'-'+Math.round(result.elapsed)+'s.'+result.extension;
-      setLastExport({name,blob:result.blob,url:URL.createObjectURL(result.blob),frames:result.frames,distinctFrames:result.distinctFrames,elapsed:result.elapsed,extension:result.extension});
+      setLastExport({name,blob:result.blob,url:URL.createObjectURL(result.blob),frames:result.frames,distinctFrames:result.distinctFrames,elapsed:result.elapsed,extension:result.extension,timing:result.timing});
       if(!/iPad|iPhone|iPod/i.test(navigator.userAgent))download(name,result.blob);
-      setMessage('GIF/video export '+label+'. '+result.frames+' frames created. Preview, save and share below.');
+      setMessage('GIF/video export '+label+'. '+result.frames+
+        ' frames rendered. '+(result.timing.rating==='stutter-risk'?
+        'Real-time capture missed rendering deadlines; check the playback preview.':
+        'Preview, save and share below.'));
     }catch(error){
       if(error instanceof CaptureCancelled||controller.signal.aborted){
         setMessage('Recording cancelled. Your live universe is unharmed.');
@@ -1859,6 +1863,18 @@ export default function App(){
               </div>
               <div>
                 <span>{lastExport.name} · {lastExport.elapsed.toFixed(1)} sec · {lastExport.distinctFrames} changing steps</span>
+              </div>
+              <div className="capture-timing-report" role="note" aria-label="Recording timing report">
+                {lastExport.timing.mode==='media-recorder-realtime'?<>
+                  <b>{lastExport.timing.rating==='stutter-risk'?'⚠ REAL-TIME TIMING RISK':'REAL-TIME BROWSER RECORDER'}</b>
+                  <p>Painted {lastExport.timing.renderedFrames} frames · {lastExport.timing.overBudgetFrames} exceeded the frame-time budget · {lastExport.timing.lateStarts} started late · slowest frame {lastExport.timing.slowestFrameMs.toFixed(0)} ms. Recorder ran {lastExport.timing.wallSeconds.toFixed(1)} s for {lastExport.timing.requestedSeconds.toFixed(1)} s requested playback.</p>
+                  <p>{lastExport.timing.rating==='stutter-risk'?
+                    'Your phone had trouble keeping up. The exported file may stutter or have an unexpected duration. Play the preview before saving; for reliably frame-indexed timing, GIF is available, or use offline WebM in a browser supporting it.':
+                    'Rendering stayed within the measured timing budget. Browser-native recording can still skip frames internally; please review playback before saving.'}</p>
+                </>:<>
+                  <b>{lastExport.timing.mode==='gif-offline'?'FRAME-INDEXED GIF':'FRAME-INDEXED OFFLINE WEBM'}</b>
+                  <p>{lastExport.timing.renderedFrames} frames authored using fixed playback timing, independent of how long rendering took. This does not measure the device player or guarantee real-time preview smoothness.</p>
+                </>}
               </div>
               <div className="export-preview">
                 {lastExport.extension==='gif'?
