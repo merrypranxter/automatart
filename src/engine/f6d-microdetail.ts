@@ -281,12 +281,11 @@ export function applyF6DMicrodetail(
    }
    dst[pixel+3]=Math.round(globalMix*255);
   }
-  // Important even with drawImage's source rectangle: some Canvas backends
-  // include texels just OUTSIDE that rectangle when bilinear sampling.
-  // Without this clear a prior small face can bleed color into later edges
-  // when the same tiny backing canvas is reused across many animation frames.
-  // At most 28×28 pixels, independent of 4K/8K export resolution.
-  tc.clearRect(0,0,maxSide,maxSide);
+  // Some backends bilinearly sample just outside drawImage's source crop.
+  // Only antialiased SMALLER tiles need a clear to prevent previous-face
+  // colors leaking into boundaries. Nearest-neighbor or a fully overwritten
+  // max-size tile cannot sample stale pixels: spare 1000s of clear operations.
+  if(antialias&&dim<maxSide)tc.clearRect(0,0,maxSide,maxSide);
   tc.putImageData(pixels,0,0);
   ctx.beginPath();ctx.moveTo(poly[0][0]*sx,poly[0][1]*sy);
   for(let k=1;k<poly.length;k++)ctx.lineTo(poly[k][0]*sx,poly[k][1]*sy);
