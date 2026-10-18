@@ -6,7 +6,7 @@ F6D–F6I added genuine mathematical sampling inside cell polygons. That opt-in 
 
 ## Changes
 
-- Reuse two capped Float32 arrays and dimension-keyed tiny RGBA ImageData tiles per original output canvas 2D context. The weak-map key permits retired stage/encoder canvases to be reclaimed; there is no growing time-history buffer. Each pixel is completely rewritten and reused ImageData is displayed only in its populated rectangle; switching skins, quality levels, aspect, and generations cannot show stale ink.
+- Reuse two capped Float32 scalar arrays and a small source canvas per original output 2D context. The weak-map key permits retired stage/encoder canvases to be reclaimed; there is no growing time-history buffer. ImageData stays per-frame (avoids backing-memory alias risk), with size-keyed reuse among faces in that frame. Clear the maximum 28×28 source tile before each new face: antialiasing can otherwise sample stale texels just beyond the specified drawImage source rectangle and introduce sporadic colored edge pixels after switching controls.
 - Precompute the sine/cosine of one micro-equation rotation once per rendered frame, not once per scalar shader evaluation. F6G's existing microLocalRotation remains available; new prepareMicroLocalRotation uses identical arithmetic and is tested against the original for exact numerical equality, including angle zero, negative angles, and nonfinite fallbacks.
 - Skip nonlinear F6H domain mapping when its mode is OFF. It was already logically a no-op; the new fast path is also explicitly identity.
 - Compute constant per-face phase offsets once per polygon instead of repeated typed-array lookup and modulo per sample, while preserving addition order.
