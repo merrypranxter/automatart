@@ -350,6 +350,7 @@ export async function captureAnimation(
           }
         }
         notCancelled(signal);
+        update('Finalizing frame-perfect WebM…',frames);
         await encoder.flush();
         if(encoderError)throw encoderError;
         notCancelled(signal);
