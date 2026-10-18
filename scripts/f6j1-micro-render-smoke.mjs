@@ -43,7 +43,7 @@ try{
   {...INITIAL_SETTINGS,engine:'cyclic',lattice:'penrose',aspect:'portrait',cellCount:32,
    pattern:'noise',density:.68,seed:139,cyclicStates:9,wrap:false},
   {...INITIAL_SETTINGS,engine:'cyclic',lattice:'voronoi',aspect:'portrait',cellCount:32,
-   pattern:'noise',density:.68,seed:149,voronoiJitter:.47,cyclicStates:9,wrap:false}
+   pattern:'noise',density:.68,seed:149,voronoiJitter:.42,cyclicStates:9,wrap:false}
  ];
  let passes=0;
  let shared=createCanvas(1,1);
