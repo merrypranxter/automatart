@@ -37,6 +37,8 @@ jobs:
         run: node scripts/recording-smoke.mjs
       - name: Regression test GIF color cycling versus live render
         run: node scripts/gif-color-cycle-smoke.mjs
+      - name: Verify F6J2C actual output-size preflight statistics and no CA mutation
+        run: node scripts/f6j2c-preflight-smoke.mjs
       - name: Verify F6J2B capture timing health and honest fallback risk classification
         run: node scripts/f6j2b-recorder-health-smoke.mjs
       - name: Verify F6J2 fixed offline video timestamps, cooperative yielding and bounded progress
@@ -192,6 +194,8 @@ jobs:
         run: node scripts/d3c-voronoi-browser-smoke.mjs
       - name: Record GIF through actual browser Worker and verify UI
         run: node scripts/recorder-browser-smoke.mjs
+      - name: Verify F6J2C optional full-resolution benchmark on 390px mobile Chromium
+        run: node scripts/f6j2c-preflight-browser-smoke.mjs
       - name: Verify F6J2B actual fallback MediaRecorder and phone-width timing report
         run: node scripts/f6j2b-recorder-health-browser-smoke.mjs
       - name: Verify smooth real-time video capture in Chromium
