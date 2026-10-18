@@ -17,12 +17,19 @@ import {isF6BSkin} from './f6b-math-skins';
 import {sampleF6EEquation} from './f6e-micro-equations';
 import type {ExtendedMicroSkin} from './f6e-micro-equations';
 import {adaptiveMicroSamples,inkEdgeCoverage,tileBandVariation} from './f6f-quality';
-import {microLocalRotation,microEquationGeneration,microInkBandShift} from './f6g-micro-motion';
+import {prepareMicroLocalRotation,microEquationGeneration,microInkBandShift} from './f6g-micro-motion';
 import {mutateMicroDomain,validateMicroDomainMode} from './f6h-domain-mutation';
 import {microGraphPhaseOffsets,validateMicroPhaseMode} from './f6i-graph-phase';
 const TAU=2*Math.PI,PI=Math.PI,clamp=(n:number)=>Math.max(0,Math.min(1,n));
 const wrap=(n:number,max:number)=>((n%max)+max)%max;
-const scratch=new WeakMap<CanvasRenderingContext2D,HTMLCanvasElement>();
+/** One bounded workspace per destination context. Weak keys allow retired
+ * canvases to be collected; scratch never scales with final output pixels. */
+interface MicroWorkspace{
+ canvas:HTMLCanvasElement;
+ bandTile:Float32Array;
+ valueTile:Float32Array;
+}
+const scratch=new WeakMap<CanvasRenderingContext2D,MicroWorkspace>();
 export interface MicroBudget {
  enabled:boolean;
  samples:number;
@@ -179,19 +186,30 @@ export function applyF6DMicrodetail(
    [parseInt(hex.slice(0,2),16),parseInt(hex.slice(2,4),16),parseInt(hex.slice(4,6),16)]:
    [255,255,255];
  });
- let tile=scratch.get(ctx);
- if(!tile){tile=document.createElement('canvas');scratch.set(ctx,tile);}
- // Hold the backing tile at the fixed global-budget maximum side. Do NOT
- // resize the canvas for every physical face: that thrashes iPhone textures.
+ let workspace=scratch.get(ctx);
+ if(!workspace){
+  workspace={canvas:document.createElement('canvas'),
+   bandTile:new Float32Array(0),valueTile:new Float32Array(0)};
+  scratch.set(ctx,workspace);
+ }
+ const tile=workspace.canvas;
+ // Fixed backing tile width PER FRAME, not per face. Only the needed sampled
+ // rectangle is drawn, and every ImageData pixel is rewritten every polygon.
  const maxSide=budget.samples;
  if(tile.width!==maxSide)tile.width=maxSide;
  if(tile.height!==maxSide)tile.height=maxSide;
  const tc=tile.getContext('2d',{willReadFrequently:true});
  if(!tc)return;
- // Reuse sampled scalars and source RGBA tiles. Coverage antialiasing below
- // makes NO extra equation calls. Actual samples stay below microBudget().
- const bandTile=new Float32Array(maxSide*maxSide);
- const valueTile=new Float32Array(maxSide*maxSide);
+ // Reuse the two scalar sampling arrays; keep RGBA ImageData scoped to this
+ // frame to avoid stale backing-memory aliases after canvas resizing. The
+ // source tile and its 2D context remain per-output-canvas reused.
+ const capacity=maxSide*maxSide;
+ if(workspace.bandTile.length<capacity){
+  workspace.bandTile=new Float32Array(capacity);
+  workspace.valueTile=new Float32Array(capacity);
+ }
+ const bandTile=workspace.bandTile;
+ const valueTile=workspace.valueTile;
  const images=new Map<number,ImageData>();
  const strengthLevel=Math.max(0,Math.min(3,Math.floor(a.mathMicroDetail??0)));
  const antialias=strengthLevel>=2;
@@ -199,7 +217,7 @@ export function applyF6DMicrodetail(
  const lineMix=clamp(a.mathInk??.65);
  const phase=(world.generation/11)+(a.paletteOffset??0)+microInkBandShift(a.mathMicroBandShift??0);
  const microGen=microEquationGeneration(world.generation,a.mathMicroTimeRate??1);
- const microAngle=a.mathMicroAngle??0;
+ const microRotate=prepareMicroLocalRotation(a.mathMicroAngle??0);
  const domain=validateMicroDomainMode(a.mathMicroDomain);
  const domainOrder=a.mathMicroDomainOrder??3;
  const domainCoupling=a.mathMicroDomainCoupling??.8;
@@ -226,13 +244,15 @@ export function applyF6DMicrodetail(
   let pixels=images.get(dim);
   if(!pixels){pixels=tc.createImageData(dim,dim);images.set(dim,pixels);}
   const dst=pixels.data;
+  const faceBand=id%3,faceNeighborPhase=neighborPhase?.[id]??0;
   for(let j=0;j<dim;j++)for(let i=0;i<dim;i++){
    const localX=(i+.5)/dim,localY=(j+.5)/dim;
    const px=left+localX*(right-left),py=top+localY*(bottom-top);
    const u=px/extentX,v=py/extentY;
-   const [rotX,rotY]=microLocalRotation(localX,localY,microAngle);
-   const [domainX,domainY]=mutateMicroDomain(rotX,rotY,domain,
-    domainOrder,domainCoupling,occupancy[id],gx[id],gy[id],laplace[id]);
+   const [rotX,rotY]=microRotate(localX,localY);
+   const [domainX,domainY]=domain==='none'?[rotX,rotY]:
+    mutateMicroDomain(rotX,rotY,domain,
+     domainOrder,domainCoupling,occupancy[id],gx[id],gy[id],laplace[id]);
    const value=sampleMicroEquation(a.skin,u,v,domainX,domainY,
     occupancy[id],gx[id],gy[id],a,microGen,laplace[id]);
    const phaseBand=a.skin==='gyroid'?(value+1.5)*2.7:
@@ -241,7 +261,7 @@ export function applyF6DMicrodetail(
     (value+1)*3.1;
    const at=j*dim+i;
    valueTile[at]=value;
-   bandTile[at]=phaseBand+phase+id%3+(neighborPhase?.[id]??0);
+   bandTile[at]=phaseBand+phase+faceBand+faceNeighborPhase;
   }
   for(let j=0;j<dim;j++)for(let i=0;i<dim;i++){
    const at=j*dim+i,pixel=at*4;
@@ -261,6 +281,11 @@ export function applyF6DMicrodetail(
    }
    dst[pixel+3]=Math.round(globalMix*255);
   }
+  // Some backends bilinearly sample just outside drawImage's source crop.
+  // Only antialiased SMALLER tiles need a clear to prevent previous-face
+  // colors leaking into boundaries. Nearest-neighbor or a fully overwritten
+  // max-size tile cannot sample stale pixels: spare 1000s of clear operations.
+  if(antialias&&dim<maxSide)tc.clearRect(0,0,maxSide,maxSide);
   tc.putImageData(pixels,0,0);
   ctx.beginPath();ctx.moveTo(poly[0][0]*sx,poly[0][1]*sy);
   for(let k=1;k<poly.length;k++)ctx.lineTo(poly[k][0]*sx,poly[k][1]*sy);
