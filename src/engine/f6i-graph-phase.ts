@@ -79,7 +79,8 @@ export function microGraphPhaseOffsets(
  if(occupancy.length!==n)throw new Error('F6I phase source must match world cells');
  const depth=Math.round(clamp(finite(settings.depth,2),1,5));
  const neighbors=microPhaseAdjacency(world);
- const base=new Float64Array(n),working=new Float64Array(n);
+ const base=new Float64Array(n);
+ let working=new Float64Array(n);
  const generation=finite(world.generation,0);
  for(let i=0;i<n;i++){
   const u=neighbors.centerX[i]/neighbors.extentX;
