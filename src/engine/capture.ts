@@ -1,6 +1,7 @@
 import { GIFEncoder } from 'gifenc';
 import {FixedWebMMuxer,offlineVideoCodec} from './fixed-webm.js';
 import { indexGifFrame } from './gif-palette';
+import {captureProgressDue,fixedVideoFrameTime,offlineYieldDue} from './f6j2-capture-cadence';
 import { createWorld, stepWorld } from './sim';
 import {exportFrameLayout,renderExportFrame} from './export-frame';
 import type {ExportFrameAspect,ExportFrameFit} from './export-frame';
@@ -228,8 +229,16 @@ export async function captureAnimation(
   if(host)host.appendChild(canvas);
   const ctx=canvas.getContext('2d',{willReadFrequently:opt.format==='gif'});
   if(!ctx){canvas.remove();throw new Error('Canvas drawing unavailable.');}
-  const update=(phase:string,count:number)=>
+  // React does not need hundreds of progress updates a second, especially
+  // while the GIF worker has the main thread rendering high-res frames.
+  // Phase transitions, first and final frame remain immediate.
+  let lastProgressAt=-Infinity,lastProgressPhase='';
+  const update=(phase:string,count:number)=>{
+    const now=performance.now();
+    if(!captureProgressDue(phase,count,totalFrames,now,lastProgressAt,lastProgressPhase))return;
+    lastProgressAt=now;lastProgressPhase=phase;
     onProgress({phase,frames:count,seconds:count/opt.fps,fraction:Math.min(1,count/totalFrames)});
+  };
   let frames=0,distinctFrames=0,ended:CaptureResult['ended']='duration';
   try{
     if(opt.format==='gif'){
@@ -307,14 +316,15 @@ export async function captureAnimation(
       });
       encoder.configure(fixed.config);
       try{
+        let lastYieldAt=performance.now();
         for(let i=0;i<totalFrames;i++){
           notCancelled(signal);
           if(encoderError)throw encoderError;
           renderExportFrame(canvas,scratch,cursor.current,a,layout);
-          const frame=new Frame(canvas,{
-            timestamp:Math.round(i*1e6/opt.fps),
-            duration:Math.round(1e6/opt.fps)
-          });
+          // VideoFrame(canvas) snapshots the fully rendered pixels NOW.
+          // The offline track owns timestamps; waiting for an on-screen RAF
+          // between snapshots adds background-tab throttling for no benefit.
+          const frame=new Frame(canvas,fixedVideoFrameTime(i,opt.fps));
           encoder.encode(frame,{keyFrame:i===0||i%Math.max(1,Math.round(opt.fps*2))===0});
           frame.close();
           frames++;
@@ -329,7 +339,15 @@ export async function captureAnimation(
           }
           if(i%Math.max(1,Math.floor(opt.fps/2))===0||i===totalFrames-1)
             update('Frame-perfect WebM: drawing actual CA states',frames);
-          await nextPaint();
+          // Let Safari/Chromium service abort, React progress and input about
+          // every 24ms of CPU work, not once per video frame. The decoder sees
+          // the same continuous frame-index timeline no matter how long the
+          // offline encoder took to finish this file.
+          const now=performance.now();
+          if(offlineYieldDue(now,lastYieldAt)){
+            await delay(0);
+            lastYieldAt=performance.now();
+          }
         }
         notCancelled(signal);
         await encoder.flush();
