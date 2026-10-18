@@ -16,6 +16,7 @@ import {isF6Skin} from './f6-math-skins';
 import {isF6BSkin} from './f6b-math-skins';
 import {sampleF6EEquation} from './f6e-micro-equations';
 import type {ExtendedMicroSkin} from './f6e-micro-equations';
+import {adaptiveMicroSamples,inkEdgeCoverage,tileBandVariation} from './f6f-quality';
 const TAU=2*Math.PI,PI=Math.PI,clamp=(n:number)=>Math.max(0,Math.min(1,n));
 const wrap=(n:number,max:number)=>((n%max)+max)%max;
 const scratch=new WeakMap<CanvasRenderingContext2D,HTMLCanvasElement>();
@@ -170,17 +171,26 @@ export function applyF6DMicrodetail(
  });
  let tile=scratch.get(ctx);
  if(!tile){tile=document.createElement('canvas');scratch.set(ctx,tile);}
- const dim=budget.samples;
- if(tile.width!==dim)tile.width=dim;
- if(tile.height!==dim)tile.height=dim;
+ // Hold the backing tile at the fixed global-budget maximum side. Do NOT
+ // resize the canvas for every physical face: that thrashes iPhone textures.
+ const maxSide=budget.samples;
+ if(tile.width!==maxSide)tile.width=maxSide;
+ if(tile.height!==maxSide)tile.height=maxSide;
  const tc=tile.getContext('2d',{willReadFrequently:true});
  if(!tc)return;
- const pixels=tc.createImageData(dim,dim),dst=pixels.data;
+ // Reuse sampled scalars and source RGBA tiles. Coverage antialiasing below
+ // makes NO extra equation calls. Actual samples stay below microBudget().
+ const bandTile=new Float32Array(maxSide*maxSide);
+ const valueTile=new Float32Array(maxSide*maxSide);
+ const images=new Map<number,ImageData>();
+ const strengthLevel=Math.max(0,Math.min(3,Math.floor(a.mathMicroDetail??0)));
+ const antialias=strengthLevel>=2;
  const globalMix=Math.min(.9,strength*.8);
  const lineMix=clamp(a.mathInk??.65);
  const phase=(world.generation/11)+(a.paletteOffset??0);
  ctx.save();
- ctx.imageSmoothingEnabled=quality==='preview';
+ ctx.imageSmoothingEnabled=antialias;
+ if(antialias)ctx.imageSmoothingQuality='high';
  for(let id=0;id<n;id++){
   const poly=patch?patch.tiles[id].vertices:vor?vor.cells[id].polygon:
    polygonForCell(shape,id%w,Math.floor(id/w),w,h);
@@ -193,6 +203,14 @@ export function applyF6DMicrodetail(
   if(!Number.isFinite(left)||right-left<=1e-9||bottom-top<=1e-9)continue;
   const destX=left*sx,destY=top*sy,destW=(right-left)*sx,destH=(bottom-top)*sy;
   if(destW<2||destH<2)continue;
+  // Larger / rapidly varying physical polygons keep more samples. A face
+  // occupying just a few target pixels cannot waste its full budget.
+  const dim=adaptiveMicroSamples(maxSide,destW,destH,
+   Math.hypot(gx[id],gy[id]),laplace[id],a.mathMicroFrequency??5);
+  if(dim<2)continue;
+  let pixels=images.get(dim);
+  if(!pixels){pixels=tc.createImageData(dim,dim);images.set(dim,pixels);}
+  const dst=pixels.data;
   for(let j=0;j<dim;j++)for(let i=0;i<dim;i++){
    const localX=(i+.5)/dim,localY=(j+.5)/dim;
    const px=left+localX*(right-left),py=top+localY*(bottom-top);
@@ -203,12 +221,26 @@ export function applyF6DMicrodetail(
     a.skin==='cusp'?Math.sign(value)*2.2+Math.log1p(Math.abs(value))*5:
     a.skin==='facets'?(value+1)*5.5:
     (value+1)*3.1;
-   const colorIndex=Math.floor(phaseBand+phase+id%3);
+   const at=j*dim+i;
+   valueTile[at]=value;
+   bandTile[at]=phaseBand+phase+id%3;
+  }
+  for(let j=0;j<dim;j++)for(let i=0;i<dim;i++){
+   const at=j*dim+i,pixel=at*4;
+   const band=bandTile[at],value=valueTile[at];
+   const colorIndex=Math.floor(band);
    const color=palette[wrap(colorIndex,palette.length)];
+   // A pixel's true finite-difference band slope estimates how much of a
+   // palette edge it covers. Flat interiors do not receive blended pigments.
+   const change=antialias?tileBandVariation(bandTile,dim,i,j):0;
+   const edge=inkEdgeCoverage(band,change,antialias);
+   const neighbor=edge.mix>0?palette[wrap(colorIndex+edge.offset,palette.length)]:color;
    const signal=Math.abs(a.skin==='cusp'?value:Math.sin(value*Math.PI));
    const ridge=(1-clamp(signal*4))*lineMix;
-   const pixel=(j*dim+i)*4;
-   for(let c=0;c<3;c++)dst[pixel+c]=Math.round(color[c]*(1-ridge*.7));
+   for(let c=0;c<3;c++){
+    const pigment=color[c]*(1-edge.mix)+neighbor[c]*edge.mix;
+    dst[pixel+c]=Math.round(pigment*(1-ridge*.7));
+   }
    dst[pixel+3]=Math.round(globalMix*255);
   }
   tc.putImageData(pixels,0,0);
@@ -216,9 +248,9 @@ export function applyF6DMicrodetail(
   for(let k=1;k<poly.length;k++)ctx.lineTo(poly[k][0]*sx,poly[k][1]*sy);
   ctx.closePath();
   ctx.save();ctx.clip();
-  ctx.drawImage(tile,destX,destY,destW,destH);
+  ctx.drawImage(tile,0,0,dim,dim,destX,destY,destW,destH);
   ctx.restore();
-  // No lingering clip or canvas state across cell draws.
+  // No lingering clip, palette state or canvas transform across faces.
  }
  ctx.restore();
 }

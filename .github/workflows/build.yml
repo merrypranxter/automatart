@@ -37,6 +37,8 @@ jobs:
         run: node scripts/recording-smoke.mjs
       - name: Regression test GIF color cycling versus live render
         run: node scripts/gif-color-cycle-smoke.mjs
+      - name: Verify F6F adaptive microscopic quality and true bounded palette-edge coverage
+        run: node scripts/f6f-quality-smoke.mjs
       - name: Verify F6E six F6A and F6B genuine microscopic math equations across all eight lattices, PNG and saved replay
         run: node scripts/f6e-microdetail-smoke.mjs
       - name: Verify F6D actual within-cell mathematical texture, live physics, full polygon boundaries and native PNG
