@@ -1127,6 +1127,9 @@ export default function App(){
       a.mathMicroDetail=Math.round(numeric(a.mathMicroDetail,0,3,0));
       a.mathMicroFrequency=numeric(a.mathMicroFrequency,0.5,12,5);
       a.mathMicroMix=numeric(a.mathMicroMix,0,1,0.65);
+      a.mathMicroAngle=numeric(a.mathMicroAngle,-180,180,0);
+      a.mathMicroTimeRate=numeric(a.mathMicroTimeRate,-3,3,1);
+      a.mathMicroBandShift=numeric(a.mathMicroBandShift,-8,8,0);
       a.temporalRGB=numeric(a.temporalRGB,0,1,0);
       a.fossilOpacity=numeric(a.fossilOpacity,0,1,0);
       if(!['forward','pingpong'].includes(a.paletteMotion))a.paletteMotion='forward';
