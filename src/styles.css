@@ -864,3 +864,20 @@ body.art-viewer-open{overflow:hidden}
   margin-left:auto;background:transparent;border:1px solid rgba(192,222,255,.32);
   border-radius:6px;color:inherit;cursor:pointer;
 }
+
+/* F6J2B: a readable, factual render-deadline report on small devices.
+ * Does not claim actual encoded frame counts from opaque MediaRecorder. */
+.capture-timing-report{
+  padding:10px 12px;
+  border:1px solid rgba(147,191,205,.42);
+  border-radius:8px;
+  background:rgba(9,18,37,.65);
+  font:500 11px/1.55 'Chakra Petch',monospace;
+  color:#d9e9ec;
+  overflow-wrap:anywhere;
+}
+.capture-timing-report b{font-size:12px;color:#99f3f0;letter-spacing:.035em}
+.capture-timing-report p{margin:3px 0 0;line-height:1.55;max-width:100%}
+@media (max-width:420px){
+  .capture-timing-report{padding:9px 10px;font-size:10px}
+}
