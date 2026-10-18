@@ -17,6 +17,7 @@ import {isF6BSkin} from './f6b-math-skins';
 import {sampleF6EEquation} from './f6e-micro-equations';
 import type {ExtendedMicroSkin} from './f6e-micro-equations';
 import {adaptiveMicroSamples,inkEdgeCoverage,tileBandVariation} from './f6f-quality';
+import {microLocalRotation,microEquationGeneration,microInkBandShift} from './f6g-micro-motion';
 const TAU=2*Math.PI,PI=Math.PI,clamp=(n:number)=>Math.max(0,Math.min(1,n));
 const wrap=(n:number,max:number)=>((n%max)+max)%max;
 const scratch=new WeakMap<CanvasRenderingContext2D,HTMLCanvasElement>();
@@ -187,7 +188,9 @@ export function applyF6DMicrodetail(
  const antialias=strengthLevel>=2;
  const globalMix=Math.min(.9,strength*.8);
  const lineMix=clamp(a.mathInk??.65);
- const phase=(world.generation/11)+(a.paletteOffset??0);
+ const phase=(world.generation/11)+(a.paletteOffset??0)+microInkBandShift(a.mathMicroBandShift??0);
+ const microGen=microEquationGeneration(world.generation,a.mathMicroTimeRate??1);
+ const microAngle=a.mathMicroAngle??0;
  ctx.save();
  ctx.imageSmoothingEnabled=antialias;
  if(antialias)ctx.imageSmoothingQuality='high';
@@ -215,8 +218,9 @@ export function applyF6DMicrodetail(
    const localX=(i+.5)/dim,localY=(j+.5)/dim;
    const px=left+localX*(right-left),py=top+localY*(bottom-top);
    const u=px/extentX,v=py/extentY;
-   const value=sampleMicroEquation(a.skin,u,v,localX,localY,
-    occupancy[id],gx[id],gy[id],a,world.generation,laplace[id]);
+   const [rotX,rotY]=microLocalRotation(localX,localY,microAngle);
+   const value=sampleMicroEquation(a.skin,u,v,rotX,rotY,
+    occupancy[id],gx[id],gy[id],a,microGen,laplace[id]);
    const phaseBand=a.skin==='gyroid'?(value+1.5)*2.7:
     a.skin==='cusp'?Math.sign(value)*2.2+Math.log1p(Math.abs(value))*5:
     a.skin==='facets'?(value+1)*5.5:
