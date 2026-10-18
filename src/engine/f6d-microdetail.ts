@@ -12,6 +12,10 @@ import {physicalGraph} from './physical-graph';
 import {penrosePatch} from './penrose';
 import {voronoiPatch} from './voronoi';
 import {gyroidLevel,circleInversion,cuspDiscriminant,isF6CSkin} from './f6c-math-skins';
+import {isF6Skin} from './f6-math-skins';
+import {isF6BSkin} from './f6b-math-skins';
+import {sampleF6EEquation} from './f6e-micro-equations';
+import type {ExtendedMicroSkin} from './f6e-micro-equations';
 const TAU=2*Math.PI,PI=Math.PI,clamp=(n:number)=>Math.max(0,Math.min(1,n));
 const wrap=(n:number,max:number)=>((n%max)+max)%max;
 const scratch=new WeakMap<CanvasRenderingContext2D,HTMLCanvasElement>();
@@ -39,10 +43,10 @@ export function microBudget(cellCount:number,level:number,quality:'preview'|'exp
  * With exact shared polygon edges in Penrose/Voronoi, and established rule
  * offsets in six other lattice types. */
 function fieldGradients(world:World):{
- occupancy:Float32Array;gx:Float32Array;gy:Float32Array
+ occupancy:Float32Array;gx:Float32Array;gy:Float32Array;laplace:Float32Array
 }{
  const {width:w,height:h,cells}=world,n=cells.length;
- const occupancy=new Float32Array(n),gx=new Float32Array(n),gy=new Float32Array(n);
+ const occupancy=new Float32Array(n),gx=new Float32Array(n),gy=new Float32Array(n),laplace=new Float32Array(n);
  let states=1;
  if(world.engine==='cyclic'||world.engine==='species')
   for(const state of cells)states=Math.max(states,state);
@@ -59,10 +63,10 @@ function fieldGradients(world:World):{
  }
  const graph=physicalGraph(world.lattice??'square',w,h,world.voronoiSeed,world.voronoiJitter);
  for(let i=0;i<n;i++){
-  let dx=0,dy=0,degree=0;
+  let dx=0,dy=0,lap=0,degree=0;
   const accept=(q:number,ox:number,oy:number)=>{
    const delta=occupancy[q]-occupancy[i],r2=Math.max(.06,ox*ox+oy*oy);
-   dx+=ox*delta/r2;dy+=oy*delta/r2;degree++;
+   dx+=ox*delta/r2;dy+=oy*delta/r2;lap+=delta;degree++;
   };
   if(graph){
    for(let k=graph.starts[i];k<graph.starts[i+1];k++){
@@ -84,15 +88,19 @@ function fieldGradients(world:World):{
   }
   gx[i]=degree?dx/Math.sqrt(degree):0;
   gy[i]=degree?dy/Math.sqrt(degree):0;
+  laplace[i]=degree?lap/degree:0;
  }
- return {occupancy,gx,gy};
+ return {occupancy,gx,gy,laplace};
 }
 export function sampleMicroEquation(
- skin:'gyroid'|'inversion'|'cusp',
+ skin:'gyroid'|'inversion'|'cusp'|ExtendedMicroSkin,
  u:number,v:number,localX:number,localY:number,
  height:number,dx:number,dy:number,
- a:Appearance,generation:number
+ a:Appearance,generation:number,lap=0
 ):number{
+ if(isF6Skin(skin)||isF6BSkin(skin)){
+  return sampleF6EEquation(skin,u,v,localX,localY,height,dx,dy,a,generation,lap);
+ }
  const frequency=Math.max(.5,Math.min(12,a.mathFrequency??4.5));
  const micro=Math.max(.5,Math.min(12,a.mathMicroFrequency??5));
  const warp=Math.max(0,Math.min(2,a.mathWarp??.8));
@@ -142,7 +150,7 @@ export function applyF6DMicrodetail(
  ctx:CanvasRenderingContext2D,world:World,a:Appearance,
  outputWidth:number,outputHeight:number,quality:'preview'|'export'
 ):void{
- if(!isF6CSkin(a.skin))return;
+ if(!isF6CSkin(a.skin)&&!isF6Skin(a.skin)&&!isF6BSkin(a.skin))return;
  const {width:w,height:h}=world,n=w*h;
  const budget=microBudget(n,a.mathMicroDetail??0,quality);
  if(!budget.enabled)return;
@@ -153,7 +161,7 @@ export function applyF6DMicrodetail(
  const sx=outputWidth/extentX,sy=outputHeight/extentY;
  const patch=shape==='penrose'?penrosePatch(w,h):null;
  const vor=shape==='voronoi'?voronoiPatch(w,h,world.voronoiSeed??1,world.voronoiJitter??.34):null;
- const {occupancy,gx,gy}=fieldGradients(world);
+ const {occupancy,gx,gy,laplace}=fieldGradients(world);
  const palette=(a.palette?.length?a.palette:['#ffffff']).map(s=>{
   const hex=s.replace('#','');
   return /^[0-9a-f]{6}$/i.test(hex)?
@@ -190,9 +198,10 @@ export function applyF6DMicrodetail(
    const px=left+localX*(right-left),py=top+localY*(bottom-top);
    const u=px/extentX,v=py/extentY;
    const value=sampleMicroEquation(a.skin,u,v,localX,localY,
-    occupancy[id],gx[id],gy[id],a,world.generation);
+    occupancy[id],gx[id],gy[id],a,world.generation,laplace[id]);
    const phaseBand=a.skin==='gyroid'?(value+1.5)*2.7:
     a.skin==='cusp'?Math.sign(value)*2.2+Math.log1p(Math.abs(value))*5:
+    a.skin==='facets'?(value+1)*5.5:
     (value+1)*3.1;
    const colorIndex=Math.floor(phaseBand+phase+id%3);
    const color=palette[wrap(colorIndex,palette.length)];

@@ -244,3 +244,8 @@ Three new non-glow mathematical materials: **Gyroid Guts** (true 3D implicit sur
 ## F6D — True high-detail mathematical pigments inside the cells
 
 Gyroid Guts, Inversion Bloom, and Cusp Catastrophe now have an opt-in **Subcell quality 0–3**, **Microscopic equation frequency** and **Microscopic flat-ink intensity**. Unlike enlarging a single cell pigment, F6D evaluates the genuine mathematical equations repeatedly *inside each true physical cell*, clipping to exact polygon paths across all eight lattices. Live preview and full-resolution exports have separately bounded sample budgets, so a 9:16 world can't accidentally allocate a framebuffer-per-cell. Off by default, perfectly backwards-compatible with old recipes; zero mix restores exact original rendering. See [F6D details](docs/F6D_SUBCELL_MATERIALS.md). Sustained physical iPhone recording endurance remains an on-device requirement.
+
+
+## F6E — Six more skins with actual microscopic mathematics (PR pending)
+
+The original F6A/F6B skins—Prismatic Shear, Crystal Fracture, Spinodal Ink, Quasicrystal Star, Poincaré Portal, and Lissajous Braid—now offer the same opt-in three-parameter **true within-cell sampling** pioneered for Gyroid/Inversion/Cusp. Real equations are evaluated at different subcell positions and clipped within exact physical polygons; no fake square-face math. Off by default; old recipes, flat-ink colors and export dimensions preserved. All 9 maths materials can now have detailed internal geometry. See [F6E spec](docs/F6E_SIX_MICRO_EQUATIONS.md).
