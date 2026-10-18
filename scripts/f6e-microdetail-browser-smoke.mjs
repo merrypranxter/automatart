@@ -47,6 +47,11 @@ try{
   assert(await frequency.isVisible()&&await mix.isVisible());
   await mix.focus();await page.keyboard.press('End');
   assert.equal(Number(await mix.inputValue()),1);
+  // The art controls are intentionally shared between skins. Reset the
+  // frequency before each check: the previous material may have left the
+  // slider AT its maximum, making End a no-op rather than a failed shader.
+  await frequency.focus();await page.keyboard.press('Home');
+  assert.equal(Number(await frequency.inputValue()),.5);
   const detailed=await fingerprint();
   assert.notEqual(detailed,plain,skin+' quality 3 must change real visible pixels');
   await frequency.focus();await page.keyboard.press('End');
