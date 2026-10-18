@@ -19,6 +19,7 @@ import type {ExtendedMicroSkin} from './f6e-micro-equations';
 import {adaptiveMicroSamples,inkEdgeCoverage,tileBandVariation} from './f6f-quality';
 import {microLocalRotation,microEquationGeneration,microInkBandShift} from './f6g-micro-motion';
 import {mutateMicroDomain,validateMicroDomainMode} from './f6h-domain-mutation';
+import {microGraphPhaseOffsets,validateMicroPhaseMode} from './f6i-graph-phase';
 const TAU=2*Math.PI,PI=Math.PI,clamp=(n:number)=>Math.max(0,Math.min(1,n));
 const wrap=(n:number,max:number)=>((n%max)+max)%max;
 const scratch=new WeakMap<CanvasRenderingContext2D,HTMLCanvasElement>();
@@ -165,6 +166,13 @@ export function applyF6DMicrodetail(
  const patch=shape==='penrose'?penrosePatch(w,h):null;
  const vor=shape==='voronoi'?voronoiPatch(w,h,world.voronoiSeed??1,world.voronoiJitter??.34):null;
  const {occupancy,gx,gy,laplace}=fieldGradients(world);
+ // Synchronous circular neighbor coupling is computed once per rendered frame,
+ // not once per microscopic pigment sample. Off bypasses it entirely.
+ const neighborPhase=microGraphPhaseOffsets(world,occupancy,{
+  mode:validateMicroPhaseMode(a.mathMicroPhaseMode),
+  strength:a.mathMicroPhaseStrength??.8,
+  depth:a.mathMicroPhaseDepth??2
+ });
  const palette=(a.palette?.length?a.palette:['#ffffff']).map(s=>{
   const hex=s.replace('#','');
   return /^[0-9a-f]{6}$/i.test(hex)?
@@ -233,7 +241,7 @@ export function applyF6DMicrodetail(
     (value+1)*3.1;
    const at=j*dim+i;
    valueTile[at]=value;
-   bandTile[at]=phaseBand+phase+id%3;
+   bandTile[at]=phaseBand+phase+id%3+(neighborPhase?.[id]??0);
   }
   for(let j=0;j<dim;j++)for(let i=0;i<dim;i++){
    const at=j*dim+i,pixel=at*4;

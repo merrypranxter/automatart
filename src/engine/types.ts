@@ -22,6 +22,7 @@ export type PatternId = 'noise' | 'center' | 'rings' | 'stripes' | 'checker' | '
 export type AspectId = 'square' | 'portrait' | 'landscape' | 'portrait34' | 'landscape43' | 'portrait45' | 'landscape54' | 'portrait23' | 'landscape32';
 export type ColorBy = 'state' | 'age' | 'neighbors' | 'events' | 'radius' | 'x' | 'activity' | 'entropy' | 'boundaries' | 'diversity' | 'flow' | 'birthFlash' | 'deathHeat' | 'generationWave' | 'angular' | 'diagonal' | 'gradient';
 export type MicroDomainMode = 'none'|'power'|'kaleidoscope'|'vortex';
+export type MicroPhaseMode = 'off'|'attract'|'repel';
 export type SkinId = 'pixels' | 'soft' | 'glow' | 'contours' | 'mercury' | 'relief' | 'glass' | 'prism' | 'facets' | 'spinodal' | 'quasicrystal' | 'hyperbolic' | 'lissajous' | 'gyroid' | 'inversion' | 'cusp';
 export type NeighborShape = 'moore' | 'vonNeumann' | 'square2' | 'diamond2' | 'directional' | 'custom';
 export type LatticeId = 'square' | 'hex' | 'triangle' | 'rhombille' | 'kagome' | 'squareoct' | 'penrose' | 'voronoi';
@@ -212,6 +213,10 @@ export interface Appearance {
   mathMicroDomain:MicroDomainMode;
   mathMicroDomainOrder:number;
   mathMicroDomainCoupling:number;
+  /** F6I: optical circular phase relaxation on REAL cellular neighbor graph. */
+  mathMicroPhaseMode:MicroPhaseMode;
+  mathMicroPhaseStrength:number;
+  mathMicroPhaseDepth:number;
   temporalRGB: number;
   fossilOpacity: number;
 }
@@ -329,7 +334,8 @@ export const INITIAL_APPEARANCE: Appearance = {
   mathFrequency:4.5,mathWarp:0.8,mathInk:0.65,mathFold:5,mathTwist:0.85,mathSlice:0,mathPoleX:.5,mathPoleY:.5,
   mathMicroDetail:0,mathMicroFrequency:5,mathMicroMix:.65,
    mathMicroAngle:0,mathMicroTimeRate:1,mathMicroBandShift:0,
-   mathMicroDomain:'none',mathMicroDomainOrder:3,mathMicroDomainCoupling:.8,temporalRGB:0,fossilOpacity:0
+   mathMicroDomain:'none',mathMicroDomainOrder:3,mathMicroDomainCoupling:.8,
+   mathMicroPhaseMode:'off',mathMicroPhaseStrength:.8,mathMicroPhaseDepth:2,temporalRGB:0,fossilOpacity:0
 };
 export const LIFE_RULES: Record<LifeRule,{birth:number[];survive:number[];label:string}> = {
   conway:{birth:[3],survive:[2,3],label:'Conway · B3/S23'},

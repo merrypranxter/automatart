@@ -1133,6 +1133,9 @@ export default function App(){
       if(!['none','power','kaleidoscope','vortex'].includes(a.mathMicroDomain))a.mathMicroDomain='none';
       a.mathMicroDomainOrder=Math.round(numeric(a.mathMicroDomainOrder,2,8,3));
       a.mathMicroDomainCoupling=numeric(a.mathMicroDomainCoupling,0,2,.8);
+      if(!['off','attract','repel'].includes(a.mathMicroPhaseMode))a.mathMicroPhaseMode='off';
+      a.mathMicroPhaseStrength=numeric(a.mathMicroPhaseStrength,0,2,.8);
+      a.mathMicroPhaseDepth=Math.round(numeric(a.mathMicroPhaseDepth,1,5,2));
       a.temporalRGB=numeric(a.temporalRGB,0,1,0);
       a.fossilOpacity=numeric(a.fossilOpacity,0,1,0);
       if(!['forward','pingpong'].includes(a.paletteMotion))a.paletteMotion='forward';

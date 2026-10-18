@@ -1,5 +1,5 @@
 import type {Dispatch,SetStateAction} from 'react';
-import type {Appearance,MicroDomainMode} from '../engine/types';
+import type {Appearance,MicroDomainMode,MicroPhaseMode} from '../engine/types';
 
 function Control({id,label,value,min,max,step=0.05,suffix='',onChange}:{
   id:string;label:string;value:number;min:number;max:number;step?:number;
@@ -42,6 +42,21 @@ function MicroMotionControls({a,update,setAppearance}:{
      <Control id="math-micro-domain-coupling" label="Living cell-field bend" value={a.mathMicroDomainCoupling??.8}
        min={0} max={2} step={.1} onChange={v=>update('mathMicroDomainCoupling',v)}/>
      <p className="skin-description">True complex powers, reflected polar wedges, or distance-dependent vortex shear. Only the sampling equations inside each real cell mutate. Field bend responds to genuine neighboring cell states.</p>
+   </>}
+   <strong>F6I · CELLULAR PHASE CONSPIRACY</strong>
+   <label htmlFor="math-micro-phase-mode" className="input-label">Neighbor phase relationship</label>
+   <select id="math-micro-phase-mode" value={a.mathMicroPhaseMode??'off'}
+     onChange={e=>setAppearance(prev=>({...prev,mathMicroPhaseMode:e.target.value as MicroPhaseMode}))}>
+     <option value="off">OFF · Independent cells</option>
+     <option value="attract">ATTRACT · Neighbor phase alignment</option>
+     <option value="repel">REPEL · Opposing phase territories</option>
+   </select>
+   {(a.mathMicroPhaseMode??'off')!=='off'&&<>
+     <Control id="math-micro-phase-strength" label="Graph coupling strength" value={a.mathMicroPhaseStrength??.8}
+       min={0} max={2} step={.1} onChange={v=>update('mathMicroPhaseStrength',v)}/>
+     <Control id="math-micro-phase-depth" label="Phase propagation depth" value={a.mathMicroPhaseDepth??2}
+       min={1} max={5} step={1} onChange={v=>update('mathMicroPhaseDepth',v)}/>
+     <p className="skin-description">Color phases negotiate through real shared-edge cell neighborhoods. Attraction coordinates; repulsion favors disagreements. Synchronous bounded iterations, not simulated Kuramoto time evolution. Doesn't change cellular rules.</p>
    </>}
  </>;
 }
@@ -172,6 +187,7 @@ export default function SkinControls({appearance:a,setAppearance}:Props){
       mathMicroDetail:0,mathMicroFrequency:5,mathMicroMix:.65,
       mathMicroAngle:0,mathMicroTimeRate:1,mathMicroBandShift:0,
       mathMicroDomain:'none',mathMicroDomainOrder:3,mathMicroDomainCoupling:.8,
+      mathMicroPhaseMode:'off',mathMicroPhaseStrength:.8,mathMicroPhaseDepth:2,
       temporalRGB:0,fossilOpacity:0}))}>↺ RESET SKIN LAB</button>
   </section>;
 }
