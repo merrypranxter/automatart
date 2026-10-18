@@ -881,3 +881,33 @@ body.art-viewer-open{overflow:hidden}
 @media (max-width:420px){
   .capture-timing-report{padding:9px 10px;font-size:10px}
 }
+
+/* F6J2C: lightweight actual-device export preflight; not a color callout
+ * and not a promise that native MediaRecorder will retain all frames. */
+.capture-preflight{
+  display:flex;flex-direction:column;gap:8px;
+  padding:11px;border:1px solid rgba(145,184,217,.42);
+  background:rgba(12,18,36,.7);border-radius:8px;
+  min-width:0;overflow-wrap:anywhere;
+  font:500 11px/1.5 'Chakra Petch',monospace;
+}
+.capture-preflight-heading{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:5px}
+.capture-preflight-heading b{color:#a0f3ef;font-size:12px}
+.capture-preflight-heading small{color:#b2aac9;font-size:10px}
+.capture-preflight p{margin:0}
+.capture-preflight-buttons{display:flex;flex-wrap:wrap;gap:7px}
+.capture-preflight-buttons button{
+  border:1px solid #7dabc4;border-radius:7px;padding:8px 11px;min-height:42px;
+  background:#1b364b;color:#e6fdfb;
+  font:700 11px 'Chakra Petch',monospace;cursor:pointer;
+}
+.capture-preflight-buttons button:disabled{opacity:.55;cursor:wait}
+.capture-preflight-results{display:flex;flex-direction:column;gap:6px;
+  border-top:1px solid rgba(170,212,230,.25);padding-top:9px}
+.capture-preflight-results>b{font-size:12px;color:#aff8f5}
+.capture-preflight-results p{line-height:1.5}
+.capture-preflight-results .capture-preflight-caution{font-size:10px;color:#c3b6d2}
+@media(max-width:420px){
+  .capture-preflight{padding:9px;font-size:10px}
+  .capture-preflight-buttons button{flex:1 1 100%}
+}
